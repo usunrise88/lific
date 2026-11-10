@@ -1337,6 +1337,65 @@ export async function listProjectActivityActors(projectId: number) {
   return request<ActorStat[]>(`/projects/${projectId}/activity/actors`);
 }
 
+// ── Feed: cross-project activity (fork) ─────────────────
+
+/** Coarse event class the server assigns to every feed row. */
+export type FeedKind =
+  | "created"
+  | "status"
+  | "comment"
+  | "edit"
+  | "assignee"
+  | "label"
+  | "link"
+  | "page"
+  | "plan"
+  | "structure";
+
+export interface FeedItem extends Activity {
+  kind: FeedKind;
+  project_identifier: string | null;
+  project_name: string | null;
+  /** Current title/status of the row's issue; null once it is deleted. */
+  issue_title: string | null;
+  issue_status: string | null;
+  page_title: string | null;
+}
+
+export interface FeedPage {
+  items: FeedItem[];
+  has_more: boolean;
+}
+
+export interface FeedParams {
+  projects?: number[];
+  kinds?: FeedKind[];
+  /** User ids, or "system" for unattributed rows. */
+  actors?: (number | "system")[];
+  agents?: "all" | "only" | "exclude";
+  before?: number;
+  after?: number;
+  limit?: number;
+}
+
+export async function listFeed(params: FeedParams = {}) {
+  const q = new URLSearchParams();
+  if (params.projects) q.set("projects", params.projects.join(","));
+  if (params.kinds) q.set("kinds", params.kinds.join(","));
+  if (params.actors) q.set("actors", params.actors.join(","));
+  if (params.agents && params.agents !== "all") q.set("agents", params.agents);
+  if (params.before !== undefined) q.set("before", String(params.before));
+  if (params.after !== undefined) q.set("after", String(params.after));
+  if (params.limit !== undefined) q.set("limit", String(params.limit));
+  const qs = q.toString();
+  return request<FeedPage>(`/feed${qs ? `?${qs}` : ""}`);
+}
+
+/** Everyone who has acted in the caller's visible projects. */
+export async function listFeedActors() {
+  return request<ActorStat[]>("/feed/actors");
+}
+
 /** Comments shown per request. One page of a thread, not the thread. */
 export const COMMENT_PAGE_SIZE = 50;
 

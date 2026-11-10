@@ -88,6 +88,8 @@ export function routePageTitle(p: RouteTitleInput): string {
   switch (p.page) {
     case "home":
       return pageTitle("Home");
+    case "feed":
+      return pageTitle("Feed");
     case "settings":
       return pageTitle("Settings");
     case "instance-settings":

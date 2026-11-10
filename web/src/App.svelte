@@ -2,6 +2,7 @@
   import Login from "./routes/Login.svelte";
   import Signup from "./routes/Signup.svelte";
   import Home from "./routes/Home.svelte";
+  import Feed from "./routes/Feed.svelte";
   import Settings from "./routes/Settings.svelte";
   import InstanceSettings from "./routes/InstanceSettings.svelte";
   import IssueList from "./routes/IssueList.svelte";
@@ -485,6 +486,7 @@
     // redirect onto the canonical routes above.
     | { type: "public-redirect"; to: string }
     | { type: "app"; page: "home" }
+    | { type: "app"; page: "feed" }
     | { type: "app"; page: "settings" }
     | { type: "app"; page: "instance-settings" }
     | { type: "app"; page: "project-new" }
@@ -567,6 +569,9 @@
     // LIF-237: bare root — the "My Work" home dashboard.
     if (r === "/") {
       return { type: "app", page: "home" };
+    }
+    if (r === "/feed") {
+      return { type: "app", page: "feed" };
     }
     if (r === "/settings") {
       return { type: "app", page: "settings" };
@@ -888,6 +893,8 @@
         {realtimeActivityReady}
         {realtimeActivityRevision}
       />
+    {:else if parsed.page === "feed"}
+      <Feed {navigate} />
     {:else if parsed.page === "settings"}
       <Settings {navigate} />
     {:else if parsed.page === "instance-settings"}

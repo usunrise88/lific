@@ -9,6 +9,7 @@ mod auth;
 // layer in `server` has to expose by the same names this module sets them by.
 pub mod comments;
 mod export;
+mod feed;
 mod git_hook;
 mod home;
 mod insights;
@@ -165,6 +166,10 @@ fn router_impl(
         )
         .route("/api/issues/attention", get(issues::my_attention))
         .route("/api/home/overview", get(home::home_overview))
+        // Fork: cross-project activity feed (the Feed page), filtered to
+        // visible projects like the home overview.
+        .route("/api/feed", get(feed::feed))
+        .route("/api/feed/actors", get(feed::actors))
         .route(
             "/api/issues/{id}",
             get(issues::get_issue)

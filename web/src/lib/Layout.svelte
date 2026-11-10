@@ -32,7 +32,7 @@
   import { currentUser, getUserRevision, publishUser } from "./userState";
   import { mobileNavState } from "./mobileNavState.svelte";
   import { navLink } from "./navLink";
-  import { Settings, List, LayoutGrid, FileText, Plus, Layers, History, ListChecks, LayoutDashboard, Search, ChevronRight, Sun, Moon, Monitor, Menu, Home, TrendingUp, HelpCircle, Folder, FolderPlus, FolderMinus, Pencil, Trash2, PanelLeftClose, PanelLeftOpen, Waypoints, Paperclip } from "lucide-svelte";
+  import { Settings, List, LayoutGrid, FileText, Plus, Layers, History, ListChecks, LayoutDashboard, Search, ChevronRight, Sun, Moon, Monitor, Menu, Home, TrendingUp, HelpCircle, Folder, FolderPlus, FolderMinus, Pencil, Trash2, PanelLeftClose, PanelLeftOpen, Waypoints, Paperclip, Activity } from "lucide-svelte";
   import { onDestroy, setContext, untrack, tick } from "svelte";
   import { Ellipsis, ArrowUp, ArrowDown } from "lucide-svelte";
   import { peekState } from "./issues/peek.svelte";
@@ -813,6 +813,7 @@
   );
   let mobileSection = $derived.by(() => {
     if (route === "/") return "Home";
+    if (route === "/feed") return "Feed";
     if (isActive("/settings")) return "Settings";
     if (route === "/projects/new") return "New project";
     if (route === "/projects/import") return "Import archive";
@@ -914,11 +915,20 @@
              pill's shape (icon + label) but unindented and un-chevroned
              since it isn't a disclosure. -->
         <a href="#/" use:navLink={navigate} aria-current={route === "/" ? "page" : undefined}
-          class="sidebar-destination sidebar-home w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md
+          class="sidebar-destination w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md
                  text-left text-body-sm transition-colors"
         >
           <Home size={14} class="shrink-0" />
           Home
+        </a>
+        <!-- Fork: live cross-project activity. Last top-level entry, so it
+             carries the section gap Home used to. -->
+        <a href="#/feed" use:navLink={navigate} aria-current={route === "/feed" ? "page" : undefined}
+          class="sidebar-destination sidebar-home w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md
+                 text-left text-body-sm transition-colors"
+        >
+          <Activity size={14} class="shrink-0" />
+          Feed
         </a>
 
         <!-- One project entry: the pill plus its sub-nav. Shared verbatim by
