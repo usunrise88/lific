@@ -19,7 +19,7 @@
   import Mascot from "../lib/Mascot.svelte";
   import ErrorState from "../lib/ErrorState.svelte";
   import Skeleton from "../lib/Skeleton.svelte";
-  import { dndzone, type DndEvent } from "svelte-dnd-action";
+  import { dndzone, TRIGGERS, type DndEvent } from "svelte-dnd-action";
   import { flip } from "svelte/animate";
   import { slide } from "svelte/transition";
   import { motionReduced } from "../lib/theme";
@@ -211,6 +211,12 @@
   // the appearance system's motion preference takes effect on the very
   // next reorder — same call-fresh pattern as Toaster/PeekPanel's
   // enterParams()/panelInParams().
+  // Fork: on touch screens a card only picks up after a still press of this
+  // long. Moving the finger sooner scrolls the column or the board instead,
+  // which an immediate drag start made impossible. Mouse drags are untouched
+  // (svelte-dnd-action applies the delay to touch events only).
+  const TOUCH_DRAG_DELAY_MS = 350;
+
   function flipMs(): number {
     return motionReduced() ? 0 : 150;
   }
@@ -648,6 +654,11 @@
   ) {
     // A drag is in progress — veto auto-refresh until finalize.
     dragActive = true;
+    // The long press landed: a short buzz tells a touch user the card is
+    // now held (no-op where vibration is unsupported, e.g. iOS Safari).
+    if (e.detail.info.trigger === TRIGGERS.DRAG_STARTED && window.matchMedia?.("(pointer: coarse)").matches) {
+      navigator.vibrate?.(10);
+    }
     boardItems[cellKey(laneKey, status)] = e.detail.items as Issue[];
   }
 
@@ -1855,6 +1866,7 @@
                 flipDurationMs: flipMs(),
                 type: "lific-issues",
                 dragDisabled: !canEdit,
+                delayTouchStart: TOUCH_DRAG_DELAY_MS,
                 dropTargetStyle: {
                   outline: "2px dashed var(--accent)",
                   outlineOffset: "-4px",
@@ -1962,6 +1974,7 @@
                   flipDurationMs: flipMs(),
                   type: "lific-issues",
                   dragDisabled: !canEdit,
+                  delayTouchStart: TOUCH_DRAG_DELAY_MS,
                   dropTargetStyle: {
                     outline: "2px dashed var(--accent)",
                     outlineOffset: "-4px",
@@ -1975,7 +1988,7 @@
                 <!-- Wrapper carries animate:flip (svelte-dnd-action animates
                      each direct zone child) and is the draggable item; the
                      visual card lives in IssueCard. -->
-                <div animate:flip={{ duration: flipMs() }}>
+                <div class="board-card-touch" animate:flip={{ duration: flipMs() }}>
                   <IssueCard
                     {issue}
                     {labels}

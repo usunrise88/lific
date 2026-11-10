@@ -1147,6 +1147,9 @@
               type: "lific-projects",
               dropTargetStyle: {},
               dragDisabled: orderSaving || ungroupedItems.length < 2,
+              // Fork: let a finger scroll the project list on tablets; a
+              // still press still reorders (see IssueList's board).
+              delayTouchStart: 350,
             }}
             onconsider={handleProjectConsider}
             onfinalize={handleProjectFinalize}

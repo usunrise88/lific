@@ -1070,3 +1070,14 @@ html[data-motion="reduced"] *::after {
     transition: none;
   }
 }
+
+/* Fork: board cards on touch screens are picked up by a long press (see
+   TOUCH_DRAG_DELAY_MS in IssueList). Without this, iOS answers the same
+   press with its link callout and text selection. */
+@media (pointer: coarse) {
+  .board-card-touch {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}
