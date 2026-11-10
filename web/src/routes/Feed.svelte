@@ -758,7 +758,8 @@
 
 {#snippet topbarContent()}
   <div class="flex items-center gap-3 px-4 sm:px-6 py-2 w-full">
-    <span class="text-body-sm font-medium text-[var(--text)]">Feed</span>
+    <!-- The phone header already names the page. -->
+    <span class="hidden sm:inline text-body-sm font-medium text-[var(--text)]">Feed</span>
     <span class="inline-flex items-center gap-1.5 text-micro text-[var(--text-faint)]" title="Updates arrive as they happen">
       <span class="relative flex size-2">
         <span class="absolute inline-flex size-full rounded-full bg-[var(--success)] opacity-60 animate-ping"></span>
