@@ -40,6 +40,12 @@ strings with `t()` from `src/lib/i18n.svelte.ts`.
 ## Translating
 
 Each `<code>.json` has exactly the keys of `en.json`, the same placeholders
-and the plural categories its language uses. `bun test` checks all three.
-UI tone: short, plain, the way a native product would say it; keep the
-original's terseness (button labels stay one or two words).
+and the plural categories its language uses (`scripts/i18n-lib.mjs` holds the
+rules; `bun test` checks every locale against them). To add a language: add it
+to `LOCALES` in `src/lib/i18n.ts`, copy `en.json` to `<code>.json`, translate,
+and run the tests. UI tone: short, plain, the way a native product would say
+it; keep the original's terseness (button labels stay one or two words).
+
+Entries named `.before` / `.mid` / `.after` are pieces of one sentence around
+markup, and the Feed and timeline phrases are written verb-first with the item
+following, so word them to read in that order.

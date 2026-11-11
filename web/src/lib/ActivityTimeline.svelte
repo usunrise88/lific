@@ -16,7 +16,15 @@
   import PriorityIcon from "./PriorityIcon.svelte";
   import { History, ChevronDown } from "lucide-svelte";
   import { assignActivity } from "./issues/assignees";
+  import { relationLabel } from "./feed";
   import { t } from "./i18n";
+
+  /** The entity's name in the active language; an unknown type stays as is. */
+  function entityName(type: string): string {
+    const key = `projectActivity.entity.${type}`;
+    const name = t(key);
+    return name === key ? type : name;
+  }
 
   let {
     items,
@@ -102,12 +110,12 @@
         if (a.entity_type === "comment") return t("activity.commented");
         if (a.entity_type === "issue") return t("activity.created.issue");
         if (a.entity_type === "page") return t("activity.created.page");
-        return t("activity.created.other", { entity: a.entity_type });
+        return t("activity.created.other", { entity: entityName(a.entity_type) });
       case "delete":
         if (a.entity_type === "comment") return t("activity.deletedComment");
         if (a.entity_type === "issue") return t("activity.deleted.issue");
         if (a.entity_type === "page") return t("activity.deleted.page");
-        return t("activity.deleted.other", { entity: a.entity_type });
+        return t("activity.deleted.other", { entity: entityName(a.entity_type) });
       case "update":
         return a.entity_type === "comment"
           ? t("activity.editedComment")
@@ -117,9 +125,9 @@
       case "detach":
         return t("activity.labelRemoved");
       case "link":
-        return t("activity.linked", { relation: (a.field ?? "relates_to").replace("_", " ") });
+        return t("activity.linked", { relation: relationLabel(a.field) });
       case "unlink":
-        return t("activity.unlinked", { relation: (a.field ?? "relates_to").replace("_", " ") });
+        return t("activity.unlinked", { relation: relationLabel(a.field) });
       // LIF-484: user and date blockers. The value is the rendered wait.
       case "wait":
         return t("activity.waitStarted");

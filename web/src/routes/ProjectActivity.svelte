@@ -36,6 +36,7 @@
   } from "../lib/linediff";
   import { getContext } from "svelte";
   import { t, locale, formatNumber } from "../lib/i18n";
+  import { relationLabel } from "../lib/feed";
 
   const PAGE_SIZE = 50;
 
@@ -208,9 +209,9 @@
       case "detach":
         return t("projectActivity.verb.unlabeled");
       case "link":
-        return t("projectActivity.verb.linked", { relation: (a.field ?? "relates_to").replace("_", " ") });
+        return t("projectActivity.verb.linked", { relation: relationLabel(a.field) });
       case "unlink":
-        return t("projectActivity.verb.unlinked", { relation: (a.field ?? "relates_to").replace("_", " ") });
+        return t("projectActivity.verb.unlinked", { relation: relationLabel(a.field) });
       default:
         return a.action;
     }
