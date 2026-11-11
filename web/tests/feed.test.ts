@@ -127,3 +127,12 @@ describe("feed filters", () => {
     expect(f.agents).toBe("all");
   });
 });
+
+describe("plain snippets", () => {
+  test("drop markdown emphasis but keep identifiers", async () => {
+    const { plainSnippet } = await import("../src/lib/feed");
+    expect(plainSnippet("**Done**: VOICECORE_SIGNAL=full _ok_ `code`\n# Head")).toBe(
+      "Done: VOICECORE_SIGNAL=full ok code Head",
+    );
+  });
+});

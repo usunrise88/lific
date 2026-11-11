@@ -335,7 +335,9 @@ export function plainSnippet(v: string | null, max = 140): string {
   if (!v) return "";
   const flat = v
     .replace(/```[\s\S]*?```/g, " ")
-    .replace(/[*_`#>]+/g, "")
+    // Strip emphasis and heading/quote markers, but keep the underscores
+    // inside identifiers like VOICECORE_SIGNAL.
+    .replace(/[*`]+|^[#>\s]+|(?<![\w])_+|_+(?![\w])/gm, "")
     .replace(/\s+/g, " ")
     .trim();
   return flat.length > max ? flat.slice(0, max - 1) + "…" : flat;

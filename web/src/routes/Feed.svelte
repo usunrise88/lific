@@ -378,8 +378,8 @@
 {/snippet}
 
 {#snippet statusChip(status: string | null)}
-  <span class="inline-flex items-center gap-1 align-middle whitespace-nowrap font-medium text-[var(--text)]">
-    <StatusIcon status={status ?? ""} size={12} />{statusLabel(status)}
+  <span class="font-medium text-[var(--text)] whitespace-nowrap">
+    <span class="inline-block align-[-2px] ml-0.5 mr-1"><StatusIcon status={status ?? ""} size={12} /></span>{statusLabel(status)}
   </span>
 {/snippet}
 
@@ -398,120 +398,78 @@
   {/if}
 {/snippet}
 
-{#snippet chip(text: string, tone: "plain" | "add" | "remove" = "plain")}
-  <span
-    class="inline-flex items-center text-micro font-medium px-1.5 py-0.5 rounded-full border
-           {tone === 'remove'
-      ? 'border-[var(--border)] text-[var(--text-faint)] line-through'
-      : 'border-[var(--border)] text-[var(--text-muted)]'}"
-  >{tone === "add" ? "+ " : ""}{text}</span>
-{/snippet}
-
-{#snippet details(card: FeedCard)}
-  {@const comments = card.rows.filter((r) => r.kind === "comment" && r.action !== "delete")}
+{#snippet inlineDetails(card: FeedCard)}
+  <!-- Second line of a row: what the action touched, in one line. -->
   {@const labels = card.rows.filter((r) => r.kind === "label")}
   {@const assigns = card.rows.filter((r) => r.kind === "assignee")}
   {@const links = card.rows.filter((r) => r.kind === "link")}
   {@const edits = card.rows.filter((r) => r.kind === "edit")}
-  {@const steps = card.rows.filter((r) => r.entity_type === "plan_step" && r.action === "create")}
-  {@const isOpen = expanded.has(card.key)}
-
+  {@const steps = card.rows.filter((r) => r.entity_type === "plan_step")}
+  {@const s = card.subjects[0]}
   {#if card.batch}
-    {@const list = isOpen ? card.subjects : card.subjects.slice(0, BATCH_PREVIEW)}
-    <ul class="mt-2 flex flex-col gap-1 m-0 p-0 list-none">
-      {#each list as s (s.key)}
-        <li class="flex items-center gap-2 min-w-0 text-body-sm">
-          <StatusIcon status={s.status ?? ""} size={12} />
-          {@render subjectRef(s, false)}
-          <button
-            class="truncate text-left text-[var(--text-muted)] hover:text-[var(--text)]"
-            onclick={() => openSubject(s)}
-          >{s.title ?? ""}</button>
-        </li>
-      {/each}
-    </ul>
-    {#if card.subjects.length > BATCH_PREVIEW}
-      <button class="mt-1 text-caption text-[var(--text-faint)] hover:text-[var(--text)]" onclick={() => toggleExpanded(card.key)}>
-        {isOpen ? "Show less" : `Show all ${card.subjects.length}`}
-      </button>
+    {@const shown = card.subjects.slice(0, BATCH_PREVIEW)}
+    {#each shown as b, i (b.key)}{#if i}<span class="text-[var(--text-faint)]">, </span>{/if}<button
+        class="font-mono text-caption text-[var(--accent)] hover:underline"
+        title={b.title ?? undefined}
+        onclick={() => openSubject(b)}
+      >{b.label}</button>{/each}
+    {#if card.subjects.length > shown.length}
+      <span class="text-[var(--text-faint)]"> +{card.subjects.length - shown.length}</span>
     {/if}
-  {/if}
-
-  {#if edits.length}
-    <div class="mt-2 flex flex-col gap-1">
-      {#each edits as e (e.id)}
-        {#if e.field === "description" || e.field === "content"}
-          <p class="m-0 text-caption text-[var(--text-muted)] line-clamp-2">
-            <span class="text-[var(--text-faint)]">{humanField(e.field)}:</span> {plainSnippet(e.new_value, 220) || "(cleared)"}
-          </p>
-        {:else if e.field === "priority" || e.field === "title" || e.field === "module" || e.field?.endsWith("date")}
-          <p class="m-0 text-caption text-[var(--text-muted)] break-words">
-            <span class="text-[var(--text-faint)]">{humanField(e.field)}:</span>
-            <span class="line-through decoration-[var(--text-faint)]">{plainSnippet(e.old_value, 80) || "none"}</span>
-            <span class="text-[var(--text-faint)]">→</span>
-            <span class="text-[var(--text)]">{plainSnippet(e.new_value, 80) || "none"}</span>
-          </p>
-        {/if}
-      {/each}
-    </div>
-  {/if}
-
-  {#if labels.length || assigns.length || links.length}
-    <div class="mt-2 flex flex-wrap items-center gap-1.5">
-      {#each labels as l (l.id)}
-        {@render chip((l.action === "detach" ? l.old_value : l.new_value) ?? "", l.action === "detach" ? "remove" : card.kind === "created" ? "plain" : "add")}
-      {/each}
-      {#each assigns as a (a.id)}
-        <span class="inline-flex items-center gap-1 text-micro text-[var(--text-muted)]">
-          <UserRound size={11} />{a.action === "unassign" ? `− ${assigneeLabel(a.old_value)}` : assigneeLabel(a.new_value)}
-        </span>
-      {/each}
-      {#each links as l (l.id)}
-        {@const target = l.action === "unlink" ? l.old_value : l.new_value}
-        <span class="inline-flex items-center gap-1 text-micro text-[var(--text-muted)] {l.action === 'unlink' ? 'line-through' : ''}">
-          <Link2 size={11} />{relationLabel(l.field)}
-          {#if target}
-            <button class="font-mono text-[var(--accent)] hover:underline" onclick={() => openPeek(target)}>{target}</button>
-          {/if}
-        </span>
-      {/each}
-    </div>
-  {/if}
-
-  {#if steps.length && card.lead.entity_type === "plan"}
-    <p class="mt-2 m-0 text-caption text-[var(--text-muted)]">
-      {steps.length} step{steps.length === 1 ? "" : "s"}
-      {#if steps.length}· {steps.slice(-3).reverse().map((s) => plainSnippet(s.new_value, 40)).join(" · ")}{steps.length > 3 ? " …" : ""}{/if}
-    </p>
-  {:else if card.kind === "plan" && card.lead.entity_type === "plan_step"}
-    <p class="mt-2 m-0 text-caption text-[var(--text-muted)] line-clamp-2">
-      {card.rows.filter((r) => r.entity_type === "plan_step").map((s) => plainSnippet(s.new_value, 60)).filter(Boolean).join(" · ")}
-    </p>
-  {/if}
-
-  {#if card.kind === "structure"}
-    {@const v = card.lead.new_value ?? card.lead.old_value}
-    {#if v && v !== card.lead.entity_label}
-      <p class="mt-1.5 m-0 text-caption text-[var(--text-muted)] line-clamp-2">{plainSnippet(v, 200)}</p>
+  {:else}
+    {#if s.title && card.kind !== "structure"}
+      <!-- Buttons always lay out as inline-block, so the title truncates
+           itself; clipped by the line instead, a long one vanished whole. -->
+      <button
+        class="max-w-[calc(100%-1.75rem)] truncate align-bottom text-left text-[var(--text)] hover:underline decoration-[var(--border)] underline-offset-2"
+        onclick={() => openSubject(s)}
+      >{s.title}</button>
+    {:else if card.kind === "structure"}
+      {@const v = card.lead.new_value ?? card.lead.old_value}
+      <span class="text-[var(--text-muted)]">{v && v !== card.lead.entity_label ? plainSnippet(v, 160) : ""}</span>
     {/if}
-  {/if}
-
-  {#each comments as c (c.id)}
-    {@const long = (c.new_value ?? "").length > 420}
-    {@const showAll = expanded.has(`${card.key}:${c.id}`)}
-    <div
-      class="feed-comment mt-2.5 relative rounded-lg border border-[var(--border)] bg-[var(--bg-subtle)]
-             px-3 py-2 text-body-sm {long && !showAll ? 'max-h-44 overflow-hidden' : ''}"
-    >
-      <Markdown content={c.new_value ?? ""} />
-      {#if long && !showAll}
-        <div class="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-[var(--bg-subtle)] to-transparent pointer-events-none"></div>
+    {#each edits as e (e.id)}
+      <span class="text-[var(--text-faint)]"> · {humanField(e.field)}</span>
+      {#if e.field !== "description" && e.field !== "content"}
+        <span class="text-[var(--text-faint)] line-through">{plainSnippet(e.old_value, 30) || "none"}</span>
+        <span class="text-[var(--text-faint)]">→</span>
+        <span class="text-[var(--text-muted)]">{plainSnippet(e.new_value, 40) || "none"}</span>
       {/if}
-    </div>
-    {#if long}
-      <button class="mt-1 text-caption text-[var(--text-faint)] hover:text-[var(--text)]" onclick={() => toggleExpanded(`${card.key}:${c.id}`)}>
-        {showAll ? "Show less" : "Show full comment"}
-      </button>
+    {/each}
+    {#each labels as l (l.id)}
+      <span class="ml-1 inline-flex items-center text-micro px-1.5 rounded-full border border-[var(--border)] text-[var(--text-muted)] align-[1px] {l.action === 'detach' ? 'line-through' : ''}">{l.action === "detach" ? l.old_value : l.new_value}</span>
+    {/each}
+    {#each assigns as a (a.id)}
+      <span class="ml-1.5 inline-flex items-center gap-0.5 text-micro text-[var(--text-muted)] align-[1px]"><UserRound size={10} />{a.action === "unassign" ? `− ${assigneeLabel(a.old_value)}` : assigneeLabel(a.new_value)}</span>
+    {/each}
+    {#each links as l (l.id)}
+      {@const target = l.action === "unlink" ? l.old_value : l.new_value}
+      <span class="ml-1.5 inline-flex items-center gap-0.5 text-micro text-[var(--text-muted)] align-[1px] {l.action === 'unlink' ? 'line-through' : ''}">
+        <Link2 size={10} />{relationLabel(l.field)}
+        {#if target}<button class="font-mono text-[var(--accent)] hover:underline" onclick={() => openPeek(target)}>{target}</button>{/if}
+      </span>
+    {/each}
+    {#if card.kind === "plan" && steps.length}
+      <span class="text-[var(--text-faint)]"> · {steps.length} step{steps.length === 1 ? "" : "s"}{card.lead.entity_type === "plan_step" ? `: ${steps.map((x) => plainSnippet(x.new_value, 40)).filter(Boolean).slice(0, 2).join(", ")}` : ""}</span>
+    {/if}
+  {/if}
+{/snippet}
+
+{#snippet commentPreview(card: FeedCard)}
+  {#each card.rows.filter((r) => r.kind === "comment" && r.action !== "delete") as c (c.id)}
+    {@const key = `${card.key}:${c.id}`}
+    {#if expanded.has(key)}
+      <div class="feed-comment mt-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-subtle)] px-3 py-2 text-body-sm">
+        <Markdown content={c.new_value ?? ""} />
+        <button class="mt-1 text-micro text-[var(--text-faint)] hover:text-[var(--text)]" onclick={() => toggleExpanded(key)}>Collapse</button>
+      </div>
+    {:else}
+      <button
+        class="mt-1 w-full text-left border-l-2 border-[var(--border)] hover:border-[var(--accent)] pl-2
+               text-caption leading-snug text-[var(--text-muted)] line-clamp-2 transition-colors"
+        title="Show the full comment"
+        onclick={() => toggleExpanded(key)}
+      >{plainSnippet(c.new_value, 400)}</button>
     {/if}
   {/each}
 {/snippet}
@@ -521,121 +479,112 @@
   {@const target = commentTarget(card)}
   {@const isFresh = card.rows.some((r) => fresh.has(r.id))}
   <article
-    class="feed-card relative flex gap-3 px-3.5 sm:px-4 py-3.5 rounded-xl border bg-[var(--surface)]
-           transition-colors {isFresh ? 'feed-fresh border-[var(--accent)]' : 'border-[var(--border)]'}"
-    in:fly={{ y: -6, duration: 220 }}
+    class="feed-row group relative flex gap-2.5 px-3 py-2 transition-colors hover:bg-[var(--bg-subtle)]
+           {isFresh ? 'feed-fresh' : ''}"
+    in:fly={{ y: -4, duration: 200 }}
   >
     <!-- Avatar with the event kind tucked into its corner. -->
-    <button class="relative shrink-0 self-start" title="Only {card.actorName}" onclick={() => onlyActor(card)}>
+    <button class="relative shrink-0 self-start mt-0.5" title="Only {card.actorName}" onclick={() => onlyActor(card)}>
       <span
-        class="size-8 rounded-full grid place-items-center text-micro font-bold select-none
+        class="size-6 rounded-full grid place-items-center text-[9px] font-bold select-none
                {card.isBot
           ? 'bg-[var(--accent-subtle)] text-[var(--accent)] border border-[var(--accent)]'
           : 'bg-[var(--accent)] text-[var(--accent-text)]'}"
       >{initials(card.actorName)}</span>
       <span
-        class="absolute -bottom-1 -right-1 size-[18px] rounded-full grid place-items-center
-               bg-[var(--surface)] border border-[var(--border)]"
+        class="absolute -bottom-0.5 -right-1 size-3.5 rounded-full grid place-items-center
+               bg-[var(--surface)] ring-1 ring-[var(--border)]"
         style="color: {KIND_TONE[card.kind]}"
-      >{@render kindIcon(card.kind, 10)}</span>
+      >{@render kindIcon(card.kind, 8)}</span>
     </button>
 
     <div class="flex-1 min-w-0">
-      <header class="flex items-center gap-1.5 min-w-0 text-body-sm">
-        <button class="font-semibold text-[var(--text)] truncate hover:underline" onclick={() => onlyActor(card)}>
-          {card.actorName}
-        </button>
-        {#if card.isBot}
-          <span class="shrink-0 text-micro font-semibold uppercase tracking-wider px-1 py-px rounded bg-[var(--accent-subtle)] text-[var(--accent)]">agent</span>
-        {/if}
-        <span class="hidden sm:inline shrink-0 text-micro text-[var(--text-faint)]">via {card.transport}</span>
-        <span class="ml-auto shrink-0 flex items-center gap-2">
+      <!-- Line 1: who did what to which item, plus where and when. -->
+      <div class="flex items-start gap-2 min-w-0 min-h-6 pt-0.5">
+        <!-- Phones get up to two lines here so the item and status survive;
+             wider screens keep one truncated line. -->
+        <p class="flex-1 min-w-0 m-0 line-clamp-2 sm:line-clamp-none sm:truncate text-body-sm leading-5 text-[var(--text-muted)]">
+          <button class="font-medium text-[var(--text)] hover:underline" onclick={() => onlyActor(card)}>{card.actorName}</button>
+          {#if card.isBot}<span class="hidden sm:inline"><Bot size={11} class="inline -mt-0.5 text-[var(--accent)]" aria-label="agent" /></span>{/if}
+          <!-- "SC-8 → Done" reads fine without the verb on a narrow phone. -->
+          <span class={card.kind === "status" && !card.batch ? "hidden sm:inline" : ""}>{verbFor(card)}</span>
+          {#if card.kind === "status"}
+            {#if !card.batch}{@render subjectRef(s, false)} →{/if}
+            {@render statusChip(card.lead.new_value)}
+          {:else if !card.batch}
+            {#if card.kind === "assignee"}
+              {@render subjectRef(s, false)} to <span class="text-[var(--text)]">{assigneeLabel(card.lead.new_value ?? card.lead.old_value)}</span>
+            {:else if card.kind === "structure"}
+              <span class="font-medium text-[var(--text)]">{card.lead.entity_label ?? ""}</span>
+            {:else}
+              {@render subjectRef(s, false)}
+            {/if}
+          {/if}
+        </p>
+        <div class="shrink-0 flex items-center gap-1.5 -mt-0.5">
+          <span class="feed-actions flex items-center">
+            {#if target}
+              <button
+                class="size-6 grid place-items-center rounded-md transition-colors
+                       {composerFor === card.key ? 'text-[var(--accent)] bg-[var(--accent-subtle)]' : 'text-[var(--text-faint)] hover:text-[var(--text)] hover:bg-[var(--surface)]'}"
+                title="Comment" aria-label="Comment"
+                onclick={() => openComposer(card)}
+              ><MessageSquare size={13} /></button>
+            {/if}
+            {#if !card.batch && s.href}
+              <button
+                class="hidden sm:grid size-6 place-items-center rounded-md text-[var(--text-faint)] hover:text-[var(--text)] hover:bg-[var(--surface)] transition-colors"
+                title="Open" aria-label="Open"
+                onclick={() => navigate(s.href!)}
+              ><ArrowUpRight size={13} /></button>
+            {/if}
+          </span>
           {#if card.project}
             <button
-              class="text-micro font-mono font-medium text-[var(--text-muted)] px-1.5 py-0.5 rounded
-                     bg-[var(--bg-subtle)] hover:text-[var(--text)]"
+              class="hidden sm:inline text-micro font-mono text-[var(--text-faint)] hover:text-[var(--text)]"
               title="Only {card.projectName ?? card.project}"
               onclick={() => onlyProject(card.project)}
             >{card.project}</button>
           {/if}
           <TimeAgo class="text-micro text-[var(--text-faint)] tabular-nums" date={card.ts} />
-        </span>
-      </header>
+        </div>
+      </div>
 
-      <p class="mt-1 m-0 text-body-sm leading-relaxed text-[var(--text-muted)] break-words">
-        {verbFor(card)}
-        {#if card.kind === "status"}
-          {#if !card.batch}{@render subjectRef(s, false)} to{/if}
-          {@render statusChip(card.lead.new_value)}
-          {#if !card.batch && card.lead.old_value}
-            <span class="text-micro text-[var(--text-faint)]">from {statusLabel(card.lead.old_value)}</span>
-          {/if}
-        {:else if !card.batch}
-          {#if card.kind === "assignee"}
-            {@render subjectRef(s, false)} to <span class="text-[var(--text)]">{assigneeLabel(card.lead.new_value ?? card.lead.old_value)}</span>
-          {:else if card.kind === "link"}
-            {@render subjectRef(s, false)}
-          {:else if card.kind === "structure"}
-            <span class="font-medium text-[var(--text)]">{card.lead.entity_label ?? ""}</span>
-          {:else}
-            {@render subjectRef(s, false)}
-          {/if}
+      <!-- Line 2: the item itself and what changed on it. -->
+      <p class="m-0 truncate text-body-sm leading-5">
+        {#if s.type === "issue" && s.status && !card.batch}
+          <span class="inline-block align-[-2px] mr-1"><StatusIcon status={s.status} size={12} /></span>
         {/if}
+        {@render inlineDetails(card)}
       </p>
 
-      {#if !card.batch && s.title && card.kind !== "structure"}
-        <p class="mt-0.5 m-0 flex items-start gap-1.5 text-body leading-snug min-w-0">
-          {#if s.type === "issue" && s.status}
-            <span class="mt-[3px] shrink-0"><StatusIcon status={s.status} size={13} /></span>
-          {/if}
-          {@render subjectRef({ ...s, label: null }, true)}
-        </p>
-      {/if}
-
-      {@render details(card)}
-
-      <footer class="mt-2.5 flex items-center gap-1 -ml-1.5">
-        {#if target}
-          <button
-            class="inline-flex items-center gap-1.5 text-caption px-1.5 py-1 rounded-md transition-colors
-                   {composerFor === card.key ? 'text-[var(--text)] bg-[var(--bg-subtle)]' : 'text-[var(--text-faint)] hover:text-[var(--text)] hover:bg-[var(--bg-subtle)]'}"
-            onclick={() => openComposer(card)}
-          ><MessageSquare size={13} />Comment</button>
-        {/if}
-        {#if !card.batch && s.href}
-          <button
-            class="inline-flex items-center gap-1 text-caption px-1.5 py-1 rounded-md text-[var(--text-faint)]
-                   hover:text-[var(--text)] hover:bg-[var(--bg-subtle)] transition-colors"
-            onclick={() => navigate(s.href!)}
-          >Open<ArrowUpRight size={12} /></button>
-        {/if}
-      </footer>
+      {@render commentPreview(card)}
 
       {#if composerFor === card.key && target}
         <div class="mt-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg)] focus-within:border-[var(--accent)] transition-colors" transition:fly={{ y: -4, duration: 150 }}>
           <textarea
             data-composer={card.key}
-            class="block w-full resize-none bg-transparent px-3 py-2 text-body-sm text-[var(--text)]
-                   placeholder:text-[var(--text-faint)] outline-none min-h-[64px]"
+            class="block w-full resize-none bg-transparent px-2.5 py-1.5 text-body-sm text-[var(--text)]
+                   placeholder:text-[var(--text-faint)] outline-none min-h-[52px]"
             placeholder="Comment on {target.label ?? 'this page'}… Markdown works"
             bind:value={draft}
             use:autoGrow
             onkeydown={(e) => composerKey(e, card)}
             disabled={sending}
           ></textarea>
-          <div class="flex items-center justify-end gap-2 px-2 pb-2">
-            <span class="hidden sm:inline mr-auto pl-1 text-micro text-[var(--text-faint)]">⌘/Ctrl + Enter to send · Esc to close</span>
+          <div class="flex items-center justify-end gap-1.5 px-1.5 pb-1.5">
+            <span class="hidden sm:inline mr-auto pl-1 text-micro text-[var(--text-faint)]">⌘/Ctrl + Enter · Esc</span>
             <button
-              class="text-caption px-2.5 py-1 rounded-md text-[var(--text-muted)] hover:bg-[var(--bg-subtle)]"
+              class="text-caption px-2 py-0.5 rounded-md text-[var(--text-muted)] hover:bg-[var(--bg-subtle)]"
               onclick={() => (composerFor = null)}
             >Cancel</button>
             <button
-              class="inline-flex items-center gap-1.5 text-caption font-medium px-2.5 py-1 rounded-md
+              class="inline-flex items-center gap-1 text-caption font-medium px-2 py-0.5 rounded-md
                      text-[var(--btn-success-text)] bg-[var(--btn-success)] hover:bg-[var(--btn-success-hover)]
                      disabled:opacity-50 transition-colors"
               disabled={!draft.trim() || sending}
               onclick={() => sendComment(card)}
-            ><SendHorizontal size={12} />{sending ? "Sending…" : "Send"}</button>
+            ><SendHorizontal size={11} />{sending ? "Sending…" : "Send"}</button>
           </div>
         </div>
       {/if}
@@ -804,13 +753,12 @@
 
       <div class="flex-1 min-w-0 w-full max-w-[720px] mx-auto">
         {#if loading}
-          <div class="flex flex-col gap-3">
-            {#each Array(5) as _, i (i)}
-              <div class="flex gap-3 px-4 py-3.5 rounded-xl border border-[var(--border)]">
-                <Skeleton variant="circle" class="size-8 shrink-0" />
-                <div class="flex-1 flex flex-col gap-2">
-                  <Skeleton variant="bar" class="h-3 w-40" />
-                  <Skeleton variant="bar" class="h-3 w-3/4" />
+          <div class="flex flex-col rounded-xl border border-[var(--border)] divide-y divide-[var(--border)]">
+            {#each Array(8) as _, i (i)}
+              <div class="flex gap-2.5 px-3 py-2.5">
+                <Skeleton variant="circle" class="size-6 shrink-0" />
+                <div class="flex-1 flex flex-col gap-1.5 pt-1">
+                  <Skeleton variant="bar" class="h-3 w-2/3" />
                   <Skeleton variant="bar" class="h-3 w-1/2" />
                 </div>
               </div>
@@ -836,12 +784,13 @@
           </div>
         {:else}
           {#each days as day (day.label)}
-            <section class="mb-6 last:mb-0">
-              <div class="sticky top-0 z-10 -mx-1 px-1 py-2 bg-[var(--bg)] flex items-center gap-2">
+            <section class="mb-4 last:mb-0">
+              <div class="sticky top-0 z-10 -mx-1 px-1 py-1.5 bg-[var(--bg)] flex items-center gap-2">
                 <span class="text-micro font-semibold uppercase tracking-widest text-[var(--text-muted)]">{day.label}</span>
+                <span class="text-micro text-[var(--text-faint)] tabular-nums">{day.cards.length}</span>
                 <div class="flex-1 h-px bg-[var(--border)]"></div>
               </div>
-              <div class="flex flex-col gap-2.5">
+              <div class="flex flex-col rounded-xl border border-[var(--border)] bg-[var(--surface)] divide-y divide-[var(--border)] overflow-hidden">
                 {#each day.cards as card (card.key)}
                   {@render feedCard(card)}
                 {/each}
@@ -865,12 +814,26 @@
 </div>
 
 <style>
-  .feed-fresh {
+  /* New rows: a brief accent bar on the left edge. */
+  .feed-fresh::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--accent);
     animation: feed-fresh 4s ease-out forwards;
   }
   @keyframes feed-fresh {
-    0% { box-shadow: 0 0 0 3px var(--accent-subtle); }
-    100% { box-shadow: 0 0 0 0 transparent; border-color: var(--border); }
+    0%, 60% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  /* Row actions appear on hover with a mouse; touch screens always see them. */
+  @media (hover: hover) and (pointer: fine) {
+    .feed-actions { opacity: 0; transition: opacity 120ms; }
+    :global(.feed-row:hover) .feed-actions,
+    .feed-actions:focus-within { opacity: 1; }
   }
   .feed-comment :global(p:first-child) { margin-top: 0; }
   .feed-comment :global(p:last-child) { margin-bottom: 0; }
