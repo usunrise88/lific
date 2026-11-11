@@ -128,14 +128,14 @@ function subjectOf(a: FeedItem): FeedSubject {
   }
   if (a.entity_type === "plan" || a.entity_type === "plan_step") {
     return {
-      key: `plan:${a.entity_label ?? a.entity_id}`,
+      key: `plan:${a.plan_id ?? a.entity_label ?? a.entity_id}`,
       type: "plan",
       label: a.entity_label,
-      title: a.entity_type === "plan" && a.action === "create" ? a.new_value : null,
+      title: a.plan_title ?? (a.entity_type === "plan" && a.action === "create" ? a.new_value : null),
       status: null,
       issueId: null,
       pageId: null,
-      href: project && a.entity_type === "plan" ? `/${project}/plans/${a.entity_id}` : null,
+      href: project && a.plan_id !== null ? `/${project}/plans/${a.plan_id}` : null,
     };
   }
   return {

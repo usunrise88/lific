@@ -36,6 +36,8 @@ function row(over: Partial<FeedItem>): FeedItem {
     issue_title: "Title",
     issue_status: "todo",
     page_title: null,
+    plan_id: null,
+    plan_title: null,
     ...over,
   };
 }
@@ -93,15 +95,26 @@ describe("feed cards", () => {
 
   test("a plan created with its steps is led by the plan", () => {
     const cards = buildCards([
-      row({ entity_type: "plan_step", entity_id: 85, entity_label: "FORGE-PLAN-1", issue_id: null, action: "create", kind: "plan", verb: "created" }),
-      row({ entity_type: "plan_step", entity_id: 84, entity_label: "FORGE-PLAN-1", issue_id: null, action: "create", kind: "plan", verb: "created" }),
-      row({ entity_type: "plan", entity_id: 3, entity_label: "FORGE-PLAN-1", issue_id: null, action: "create", new_value: "Roadmap", kind: "plan", verb: "created" }),
+      row({ entity_type: "plan_step", entity_id: 85, entity_label: "FORGE-PLAN-1", issue_id: null, action: "create", kind: "plan", verb: "created", plan_id: 3, plan_title: "Roadmap" }),
+      row({ entity_type: "plan_step", entity_id: 84, entity_label: "FORGE-PLAN-1", issue_id: null, action: "create", kind: "plan", verb: "created", plan_id: 3, plan_title: "Roadmap" }),
+      row({ entity_type: "plan", entity_id: 3, entity_label: "FORGE-PLAN-1", issue_id: null, action: "create", new_value: "Roadmap", kind: "plan", verb: "created", plan_id: 3, plan_title: "Roadmap" }),
     ]);
     expect(cards).toHaveLength(1);
     expect(cards[0].lead.entity_type).toBe("plan");
     expect(cards[0].subjects[0].title).toBe("Roadmap");
     expect(cards[0].subjects[0].href).toBe("/PRISM/plans/3");
+    expect(cards[0].subjects[0].title).toBe("Roadmap");
     expect(verbFor(cards[0])).toEqual({ verb: "created", word: "created", rest: "plan" });
+  });
+});
+
+describe("plan links", () => {
+  test("a step event opens its plan, not the step", () => {
+    const cards = buildCards([
+      row({ entity_type: "plan_step", entity_id: 122, entity_label: "DSITE-PLAN-2", project_identifier: "DSITE", issue_id: null, action: "update", field: "done", new_value: "1", kind: "plan", verb: "completed", plan_id: 5, plan_title: "EN site edits" }),
+    ]);
+    expect(cards[0].subjects[0].href).toBe("/DSITE/plans/5");
+    expect(cards[0].subjects[0].title).toBe("EN site edits");
   });
 });
 

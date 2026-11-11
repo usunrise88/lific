@@ -119,6 +119,10 @@ pub struct FeedItem {
     pub issue_title: Option<String>,
     pub issue_status: Option<String>,
     pub page_title: Option<String>,
+    /// The plan a plan or plan-step row belongs to, and its title. A step row
+    /// only carries its own id; the plan is found by its label ("DSITE-PLAN-2").
+    pub plan_id: Option<i64>,
+    pub plan_title: Option<String>,
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -204,12 +208,16 @@ pub fn list_feed(conn: &Connection, filter: &FeedFilter) -> Result<FeedPage, Lif
                 a.entity_label, a.project_id, a.issue_id, a.page_id,
                 a.action, a.field, a.old_value, a.new_value,
                 {KIND_SQL}, p.identifier, p.name,
-                i.title, i.status, pg.title, {VERB_SQL}
+                i.title, i.status, pg.title, {VERB_SQL}, pl.id, pl.title
          FROM audit_log a
          LEFT JOIN users u ON u.id = a.actor_user_id
          LEFT JOIN projects p ON p.id = a.project_id
          LEFT JOIN issues i ON i.id = a.issue_id AND i.deleted_at IS NULL
          LEFT JOIN pages pg ON pg.id = a.page_id AND pg.deleted_at IS NULL
+         LEFT JOIN plans pl ON pl.project_id = a.project_id
+              AND ((a.entity_type = 'plan' AND pl.id = a.entity_id)
+                OR (a.entity_type = 'plan_step'
+                    AND p.identifier || '-PLAN-' || pl.sequence = a.entity_label))
          WHERE {}
          ORDER BY a.id DESC
          LIMIT ?{}",
@@ -247,6 +255,8 @@ pub fn list_feed(conn: &Connection, filter: &FeedFilter) -> Result<FeedPage, Lif
             issue_status: row.get(21)?,
             page_title: row.get(22)?,
             verb: row.get(23)?,
+            plan_id: row.get(24)?,
+            plan_title: row.get(25)?,
         })
     })?;
     let items = rows.collect::<Result<Vec<_>, _>>()?;
@@ -440,6 +450,42 @@ mod tests {
         .unwrap();
         assert_eq!(created_rows.items.len(), 1);
         assert_eq!(created_rows.items[0].activity.issue_id, Some(created.id));
+    }
+
+    #[test]
+    fn plan_and_step_rows_know_their_plan() {
+        let pool = crate::db::open_memory().unwrap();
+        let (older_id, roadmap_id) = {
+            let conn = pool.write().unwrap();
+            let pid = project(&conn, "PLN");
+            let plan = |title: &str| {
+                queries::plans::create_plan(
+                    &conn,
+                    &CreatePlan { project_id: pid, title: title.into(), issue_id: None, steps: vec![] },
+                )
+                .unwrap()
+            };
+            let older = plan("Older");
+            let roadmap = plan("Roadmap");
+            queries::plans::add_step(&conn, roadmap.id, None, "Ship it", "", None).unwrap();
+            (older.id, roadmap.id)
+        };
+        let conn = pool.read().unwrap();
+        let page = list_feed(&conn, &FeedFilter { kinds: Some(vec!["plan".into()]), ..Default::default() }).unwrap();
+
+        let roadmap_rows: Vec<_> = page
+            .items
+            .iter()
+            .filter(|i| i.activity.entity_label.as_deref() == Some("PLN-PLAN-2"))
+            .collect();
+        assert!(roadmap_rows.iter().any(|i| i.activity.entity_type == "plan_step"), "a step row exists");
+        assert!(roadmap_rows.iter().any(|i| i.activity.entity_type == "plan"), "the plan row exists");
+        for row in roadmap_rows {
+            assert_eq!(row.plan_id, Some(roadmap_id), "{} row opens its own plan", row.activity.entity_type);
+            assert_eq!(row.plan_title.as_deref(), Some("Roadmap"));
+        }
+        let older = page.items.iter().find(|i| i.activity.entity_label.as_deref() == Some("PLN-PLAN-1")).unwrap();
+        assert_eq!(older.plan_id, Some(older_id));
     }
 
     #[test]

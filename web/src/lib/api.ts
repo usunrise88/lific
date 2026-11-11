@@ -1387,6 +1387,10 @@ export interface FeedItem extends Activity {
   issue_title: string | null;
   issue_status: string | null;
   page_title: string | null;
+  /** The plan a plan or plan-step row belongs to (a step row only carries
+   *  its own id), and its title. */
+  plan_id: number | null;
+  plan_title: string | null;
 }
 
 export interface FeedPage {
