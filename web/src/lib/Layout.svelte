@@ -32,10 +32,11 @@
   import { currentUser, getUserRevision, publishUser } from "./userState";
   import { mobileNavState } from "./mobileNavState.svelte";
   import { navLink } from "./navLink";
-  import { Settings, List, LayoutGrid, FileText, Plus, Layers, History, ListChecks, LayoutDashboard, Search, ChevronRight, Sun, Moon, Monitor, Menu, Home, TrendingUp, HelpCircle, Folder, FolderPlus, FolderMinus, Pencil, Trash2, PanelLeftClose, PanelLeftOpen, Waypoints, Paperclip, Activity } from "lucide-svelte";
+  import { Settings, List, LayoutGrid, FileText, Plus, Layers, History, ListChecks, LayoutDashboard, Search, ChevronRight, Sun, Moon, Monitor, Menu, Home, TrendingUp, HelpCircle, Folder, FolderPlus, FolderMinus, Pencil, Trash2, PanelLeftClose, PanelLeftOpen, Waypoints, Paperclip, Activity, Inbox } from "lucide-svelte";
   import { onDestroy, setContext, untrack, tick } from "svelte";
   import { Ellipsis, ArrowUp, ArrowDown } from "lucide-svelte";
   import { peekState } from "./issues/peek.svelte";
+  import { logoTarget, loadLogoTarget, logoRoute, REPO_URL } from "./logoTarget.svelte";
   import PeekPanel from "./issues/PeekPanel.svelte"; // LIF-248: hoisted here so it's available on every route
   import PagePeekPanel from "./pages/PagePeekPanel.svelte"; // pages sibling of PeekPanel, same reasoning
   import { contextMenuState, openContextMenu } from "./contextMenuState.svelte";
@@ -657,6 +658,12 @@
 
   let activeProject = $derived(projectFromRoute());
 
+  // Fork: where the brand logo leads (instance setting).
+  $effect(() => {
+    void loadLogoTarget();
+  });
+  let brandRoute = $derived(logoRoute(logoTarget.value));
+
   type RecentSection = "issues" | "modules" | "pages" | "plans";
   let recentIssues = $state<Issue[]>([]);
   let recentModules = $state<Module[]>([]);
@@ -814,6 +821,7 @@
   let mobileSection = $derived.by(() => {
     if (route === "/") return "Home";
     if (route === "/feed") return "Feed";
+    if (route === "/for-me") return "For me";
     if (isActive("/settings")) return "Settings";
     if (route === "/projects/new") return "New project";
     if (route === "/projects/import") return "Import archive";
@@ -863,11 +871,19 @@
         use:observeSidebarFontSize={(size) => sidebarFontSize = size}></span>
       <!-- Brand header -->
       <div class="px-3 pt-3 pb-2 flex items-center gap-1.5">
+        <!-- Fork: the instance setting `logo_target` decides whether the logo
+             opens the project on GitHub (upstream) or an in-app page. -->
         <a
-          href="https://github.com/VoidNullable/lific"
-          target="_blank"
-          rel="noopener noreferrer"
-          title="View Lific on GitHub"
+          href={brandRoute ? `#${brandRoute}` : REPO_URL}
+          target={brandRoute ? undefined : "_blank"}
+          rel={brandRoute ? undefined : "noopener noreferrer"}
+          title={brandRoute ? "Go to " + (brandRoute === "/" ? "Home" : brandRoute === "/feed" ? "Feed" : "For me") : "View Lific on GitHub"}
+          onclick={(e) => {
+            if (brandRoute && !e.metaKey && !e.ctrlKey && !e.shiftKey && e.button === 0) {
+              e.preventDefault();
+              navigate(brandRoute);
+            }
+          }}
           class="sidebar-brand flex flex-1 min-w-0 items-center gap-2.5 px-1 py-1 transition-colors"
         >
           <img src="/logo.webp" alt="" width="26" height="26" class="rounded-md shrink-0" />
@@ -921,14 +937,22 @@
           <Home size={14} class="shrink-0" />
           Home
         </a>
-        <!-- Fork: live cross-project activity. Last top-level entry, so it
-             carries the section gap Home used to. -->
+        <!-- Fork: live cross-project activity, and the issues waiting on a
+             person. For me is the last top-level entry, so it carries the
+             section gap Home used to. -->
         <a href="#/feed" use:navLink={navigate} aria-current={route === "/feed" ? "page" : undefined}
-          class="sidebar-destination sidebar-home w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md
+          class="sidebar-destination w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md
                  text-left text-body-sm transition-colors"
         >
           <Activity size={14} class="shrink-0" />
           Feed
+        </a>
+        <a href="#/for-me" use:navLink={navigate} aria-current={route === "/for-me" ? "page" : undefined}
+          class="sidebar-destination sidebar-home w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md
+                 text-left text-body-sm transition-colors"
+        >
+          <Inbox size={14} class="shrink-0" />
+          For me
         </a>
 
         <!-- One project entry: the pill plus its sub-nav. Shared verbatim by

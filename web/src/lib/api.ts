@@ -272,7 +272,13 @@ export interface InstanceInfo {
   /** LIF-215: single-user mode — the web app should auto-sign-in as the admin
    *  instead of showing the login form. */
   web_auto_login: boolean;
+  /** Fork: where the sidebar logo leads. */
+  logo_target?: LogoTarget;
 }
+
+/** Fork: the sidebar logo's destination — the project on GitHub
+ *  (upstream behavior) or an in-app page. */
+export type LogoTarget = "repo" | "home" | "feed" | "for-me";
 
 export async function getInstance() {
   return request<InstanceInfo>("/instance");
@@ -290,6 +296,8 @@ export interface InstanceSettings {
    *  LIF-194). Off by default — see src/authz.rs for the legacy vs
    *  enforced mode split. */
   authz_enforced: boolean;
+  /** Fork: see `LogoTarget`. */
+  logo_target: LogoTarget;
 }
 
 export interface InstanceSettingsPatch {
@@ -302,6 +310,7 @@ export interface InstanceSettingsPatch {
   login_message?: string;
   web_auto_login?: boolean;
   authz_enforced?: boolean;
+  logo_target?: LogoTarget;
 }
 
 export async function getInstanceSettings() {
@@ -1394,6 +1403,70 @@ export async function listFeed(params: FeedParams = {}) {
 /** Everyone who has acted in the caller's visible projects. */
 export async function listFeedActors() {
   return request<ActorStat[]>("/feed/actors");
+}
+
+// ── For me: open issues a person has to act on (fork) ──────
+
+export type ForMeScope = "me" | "anyone" | "others";
+export type ForMeSort = "newest" | "oldest" | "updated" | "priority";
+export type ForMeRequestedBy = "all" | "agents" | "people";
+
+export interface ForMeItem extends Issue {
+  project_identifier: string;
+  project_name: string;
+  /** When the issue was last handed to people. */
+  assigned_at: string;
+  assigned_by: {
+    user_id: number | null;
+    name: string;
+    username: string | null;
+    is_bot: boolean;
+  } | null;
+  /** Named for the caller. */
+  mine: boolean;
+  /** A user wait points at the caller. */
+  waiting_on_me: boolean;
+  comment_count: number;
+  last_comment: {
+    author: string;
+    is_bot: boolean;
+    content: string;
+    created_at: string;
+  } | null;
+}
+
+export interface ForMePage {
+  items: ForMeItem[];
+  total: number;
+  has_more: boolean;
+  counts: Record<ForMeScope, number>;
+}
+
+export interface ForMeParams {
+  projects?: number[];
+  statuses?: string[];
+  priorities?: string[];
+  scopes?: ForMeScope[];
+  requested_by?: ForMeRequestedBy;
+  sort?: ForMeSort;
+  mine_first?: boolean;
+  limit?: number;
+  offset?: number;
+}
+
+export async function listForMe(params: ForMeParams = {}) {
+  const q = new URLSearchParams();
+  if (params.projects) q.set("projects", params.projects.join(","));
+  if (params.statuses) q.set("statuses", params.statuses.join(","));
+  if (params.priorities) q.set("priorities", params.priorities.join(","));
+  if (params.scopes) q.set("scopes", params.scopes.join(","));
+  if (params.requested_by && params.requested_by !== "all") q.set("requested_by", params.requested_by);
+  if (params.sort) q.set("sort", params.sort);
+  if (params.mine_first) q.set("mine_first", "true");
+  if (params.limit !== undefined) q.set("limit", String(params.limit));
+  if (params.offset !== undefined) q.set("offset", String(params.offset));
+  const qs = q.toString();
+  return request<ForMePage>(`/for-me${qs ? `?${qs}` : ""}`);
 }
 
 /** Comments shown per request. One page of a thread, not the thread. */

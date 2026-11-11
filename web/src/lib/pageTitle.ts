@@ -90,6 +90,8 @@ export function routePageTitle(p: RouteTitleInput): string {
       return pageTitle("Home");
     case "feed":
       return pageTitle("Feed");
+    case "for-me":
+      return pageTitle("For me");
     case "settings":
       return pageTitle("Settings");
     case "instance-settings":

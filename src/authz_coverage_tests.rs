@@ -383,6 +383,7 @@ fn rest_manifest() -> HashMap<(&'static str, &'static str), Classification> {
         (("GET", "/api/home/overview"), Filtered),
         (("GET", "/api/feed"), Filtered),
         (("GET", "/api/feed/actors"), Filtered),
+        (("GET", "/api/for-me"), Filtered),
         (("POST", "/api/issues"), Gated(Maintainer)),
         (("GET", "/api/issues/{id}"), Gated(Viewer)),
         (("PUT", "/api/issues/{id}"), Gated(Maintainer)),

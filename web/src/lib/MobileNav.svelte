@@ -34,6 +34,7 @@
     Search,
     Home,
     Activity,
+    Inbox,
     ChevronRight,
     ChevronLeft,
     X,
@@ -660,6 +661,15 @@
         >
           <Activity size={18} class="shrink-0" />
           Feed
+        </a>
+        <a
+          class="sidebar-destination mobile-main-row w-full min-h-12 flex items-center gap-3 px-3 rounded-lg text-left text-body-lg transition-colors"
+          href="#/for-me"
+          aria-current={route === "/for-me" ? "page" : undefined}
+          onclick={(e) => go(e, "/for-me")}
+        >
+          <Inbox size={18} class="shrink-0" />
+          For me
         </a>
 
         <div class="flex items-center justify-between pl-3 pr-1 pt-2 pb-1">

@@ -3,6 +3,7 @@
   import Signup from "./routes/Signup.svelte";
   import Home from "./routes/Home.svelte";
   import Feed from "./routes/Feed.svelte";
+  import ForMe from "./routes/ForMe.svelte";
   import Settings from "./routes/Settings.svelte";
   import InstanceSettings from "./routes/InstanceSettings.svelte";
   import IssueList from "./routes/IssueList.svelte";
@@ -487,6 +488,7 @@
     | { type: "public-redirect"; to: string }
     | { type: "app"; page: "home" }
     | { type: "app"; page: "feed" }
+    | { type: "app"; page: "for-me" }
     | { type: "app"; page: "settings" }
     | { type: "app"; page: "instance-settings" }
     | { type: "app"; page: "project-new" }
@@ -572,6 +574,9 @@
     }
     if (r === "/feed") {
       return { type: "app", page: "feed" };
+    }
+    if (r === "/for-me") {
+      return { type: "app", page: "for-me" };
     }
     if (r === "/settings") {
       return { type: "app", page: "settings" };
@@ -895,6 +900,8 @@
       />
     {:else if parsed.page === "feed"}
       <Feed {navigate} />
+    {:else if parsed.page === "for-me"}
+      <ForMe {navigate} />
     {:else if parsed.page === "settings"}
       <Settings {navigate} />
     {:else if parsed.page === "instance-settings"}

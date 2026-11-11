@@ -431,7 +431,7 @@ export function activeFilterCount(f: FeedFilters): number {
 /** Project ids the filters select, or undefined for "every project".
  *  Groups and single projects add up. */
 export function selectedProjectIds(
-  f: FeedFilters,
+  f: Pick<FeedFilters, "groups" | "projects">,
   groups: { id: number; project_ids: number[] }[],
 ): number[] | undefined {
   if (f.groups.length === 0 && f.projects.length === 0) return undefined;

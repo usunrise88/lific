@@ -5,6 +5,8 @@ pub(crate) mod briefing;
 pub(crate) mod changes;
 pub(crate) mod comments;
 pub(crate) mod feed;
+pub(crate) mod for_me;
+pub(crate) mod fork_settings;
 pub(crate) mod home;
 pub(crate) mod insights;
 mod issues;

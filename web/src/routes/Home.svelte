@@ -54,6 +54,7 @@
     User,
     Hourglass,
     Bot,
+    ArrowRight,
   } from "lucide-svelte";
   import { projectCodeOf } from "../lib/references";
   import { getContext } from "svelte";
@@ -389,6 +390,25 @@
   </div>
 {/snippet}
 
+<!-- Fork: a widget's way into its full page (Feed, For me). `padded` is for
+     a widget whose body already has padding. -->
+{#snippet sectionLink(path: string, label: string, padded = false)}
+  <a
+    href="#{path}"
+    class="group flex items-center justify-end gap-1 text-caption text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors
+           {padded ? 'mt-3 pt-2.5 border-t border-[var(--border)]' : 'px-4 py-2.5 border-t border-[var(--border)]'}"
+    onclick={(e) => {
+      if (!e.metaKey && !e.ctrlKey && !e.shiftKey && e.button === 0) {
+        e.preventDefault();
+        navigate(path);
+      }
+    }}
+  >
+    {label}
+    <ArrowRight size={12} class="transition-transform group-hover:translate-x-0.5" />
+  </a>
+{/snippet}
+
 {#snippet cardHeader(Icon: typeof Bot, title: string, subtitle: string, count?: number)}
   <div class="flex items-center gap-2.5 px-4 py-3 border-b border-[var(--border)]">
     <span class="size-7 shrink-0 rounded-lg bg-[var(--bg-subtle)] flex items-center justify-center text-[var(--text-muted)]">
@@ -643,6 +663,7 @@
                 </div>
               {/each}
             {/if}
+            {@render sectionLink("/for-me", "All work for people in For me")}
           </section>
         </div>
 
@@ -693,6 +714,7 @@
                 {/each}
               </div>
             {/if}
+            {@render sectionLink("/feed", "Everything, live, in the Feed", true)}
           </section>
 
           <aside class="flex flex-col gap-6 min-w-0">

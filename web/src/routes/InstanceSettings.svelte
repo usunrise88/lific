@@ -21,7 +21,9 @@
     type UserSummary,
     type InstanceSettings,
     type InstanceSettingsPatch,
+    type LogoTarget,
   } from "../lib/api";
+  import { logoTarget } from "../lib/logoTarget.svelte";
   import {
     RECENT_AUTH_ERROR,
     needsReauth,
@@ -69,6 +71,7 @@
   let fMessage = $state("");
   let fAutoLogin = $state(false);
   let fAuthzEnforced = $state(false);
+  let fLogoTarget = $state<LogoTarget>("repo");
 
   let saving = $state(false);
   let saveError = $state("");
@@ -83,6 +86,7 @@
     fMessage = s.login_message ?? "";
     fAutoLogin = s.web_auto_login;
     fAuthzEnforced = s.authz_enforced;
+    fLogoTarget = s.logo_target ?? "repo";
   }
 
   onMount(async () => {
@@ -148,6 +152,10 @@
     if (patch.allow_signup !== undefined) fSignups = from.allow_signup;
     if (patch.web_auto_login !== undefined) fAutoLogin = from.web_auto_login;
     if (patch.authz_enforced !== undefined) fAuthzEnforced = from.authz_enforced;
+    if (patch.logo_target !== undefined) {
+      fLogoTarget = from.logo_target ?? "repo";
+      logoTarget.value = fLogoTarget;
+    }
   }
 
   /** One save. `recover` is false once the password prompt has already
@@ -282,6 +290,12 @@
     if (settings && v !== fAutoLogin) {
       fAutoLogin = v;
       commit({ web_auto_login: v });
+    }
+  }
+  function setLogoTarget(v: LogoTarget) {
+    if (settings && v !== fLogoTarget) {
+      fLogoTarget = v;
+      commit({ logo_target: v });
     }
   }
   function setAuthzEnforced(v: boolean) {
@@ -758,6 +772,29 @@
               ></textarea>
               <span class="block text-caption text-[var(--text)] mt-1.5">A short note shown on the sign-in screen. Leave blank for none.</span>
             </label>
+
+            <!-- Fork: where the sidebar logo leads. -->
+            <div>
+              <span class="block text-micro font-semibold uppercase tracking-widest text-[var(--text)] mb-1.5">Logo link</span>
+              <div class="inline-flex flex-wrap gap-1 p-1 rounded-xl bg-[var(--bg)] shadow-[inset_0_1px_2px_rgba(0,0,0,0.10)]">
+                {#each [["repo", "Lific on GitHub"], ["home", "Home"], ["feed", "Feed"], ["for-me", "For me"]] as [value, label] (value)}
+                  <button
+                    type="button"
+                    aria-pressed={fLogoTarget === value}
+                    class="px-3.5 py-2 rounded-lg text-body-sm font-semibold transition-all motion-safe:active:scale-[0.98]
+                           {fLogoTarget === value
+                      ? 'bg-[var(--surface)] text-[var(--text)] shadow-[0_1px_2px_rgba(0,0,0,0.10)] ring-1 ring-[var(--border)]'
+                      : 'text-[var(--text-muted)] hover:text-[var(--text)]'}"
+                    onclick={() => setLogoTarget(value as LogoTarget)}
+                  >{label}</button>
+                {/each}
+              </div>
+              <span class="block text-caption text-[var(--text)] mt-2">
+                {fLogoTarget === "repo"
+                  ? "Clicking the Lific logo in the sidebar opens the project's GitHub repository in a new tab."
+                  : `Clicking the Lific logo in the sidebar opens ${fLogoTarget === "home" ? "Home" : fLogoTarget === "feed" ? "the Feed" : "For me"}.`}
+              </span>
+            </div>
 
             <!-- Single-user mode (LIF-215): auto-sign-in the web UI as the
                  admin. A real auth bypass, so it's set apart with a divider and

@@ -10,6 +10,7 @@ mod auth;
 pub mod comments;
 mod export;
 mod feed;
+mod for_me;
 mod git_hook;
 mod home;
 mod insights;
@@ -170,6 +171,8 @@ fn router_impl(
         // visible projects like the home overview.
         .route("/api/feed", get(feed::feed))
         .route("/api/feed/actors", get(feed::actors))
+        // Fork: open issues a person has to act on (the For me page).
+        .route("/api/for-me", get(for_me::for_me))
         .route(
             "/api/issues/{id}",
             get(issues::get_issue)
