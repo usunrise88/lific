@@ -3,6 +3,7 @@
 //! like `/api/home/overview`; the query lives in `db::queries::feed`.
 //!
 //! List filters are comma-separated: `projects=3,7`, `kinds=status,comment`,
+//! `verbs=completed,commented`,
 //! `actors=12,system`. `agents=only|exclude` keeps or drops agent rows.
 //! `before` pages down from an id, `after` fetches what is newer than one.
 
@@ -15,7 +16,7 @@ use crate::authz;
 use crate::db::DbPool;
 use crate::db::models::ActorStat;
 use crate::db::queries::feed::{
-    ActorRef, AgentFilter, FeedFilter, FeedPage, KINDS, feed_actors, list_feed,
+    ActorRef, AgentFilter, FeedFilter, FeedPage, KINDS, VERBS, feed_actors, list_feed,
 };
 use crate::error::LificError;
 
@@ -25,6 +26,7 @@ use super::with_read;
 pub(super) struct FeedQuery {
     pub projects: Option<String>,
     pub kinds: Option<String>,
+    pub verbs: Option<String>,
     pub actors: Option<String>,
     pub agents: Option<String>,
     pub before: Option<i64>,
@@ -64,6 +66,26 @@ impl FeedQuery {
                             Err(LificError::BadRequest(format!(
                                 "unknown kind '{k}'. Use: {}",
                                 KINDS.join(", ")
+                            )))
+                        }
+                    })
+                    .collect()
+            })
+            .transpose()
+    }
+
+    fn verbs(&self) -> Result<Option<Vec<String>>, LificError> {
+        split(&self.verbs)
+            .map(|values| {
+                values
+                    .into_iter()
+                    .map(|v| {
+                        if VERBS.contains(&v) {
+                            Ok(v.to_string())
+                        } else {
+                            Err(LificError::BadRequest(format!(
+                                "unknown verb '{v}'. Use: {}",
+                                VERBS.join(", ")
                             )))
                         }
                     })
@@ -114,6 +136,7 @@ pub(super) async fn feed(
         visible: visible.as_ref(),
         projects: parse_ids(&q.projects, "project")?,
         kinds: q.kinds()?,
+        verbs: q.verbs()?,
         actors: q.actors()?,
         agents: q.agents()?,
         before: q.before,
@@ -171,6 +194,12 @@ mod tests {
 
         let (_, only) = get(&app, &format!("/api/feed?kinds=created&projects={project_id}")).await;
         assert!(only["items"].as_array().unwrap().iter().all(|i| i["kind"] == "created"));
+
+        let (_, created) = get(&app, "/api/feed?verbs=created").await;
+        let created = created["items"].as_array().unwrap();
+        assert!(!created.is_empty() && created.iter().all(|i| i["verb"] == "created"));
+        let (status, _) = get(&app, "/api/feed?verbs=exploded").await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
 
         let (status, _) = get(&app, "/api/feed?kinds=bogus").await;
         assert_eq!(status, StatusCode::BAD_REQUEST);

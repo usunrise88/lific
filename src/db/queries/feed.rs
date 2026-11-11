@@ -42,6 +42,36 @@ const KIND_SQL: &str = "CASE
     ELSE 'structure'
 END";
 
+/// The verb a row shows as (colored in the Feed), in the order the Feed's
+/// action filter lists them. Unlike `kind` it ignores what was acted on: a
+/// created issue, page or plan are all `created`.
+pub const VERBS: &[&str] = &[
+    "created",
+    "commented",
+    "moved",
+    "completed",
+    "cancelled",
+    "assigned",
+    "edited",
+    "labeled",
+    "deleted",
+    "linked",
+];
+
+const VERB_SQL: &str = "CASE
+    WHEN a.action = 'delete' THEN 'deleted'
+    WHEN a.entity_type = 'comment' AND a.action = 'create' THEN 'commented'
+    WHEN a.action = 'create' THEN 'created'
+    WHEN a.field = 'status' AND a.new_value = 'done' THEN 'completed'
+    WHEN a.field = 'status' AND a.new_value = 'cancelled' THEN 'cancelled'
+    WHEN a.field = 'status' THEN 'moved'
+    WHEN a.entity_type = 'plan_step' AND a.field = 'done' AND a.new_value = '1' THEN 'completed'
+    WHEN a.action IN ('attach', 'detach') THEN 'labeled'
+    WHEN a.action IN ('link', 'unlink', 'wait', 'unwait') THEN 'linked'
+    WHEN a.action IN ('assign', 'unassign') THEN 'assigned'
+    ELSE 'edited'
+END";
+
 /// Who did it: a user (person or agent), or the unattributed system bucket.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ActorRef {
@@ -64,6 +94,7 @@ pub struct FeedFilter<'a> {
     pub visible: Option<&'a HashSet<i64>>,
     pub projects: Option<Vec<i64>>,
     pub kinds: Option<Vec<String>>,
+    pub verbs: Option<Vec<String>>,
     pub actors: Option<Vec<ActorRef>>,
     pub agents: AgentFilter,
     /// Rows strictly older than this id (paging down).
@@ -80,6 +111,7 @@ pub struct FeedItem {
     #[serde(flatten)]
     pub activity: Activity,
     pub kind: String,
+    pub verb: String,
     pub project_identifier: Option<String>,
     pub project_name: Option<String>,
     /// Current title and status of the issue the row belongs to, when it
@@ -121,6 +153,13 @@ pub fn list_feed(conn: &Connection, filter: &FeedFilter) -> Result<FeedPage, Lif
         }
         let marks = in_list(kinds.iter().map(|k| boxed(k.clone())).collect(), &mut params);
         clauses.push(format!("({KIND_SQL}) IN ({marks})"));
+    }
+    if let Some(verbs) = &filter.verbs {
+        if verbs.is_empty() {
+            return Ok(FeedPage { items: Vec::new(), has_more: false });
+        }
+        let marks = in_list(verbs.iter().map(|v| boxed(v.clone())).collect(), &mut params);
+        clauses.push(format!("({VERB_SQL}) IN ({marks})"));
     }
     if let Some(actors) = &filter.actors {
         if actors.is_empty() {
@@ -165,7 +204,7 @@ pub fn list_feed(conn: &Connection, filter: &FeedFilter) -> Result<FeedPage, Lif
                 a.entity_label, a.project_id, a.issue_id, a.page_id,
                 a.action, a.field, a.old_value, a.new_value,
                 {KIND_SQL}, p.identifier, p.name,
-                i.title, i.status, pg.title
+                i.title, i.status, pg.title, {VERB_SQL}
          FROM audit_log a
          LEFT JOIN users u ON u.id = a.actor_user_id
          LEFT JOIN projects p ON p.id = a.project_id
@@ -207,6 +246,7 @@ pub fn list_feed(conn: &Connection, filter: &FeedFilter) -> Result<FeedPage, Lif
             issue_title: row.get(20)?,
             issue_status: row.get(21)?,
             page_title: row.get(22)?,
+            verb: row.get(23)?,
         })
     })?;
     let items = rows.collect::<Result<Vec<_>, _>>()?;
@@ -339,6 +379,21 @@ mod tests {
         assert_eq!(status.project_identifier.as_deref(), Some("ONE"));
         assert_eq!(status.issue_title.as_deref(), Some("Fix login"));
         assert_eq!(status.issue_status.as_deref(), Some("active"));
+
+        assert_eq!(status.verb, "moved");
+        let created_row = all.items.iter().find(|i| i.kind == "created").unwrap();
+        assert_eq!(created_row.verb, "created");
+
+        let moved = list_feed(
+            &conn,
+            &FeedFilter {
+                verbs: Some(vec!["moved".into()]),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        assert_eq!(moved.items.len(), 1);
+        assert_eq!(moved.items[0].activity.new_value.as_deref(), Some("active"));
 
         let only_status = list_feed(
             &conn,

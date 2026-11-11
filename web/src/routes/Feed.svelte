@@ -6,7 +6,7 @@
   // socket, with a 15s poll as the fallback for events the socket does not
   // carry (pages, plans). Any issue or page card can be commented on in place.
 
-  import { getContext, tick } from "svelte";
+  import { getContext, tick, untrack } from "svelte";
   import { fly } from "svelte/transition";
   import {
     listFeed,
@@ -36,7 +36,7 @@
     activeFilterCount,
     selectedProjectIds,
     toggle,
-    KIND_OPTIONS,
+    VERB_OPTIONS,
     EMPTY_FILTERS,
     type FeedCard,
     type FeedFilters,
@@ -47,7 +47,9 @@
     type Density,
   } from "../lib/feed";
   import { startAutoRefresh } from "../lib/autoRefresh.svelte";
+  import { loadScroll, clearScroll, scrollSaver } from "../lib/scrollMemory";
   import { openPeek, peekState, dockPeek } from "../lib/issues/peek.svelte";
+  import { openPagePeek } from "../lib/pages/pagePeek.svelte";
   import PeekPanel from "../lib/issues/PeekPanel.svelte";
   import { toast } from "../lib/toast/toast.svelte";
   import StatusIcon from "../lib/StatusIcon.svelte";
@@ -111,7 +113,7 @@
   function params(): FeedParams {
     return {
       projects: selectedProjectIds(filters, groups),
-      kinds: filters.kinds.length ? filters.kinds : undefined,
+      verbs: filters.verbs.length ? filters.verbs : undefined,
       actors: filters.actors.length ? filters.actors : undefined,
       agents: filters.agents,
     };
@@ -124,20 +126,50 @@
     if (a.ok) actors = a.data;
   }
 
+  // Coming back to the Feed restores the rows and the scroll position it
+  // was left at (per tab); a filter change starts from the top.
+  const SCROLL_KEY = "feed";
+  const MAX_RESTORE_ROWS = 1000;
+  let firstLoad = true;
+  const rememberScroll = scrollSaver(SCROLL_KEY, () =>
+    scroller ? { top: scroller.scrollTop, count: items.length } : null,
+  );
+
   async function load() {
     const token = ++request;
     loading = true;
     error = "";
     pending = [];
-    const res = await listFeed({ ...params(), limit: PAGE_SIZE });
+    const restore = firstLoad ? loadScroll(SCROLL_KEY) : null;
+    if (!firstLoad) clearScroll(SCROLL_KEY);
+    firstLoad = false;
+    const want = restore ? Math.min(Math.max(restore.count, PAGE_SIZE), MAX_RESTORE_ROWS) : PAGE_SIZE;
+    const res = await listFeed({ ...params(), limit: Math.min(want, 200) });
     if (token !== request) return;
-    if (res.ok) {
-      items = res.data.items;
-      hasMore = res.data.has_more;
-    } else {
+    if (!res.ok) {
       error = res.error;
+      loading = false;
+      return;
+    }
+    items = res.data.items;
+    hasMore = res.data.has_more;
+    while (restore && hasMore && items.length < want) {
+      const more = await listFeed({
+        ...params(),
+        before: items[items.length - 1].id,
+        limit: Math.min(200, want - items.length),
+      });
+      if (token !== request || !more.ok) break;
+      items = [...items, ...more.data.items];
+      hasMore = more.data.has_more;
     }
     loading = false;
+    await tick();
+    if (scroller) {
+      // A restored visit goes back to its place; new filters start at the top.
+      scroller.scrollTop = restore ? restore.top : 0;
+      atTop = scroller.scrollTop < 120;
+    }
   }
 
   async function loadMore() {
@@ -213,7 +245,10 @@
     // Group membership only matters once a group is selected.
     if (filters.groups.length) void groups;
     saveFilters($state.snapshot(filters) as FeedFilters);
-    void load();
+    // Only the filters above trigger a reload: `load` itself reads groups
+    // and the list, and tracking those would reload (and forget the saved
+    // scroll position) whenever the group list arrives.
+    untrack(() => void load());
   });
 
   $effect(() =>
@@ -269,6 +304,7 @@
 
   function onScroll() {
     if (!scroller) return;
+    rememberScroll();
     atTop = scroller.scrollTop < 120;
     if (atTop && pending.length) void revealPending();
   }
@@ -330,6 +366,27 @@
     else if (s.href) navigate(s.href);
   }
 
+  // A click anywhere on a row or card previews its item (on wide screens in
+  // the right column). Its own controls (author, project, links, buttons)
+  // keep their meaning, and selecting text does not count as a click.
+  function onRowClick(e: MouseEvent, card: FeedCard) {
+    const target = e.target as HTMLElement;
+    if (target.closest("button, a, textarea, input, [data-row-ignore]")) return;
+    if (window.getSelection()?.toString()) return;
+    previewCard(card);
+  }
+
+  function onRowKey(e: KeyboardEvent, card: FeedCard) {
+    if (e.key === "Enter" && e.target === e.currentTarget) previewCard(card);
+  }
+
+  function previewCard(card: FeedCard) {
+    const s = card.subjects[0];
+    if (s.type === "issue" && s.label) openPeek(s.label);
+    else if (s.type === "page" && s.pageId !== null && s.href) openPagePeek(s.pageId, s.href);
+    else if (s.href) navigate(s.href);
+  }
+
   function commentTarget(card: FeedCard): FeedSubject | null {
     if (card.batch) return null;
     const s = card.subjects[0];
@@ -388,19 +445,30 @@
     expanded = next;
   }
 
-  const KIND_TONE: Record<string, string> = {
-    created: "var(--success)",
-    status: "var(--accent)",
-    comment: "var(--color-indigo-500)",
-    edit: "var(--text-muted)",
-    assignee: "var(--color-orange-400)",
-    label: "var(--text-muted)",
-    link: "var(--text-muted)",
-    page: "var(--text-muted)",
-    plan: "var(--accent)",
-    structure: "var(--text-faint)",
-  };
 </script>
+
+<!-- The action, as a badge in its verb's color, then the words after it. -->
+{#snippet phrase(card: FeedCard)}
+  {@const ph = verbFor(card)}
+  <span class="feed-verb verb-{ph.verb}">{ph.word}</span>{#if ph.rest}{" "}{ph.rest}{/if}
+{/snippet}
+
+<!-- What follows the phrase: the item, and for a move its new status. -->
+{#snippet subjectTail(card: FeedCard, joiner: string)}
+  {@const s = card.subjects[0]}
+  {@const verb = card.lead.verb}
+  {#if card.batch}
+    {#if verb === "moved"}{@render statusChip(card.lead.new_value)}{/if}
+  {:else if verb === "moved"}
+    {@render subjectRef(s, false)} {joiner} {@render statusChip(card.lead.new_value)}
+  {:else if verb === "assigned"}
+    {@render subjectRef(s, false)} to <span class="text-[var(--text)]">{assigneeLabel(card.lead.new_value ?? card.lead.old_value)}</span>
+  {:else if card.kind === "structure"}
+    <span class="font-medium text-[var(--text)]">{card.lead.entity_label ?? ""}</span>
+  {:else}
+    {@render subjectRef(s, false)}
+  {/if}
+{/snippet}
 
 {#snippet kindIcon(kind: string, size: number)}
   {#if kind === "created"}<CirclePlus {size} />
@@ -442,11 +510,12 @@
   {@const assigns = card.rows.filter((r) => r.kind === "assignee")}
   {@const links = card.rows.filter((r) => r.kind === "link")}
   {@const edits = card.rows.filter((r) => r.kind === "edit")}
-  {@const steps = card.rows.filter((r) => r.entity_type === "plan_step")}
+  <!-- Only added steps carry a title; a completed step's value is just "1". -->
+  {@const steps = card.rows.filter((r) => r.entity_type === "plan_step" && r.action === "create")}
   {@const s = card.subjects[0]}
   {#if card.batch}
     {@const shown = card.subjects.slice(0, BATCH_PREVIEW)}
-    {#each shown as b, i (b.key)}{#if i}<span class="text-[var(--text-faint)]">, </span>{/if}<button
+    {#each shown as b, i (b.key)}{#if i}<span class="text-[var(--text-faint)]">,&nbsp;</span>{/if}<button
         class="font-mono text-caption text-[var(--accent)] hover:underline"
         title={b.title ?? undefined}
         onclick={() => openSubject(b)}
@@ -516,8 +585,16 @@
   {@const s = card.subjects[0]}
   {@const target = commentTarget(card)}
   {@const isFresh = card.rows.some((r) => fresh.has(r.id))}
+  <!-- A row opens its item, so it takes focus and Enter like a control;
+       the controls inside it stay real buttons. -->
+  <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+  <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
   <article
-    class="feed-row group relative flex gap-2.5 px-3 py-2 transition-colors
+    tabindex="0"
+    onclick={(e) => onRowClick(e, card)}
+    onkeydown={(e) => onRowKey(e, card)}
+    class="feed-row group relative flex gap-2.5 px-3 py-2 transition-colors cursor-pointer outline-none
+           focus-visible:bg-[var(--bg-subtle)]
            {isPreviewed(card) ? 'bg-[var(--accent-subtle)]' : 'hover:bg-[var(--bg-subtle)]'}
            {isFresh ? 'feed-fresh' : ''}"
     in:fly={{ y: -4, duration: 200 }}
@@ -531,9 +608,9 @@
           : 'bg-[var(--accent)] text-[var(--accent-text)]'}"
       >{initials(card.actorName)}</span>
       <span
-        class="absolute -bottom-0.5 -right-1 size-3.5 rounded-full grid place-items-center
+        class="verb-{card.lead.verb} absolute -bottom-0.5 -right-1 size-3.5 rounded-full grid place-items-center
                bg-[var(--surface)] ring-1 ring-[var(--border)]"
-        style="color: {KIND_TONE[card.kind]}"
+        style="color: var(--vc)"
       >{@render kindIcon(card.kind, 8)}</span>
     </button>
 
@@ -545,20 +622,8 @@
         <p class="flex-1 min-w-0 m-0 line-clamp-2 sm:line-clamp-none sm:truncate text-body-sm leading-5 text-[var(--text-muted)]">
           <button class="font-medium text-[var(--text)] hover:underline" onclick={() => onlyActor(card)}>{card.actorName}</button>
           {#if card.isBot}<span class="hidden sm:inline"><Bot size={11} class="inline -mt-0.5 text-[var(--accent)]" aria-label="agent" /></span>{/if}
-          <!-- "SC-8 → Done" reads fine without the verb on a narrow phone. -->
-          <span class={card.kind === "status" && !card.batch ? "hidden sm:inline" : ""}>{verbFor(card)}</span>
-          {#if card.kind === "status"}
-            {#if !card.batch}{@render subjectRef(s, false)} →{/if}
-            {@render statusChip(card.lead.new_value)}
-          {:else if !card.batch}
-            {#if card.kind === "assignee"}
-              {@render subjectRef(s, false)} to <span class="text-[var(--text)]">{assigneeLabel(card.lead.new_value ?? card.lead.old_value)}</span>
-            {:else if card.kind === "structure"}
-              <span class="font-medium text-[var(--text)]">{card.lead.entity_label ?? ""}</span>
-            {:else}
-              {@render subjectRef(s, false)}
-            {/if}
-          {/if}
+          {@render phrase(card)}
+          {@render subjectTail(card, "→")}
         </p>
         <div class="shrink-0 flex items-center gap-1.5 -mt-0.5">
           <span class="feed-actions flex items-center">
@@ -719,7 +784,7 @@
     </p>
   {:else if card.kind === "plan" && card.lead.entity_type === "plan_step"}
     <p class="mt-2 m-0 text-caption text-[var(--text-muted)] line-clamp-2">
-      {card.rows.filter((r) => r.entity_type === "plan_step").map((s) => plainSnippet(s.new_value, 60)).filter(Boolean).join(" · ")}
+      {card.rows.filter((r) => r.entity_type === "plan_step" && r.action === "create").map((s) => plainSnippet(s.new_value, 60)).filter(Boolean).join(" · ")}
     </p>
   {/if}
 
@@ -754,9 +819,17 @@
   {@const s = card.subjects[0]}
   {@const target = commentTarget(card)}
   {@const isFresh = card.rows.some((r) => fresh.has(r.id))}
+  <!-- A row opens its item, so it takes focus and Enter like a control;
+       the controls inside it stay real buttons. -->
+  <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+  <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
   <article
+    tabindex="0"
+    onclick={(e) => onRowClick(e, card)}
+    onkeydown={(e) => onRowKey(e, card)}
     class="feed-row feed-card relative flex gap-3 px-3.5 sm:px-4 py-3.5 rounded-xl border bg-[var(--surface)]
-           transition-colors {isFresh || isPreviewed(card) ? 'feed-fresh border-[var(--accent)]' : 'border-[var(--border)]'}"
+           transition-colors cursor-pointer outline-none focus-visible:border-[var(--accent)]
+           {isFresh || isPreviewed(card) ? 'feed-fresh border-[var(--accent)]' : 'border-[var(--border)] hover:border-[color-mix(in_oklab,var(--text-faint)_60%,var(--border))]'}"
     in:fly={{ y: -6, duration: 220 }}
   >
     <!-- Avatar with the event kind tucked into its corner. -->
@@ -768,9 +841,9 @@
           : 'bg-[var(--accent)] text-[var(--accent-text)]'}"
       >{initials(card.actorName)}</span>
       <span
-        class="absolute -bottom-1 -right-1 size-[18px] rounded-full grid place-items-center
+        class="verb-{card.lead.verb} absolute -bottom-1 -right-1 size-[18px] rounded-full grid place-items-center
                bg-[var(--surface)] border border-[var(--border)]"
-        style="color: {KIND_TONE[card.kind]}"
+        style="color: var(--vc)"
       >{@render kindIcon(card.kind, 10)}</span>
     </button>
 
@@ -797,23 +870,10 @@
       </header>
 
       <p class="mt-1 m-0 text-body-sm leading-relaxed text-[var(--text-muted)] break-words">
-        {verbFor(card)}
-        {#if card.kind === "status"}
-          {#if !card.batch}{@render subjectRef(s, false)} to{/if}
-          {@render statusChip(card.lead.new_value)}
-          {#if !card.batch && card.lead.old_value}
-            <span class="text-micro text-[var(--text-faint)]">from {statusLabel(card.lead.old_value)}</span>
-          {/if}
-        {:else if !card.batch}
-          {#if card.kind === "assignee"}
-            {@render subjectRef(s, false)} to <span class="text-[var(--text)]">{assigneeLabel(card.lead.new_value ?? card.lead.old_value)}</span>
-          {:else if card.kind === "link"}
-            {@render subjectRef(s, false)}
-          {:else if card.kind === "structure"}
-            <span class="font-medium text-[var(--text)]">{card.lead.entity_label ?? ""}</span>
-          {:else}
-            {@render subjectRef(s, false)}
-          {/if}
+        {@render phrase(card)}
+        {@render subjectTail(card, "to")}
+        {#if card.lead.field === "status" && !card.batch && card.lead.old_value}
+          <span class="text-micro text-[var(--text-faint)]">from {statusLabel(card.lead.old_value)}</span>
         {/if}
       </p>
 
@@ -924,20 +984,19 @@
       {/if}
     </section>
 
-    <!-- Event types -->
+    <!-- Actions, in their badge colors. -->
     <section>
-      {@render sectionLabel("Events")}
+      {@render sectionLabel("Actions")}
       <div class="flex flex-wrap gap-1.5">
-        {#each KIND_OPTIONS as o (o.kind)}
-          {@const on = filters.kinds.includes(o.kind)}
+        {#each VERB_OPTIONS as o (o.verb)}
+          {@const on = filters.verbs.includes(o.verb)}
           <button
-            class="inline-flex items-center gap-1.5 text-caption px-2 py-1 rounded-full border transition-colors
-                   {on
-              ? 'border-[var(--accent)] bg-[var(--accent-subtle)] text-[var(--accent)] font-medium'
-              : 'border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] hover:border-[var(--text-faint)]'}"
-            onclick={() => setFilters({ kinds: toggle(filters.kinds, o.kind) })}
+            class="feed-verb-chip verb-{o.verb} inline-flex items-center gap-1.5 text-caption px-2 py-1 rounded-full border transition-colors"
+            class:on
+            aria-pressed={on}
+            onclick={() => setFilters({ verbs: toggle(filters.verbs, o.verb) })}
           >
-            <span style="color: {on ? 'inherit' : KIND_TONE[o.kind]}">{@render kindIcon(o.kind, 12)}</span>{o.label}
+            <span class="feed-verb-dot"></span>{o.label}
           </button>
         {/each}
       </div>
@@ -1152,6 +1211,63 @@
      a scrollbar beside it. */
   .feed-rail { scrollbar-width: none; }
   .feed-rail::-webkit-scrollbar { display: none; }
+  /* Action colors (validated as a categorical set, light and dark, in the
+     filter's order: every neighbouring pair stays apart for normal and
+     color-blind vision). The verb is always spelled out, so color only
+     helps scanning. `cancelled` is deliberately neutral. */
+  .verb-created { --vc: #2171cc; }
+  .verb-commented { --vc: #b74d00; }
+  .verb-moved { --vc: #8156c0; }
+  .verb-completed { --vc: #1c882d; }
+  .verb-cancelled { --vc: #6f6f6f; }
+  .verb-assigned { --vc: #af4387; }
+  .verb-edited { --vc: #8f6d00; }
+  .verb-labeled { --vc: #008d7e; }
+  .verb-deleted { --vc: #bd413f; }
+  .verb-linked { --vc: #0083b3; }
+  :global(.dark) .verb-created { --vc: #5591dd; }
+  :global(.dark) .verb-commented { --vc: #cd753f; }
+  :global(.dark) .verb-moved { --vc: #9c7bd2; }
+  :global(.dark) .verb-completed { --vc: #57a45b; }
+  :global(.dark) .verb-cancelled { --vc: #9a9a9a; }
+  :global(.dark) .verb-assigned { --vc: #c66ca1; }
+  :global(.dark) .verb-edited { --vc: #a88d10; }
+  :global(.dark) .verb-labeled { --vc: #00a89a; }
+  :global(.dark) .verb-deleted { --vc: #d36c66; }
+  :global(.dark) .verb-linked { --vc: #00a0c7; }
+
+  /* The verb badge: tinted pill, text in the verb's color nudged toward the
+     body ink so small type keeps its contrast. */
+  .feed-verb {
+    display: inline-block;
+    padding: 0 0.375rem;
+    border-radius: 0.375rem;
+    font-weight: 600;
+    font-size: var(--text-caption);
+    line-height: 1.25rem;
+    color: color-mix(in oklab, var(--vc) 82%, var(--text));
+    background: color-mix(in oklab, var(--vc) 13%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--vc) 26%, transparent);
+  }
+
+  .feed-verb-chip {
+    border-color: var(--border);
+    color: var(--text-muted);
+  }
+  .feed-verb-chip:hover { color: var(--text); border-color: color-mix(in oklab, var(--vc) 45%, var(--border)); }
+  .feed-verb-chip.on {
+    font-weight: 500;
+    color: color-mix(in oklab, var(--vc) 82%, var(--text));
+    background: color-mix(in oklab, var(--vc) 13%, transparent);
+    border-color: color-mix(in oklab, var(--vc) 45%, transparent);
+  }
+  .feed-verb-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 9999px;
+    background: var(--vc);
+  }
+
   .feed-comment :global(p:first-child) { margin-top: 0; }
   .feed-comment :global(p:last-child) { margin-bottom: 0; }
 </style>

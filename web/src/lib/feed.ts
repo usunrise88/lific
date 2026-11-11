@@ -11,7 +11,7 @@
 //
 // Everything here is pure so it can be tested without a browser.
 
-import type { FeedItem, FeedKind } from "./api";
+import type { FeedItem, FeedKind, FeedVerb } from "./api";
 
 /** Rows further apart than this never share a card. */
 const SAME_ACTION_SECONDS = 10;
@@ -30,17 +30,20 @@ const KIND_RANK: FeedKind[] = [
   "structure",
 ];
 
-export const KIND_OPTIONS: { kind: FeedKind; label: string }[] = [
-  { kind: "created", label: "Created" },
-  { kind: "status", label: "Status" },
-  { kind: "comment", label: "Comments" },
-  { kind: "edit", label: "Edits" },
-  { kind: "assignee", label: "Assignees" },
-  { kind: "label", label: "Labels" },
-  { kind: "link", label: "Relations" },
-  { kind: "page", label: "Pages" },
-  { kind: "plan", label: "Plans" },
-  { kind: "structure", label: "Structure" },
+/** The action filter, in the server's order. Each verb has its own color
+ *  (see `--verb-*` in Feed.svelte); the order keeps neighbouring chips, and
+ *  the verbs that usually sit side by side in the feed, far apart in hue. */
+export const VERB_OPTIONS: { verb: FeedVerb; label: string }[] = [
+  { verb: "created", label: "Created" },
+  { verb: "commented", label: "Commented" },
+  { verb: "moved", label: "Moved" },
+  { verb: "completed", label: "Completed" },
+  { verb: "cancelled", label: "Cancelled" },
+  { verb: "assigned", label: "Assigned" },
+  { verb: "edited", label: "Edited" },
+  { verb: "labeled", label: "Labeled" },
+  { verb: "deleted", label: "Deleted" },
+  { verb: "linked", label: "Linked" },
 ];
 
 export interface FeedSubject {
@@ -282,50 +285,54 @@ export function assigneeLabel(v: string | null): string {
   return v;
 }
 
-/** The short verb phrase leading a card, without its subject. */
-export function verbFor(card: FeedCard): string {
+/** How a card reads: `word` goes in the colored badge (its color comes
+ *  from `verb`), `rest` follows it, then the subject. "commented" + "on",
+ *  "completed" + "3 issues", "edited" + "title of". */
+export interface Phrase {
+  verb: FeedVerb;
+  word: string;
+  rest: string;
+}
+
+export function verbFor(card: FeedCard): Phrase {
   const a = card.lead;
   const n = card.subjects.length;
-  switch (card.kind) {
+  const verb = a.verb;
+  const p = (word: string, rest = ""): Phrase => ({ verb, word, rest });
+  const what = a.entity_type === "plan_step" ? "step" : a.entity_type;
+  switch (verb) {
     case "created":
-      return card.batch ? `created ${n} issues` : "created";
-    case "status":
-      return card.batch ? `moved ${n} issues to` : "moved";
-    case "comment":
-      if (a.action === "update") return "edited a comment on";
-      if (a.action === "delete") return "deleted a comment on";
-      return "commented on";
-    case "edit": {
-      const fields = [...new Set(card.rows.filter((r) => r.kind === "edit").map((r) => humanField(r.field)))];
-      return fields.length > 2 ? "edited" : `changed ${fields.join(" and ")} of`;
-    }
-    case "assignee":
-      return a.action === "unassign" ? "unassigned" : "assigned";
-    case "link":
-      return a.action === "unlink" ? "unlinked" : "linked";
-    case "label":
-      return a.action === "detach" ? "removed a label from" : "labeled";
-    case "page":
-      if (a.action === "create") return "created page";
-      if (a.action === "delete") return "deleted page";
-      return "edited page";
-    case "plan": {
-      if (a.entity_type === "plan") {
-        if (a.action === "create") return "created plan";
-        return a.action === "delete" ? "deleted plan" : "updated plan";
+      if (a.entity_type === "issue") return card.batch ? p("created", `${n} issues`) : p("created");
+      if (a.entity_type === "plan_step") {
+        const steps = card.rows.filter((r) => r.entity_type === "plan_step").length;
+        return p("added", steps === 1 ? "a step to" : `${steps} steps to`);
       }
-      const steps = card.rows.filter((r) => r.entity_type === "plan_step");
-      if (steps.every((r) => r.field === "done")) return "completed a step in";
-      if (steps.every((r) => r.action === "create")) {
-        return steps.length === 1 ? "added a step to" : `added ${steps.length} steps to`;
-      }
-      return "updated steps in";
-    }
+      if (a.entity_type === "member") return p("added", "member");
+      return p("created", what);
+    case "commented":
+      return p("commented", "on");
+    case "moved":
+      return card.batch ? p("moved", `${n} issues to`) : p("moved");
+    case "completed":
+      if (a.entity_type === "plan_step") return p("completed", "a step in");
+      return card.batch ? p("completed", `${n} issues`) : p("completed");
+    case "cancelled":
+      return card.batch ? p("cancelled", `${n} issues`) : p("cancelled");
+    case "assigned":
+      return p(a.action === "unassign" ? "unassigned" : "assigned");
+    case "labeled":
+      return p(a.action === "detach" ? "unlabeled" : "labeled");
+    case "linked":
+      return p(a.action === "unlink" ? "unlinked" : "linked");
+    case "deleted":
+      return p("deleted", a.entity_type === "comment" ? "a comment on" : what);
     default: {
-      const what = a.entity_type === "member" ? "member" : a.entity_type;
-      if (a.action === "create") return `created ${what}`;
-      if (a.action === "delete") return `deleted ${what}`;
-      return `updated ${what}`;
+      if (a.entity_type === "comment") return p("edited", "a comment on");
+      if (a.entity_type === "issue") {
+        const fields = [...new Set(card.rows.filter((r) => r.kind === "edit").map((r) => humanField(r.field)))];
+        return fields.length && fields.length <= 2 ? p("edited", `${fields.join(" and ")} of`) : p("edited");
+      }
+      return p("edited", a.entity_type === "plan_step" ? "steps in" : what);
     }
   }
 }
@@ -374,7 +381,7 @@ export type AgentMode = "all" | "only" | "exclude";
 export interface FeedFilters {
   groups: number[];
   projects: number[];
-  kinds: FeedKind[];
+  verbs: FeedVerb[];
   actors: (number | "system")[];
   agents: AgentMode;
 }
@@ -382,7 +389,7 @@ export interface FeedFilters {
 export const EMPTY_FILTERS: FeedFilters = {
   groups: [],
   projects: [],
-  kinds: [],
+  verbs: [],
   actors: [],
   agents: "all",
 };
@@ -394,11 +401,11 @@ export function loadFilters(): FeedFilters {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const v = JSON.parse(raw) as Partial<FeedFilters>;
-      const kinds = KIND_OPTIONS.map((o) => o.kind);
+      const verbs = VERB_OPTIONS.map((o) => o.verb);
       return {
         groups: Array.isArray(v.groups) ? v.groups.filter((x) => typeof x === "number") : [],
         projects: Array.isArray(v.projects) ? v.projects.filter((x) => typeof x === "number") : [],
-        kinds: Array.isArray(v.kinds) ? v.kinds.filter((k) => kinds.includes(k)) : [],
+        verbs: Array.isArray(v.verbs) ? v.verbs.filter((k) => verbs.includes(k)) : [],
         actors: Array.isArray(v.actors)
           ? v.actors.filter((x) => typeof x === "number" || x === "system")
           : [],
@@ -422,7 +429,7 @@ export function saveFilters(f: FeedFilters): void {
 export function activeFilterCount(f: FeedFilters): number {
   return (
     (f.groups.length + f.projects.length > 0 ? 1 : 0) +
-    (f.kinds.length > 0 ? 1 : 0) +
+    (f.verbs.length > 0 ? 1 : 0) +
     (f.actors.length > 0 ? 1 : 0) +
     (f.agents !== "all" ? 1 : 0)
   );

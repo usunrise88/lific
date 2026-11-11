@@ -1361,8 +1361,22 @@ export type FeedKind =
   | "plan"
   | "structure";
 
+/** The verb a row shows as, colored in the Feed. */
+export type FeedVerb =
+  | "created"
+  | "commented"
+  | "moved"
+  | "completed"
+  | "cancelled"
+  | "assigned"
+  | "edited"
+  | "labeled"
+  | "deleted"
+  | "linked";
+
 export interface FeedItem extends Activity {
   kind: FeedKind;
+  verb: FeedVerb;
   project_identifier: string | null;
   project_name: string | null;
   /** Current title/status of the row's issue; null once it is deleted. */
@@ -1379,6 +1393,7 @@ export interface FeedPage {
 export interface FeedParams {
   projects?: number[];
   kinds?: FeedKind[];
+  verbs?: FeedVerb[];
   /** User ids, or "system" for unattributed rows. */
   actors?: (number | "system")[];
   agents?: "all" | "only" | "exclude";
@@ -1391,6 +1406,7 @@ export async function listFeed(params: FeedParams = {}) {
   const q = new URLSearchParams();
   if (params.projects) q.set("projects", params.projects.join(","));
   if (params.kinds) q.set("kinds", params.kinds.join(","));
+  if (params.verbs) q.set("verbs", params.verbs.join(","));
   if (params.actors) q.set("actors", params.actors.join(","));
   if (params.agents && params.agents !== "all") q.set("agents", params.agents);
   if (params.before !== undefined) q.set("before", String(params.before));

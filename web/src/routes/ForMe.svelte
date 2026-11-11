@@ -6,7 +6,7 @@
   // reader last looked are tinted. Like the Feed, the issue preview takes the
   // filter rail's place on wide screens.
 
-  import { getContext, tick } from "svelte";
+  import { getContext, tick, untrack } from "svelte";
   import { fly, fade } from "svelte/transition";
   import {
     listForMe,
@@ -40,6 +40,7 @@
   } from "../lib/forMe";
   import { selectedProjectIds, toggle, statusLabel, initials } from "../lib/feed";
   import { startAutoRefresh } from "../lib/autoRefresh.svelte";
+  import { loadScroll, clearScroll, scrollSaver } from "../lib/scrollMemory";
   import { openPeek, peekState, dockPeek, registerPeekSync } from "../lib/issues/peek.svelte";
   import { updateIssueWithUndo } from "../lib/issues/state.svelte";
   import PeekPanel from "../lib/issues/PeekPanel.svelte";
@@ -127,15 +128,30 @@
     if (m.ok) myUsername = m.data.username;
   }
 
+  // Coming back restores the cards and scroll position (per tab); a filter
+  // change starts from the top.
+  const SCROLL_KEY = "for-me";
+  let firstLoad = true;
+  const rememberScroll = scrollSaver(SCROLL_KEY, () =>
+    scroller ? { top: scroller.scrollTop, count: items.length } : null,
+  );
+
   async function load() {
     const token = ++request;
     loading = true;
     error = "";
-    const res = await listForMe({ ...params(), limit: PAGE_SIZE });
+    const restore = firstLoad ? loadScroll(SCROLL_KEY) : null;
+    if (!firstLoad) clearScroll(SCROLL_KEY);
+    firstLoad = false;
+    const want = restore ? Math.min(Math.max(restore.count, PAGE_SIZE), 200) : PAGE_SIZE;
+    const res = await listForMe({ ...params(), limit: want });
     if (token !== request) return;
     if (res.ok) apply(res.data, false);
     else error = res.error;
     loading = false;
+    await tick();
+    // A restored visit goes back to its place; new filters start at the top.
+    if (scroller) scroller.scrollTop = restore && res.ok ? restore.top : 0;
   }
 
   function apply(page: { items: ForMeItem[]; total: number; has_more: boolean; counts: Record<ForMeScope, number> }, live: boolean) {
@@ -181,7 +197,10 @@
     void JSON.stringify(filters);
     if (filters.groups.length) void groups;
     saveFilters($state.snapshot(filters) as ForMeFilters);
-    void load();
+    // Only the filters above trigger a reload: `load` itself reads groups
+    // and the list, and tracking those would reload (and forget the saved
+    // scroll position) whenever the group list arrives.
+    untrack(() => void load());
   });
 
   $effect(() =>
@@ -724,7 +743,7 @@
 {/snippet}
 
 <div class="h-full flex flex-col">
-  <div class="flex-1 overflow-y-auto" bind:this={scroller}>
+  <div class="flex-1 overflow-y-auto" bind:this={scroller} onscroll={rememberScroll}>
     <div class="flex flex-col lg:flex-row gap-8 px-3 sm:px-6 lg:px-8 py-5 max-w-[1320px] mx-auto items-start">
       {#if filtersOpen}
         <div class="lg:hidden w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4" transition:fly={{ y: -6, duration: 150 }}>
