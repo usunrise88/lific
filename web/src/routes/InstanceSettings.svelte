@@ -505,6 +505,17 @@
     reauthBusy = false;
   }
 
+  // Bring a refused settings change's prompt into view and focus it: it is
+  // the only way forward, and the controls above stay locked until it is
+  // answered or cancelled.
+  let settingsReauthEl = $state<HTMLDivElement | null>(null);
+  $effect(() => {
+    const el = settingsReauthEl;
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.querySelector<HTMLInputElement>('input[type="password"]')?.focus({ preventScroll: true });
+  });
+
   function cancelReauth() {
     // An abandoned settings change must not leave its control asserting a
     // value the server never stored.
@@ -578,6 +589,76 @@
     creating = false;
   }
 </script>
+
+{#snippet reauthForm(target: ReauthTarget)}
+  <!-- The password prompt for a refused change. Rendered beside what was
+       refused: under the settings for a settings change, under Members for
+       the member actions. -->
+  <div class="flex items-start gap-2 text-caption text-[var(--text)]">
+    <Lock size={13} class="shrink-0 mt-0.5 text-[var(--text-muted)]" />
+    <p class="leading-relaxed">
+      Verify it's you to
+      {#if target.kind === "create"}
+        create <span class="font-mono">@{target.username}</span>.
+      {:else if target.kind === "promote"}
+        make <span class="font-mono">@{target.username}</span> an admin.
+      {:else if target.kind === "reactivate"}
+        restore <span class="font-mono">@{target.username}</span>.
+      {:else}
+        save this setting.
+      {/if}
+      {#if target.kind === "settings"}
+        Instance settings can only be changed within 15 minutes of signing in, and this
+        session is older. Enter your password and the change is saved right away.
+      {:else}
+        Expanding access needs a recent sign-in, and you have been signed in for a while.
+      {/if}
+    </p>
+  </div>
+  {#if autoReauthNote}
+    <p class="text-caption text-[var(--text-muted)]" role="status">
+      Signing you in automatically did not work ({autoReauthNote}).
+    </p>
+  {/if}
+  {#if reauthError}
+    <p class="text-caption text-[var(--error)] flex items-center gap-1" role="alert">
+      <AlertTriangle size={12} /> {reauthError}
+    </p>
+  {/if}
+  <div class="flex items-center gap-2 flex-wrap">
+    <label class="flex-1 min-w-[180px]">
+      <span class="sr-only">Your current password</span>
+      <input
+        bind:value={reauthPassword}
+        type="password"
+        placeholder="your current password"
+        autocomplete="current-password"
+        disabled={reauthBusy}
+        class="w-full px-3 py-1.5 text-body-sm rounded-md border border-[var(--border)]
+               bg-[var(--bg)] text-[var(--text)] outline-none focus-visible:ring-2
+               focus-visible:ring-[var(--accent)] disabled:opacity-50"
+        onkeydown={(e) => { if (e.key === 'Enter') submitReauth(); }}
+      />
+    </label>
+    <button
+      class="text-body-sm font-medium text-[var(--btn-success-text)] bg-[var(--btn-success)]
+             px-3 py-1.5 rounded-md hover:bg-[var(--btn-success-hover)] transition-colors
+             disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+      disabled={reauthBusy || !reauthPassword}
+      onclick={submitReauth}
+    >
+      {reauthBusy ? "Verifying…" : "Confirm and continue"}
+    </button>
+    <button
+      class="text-body-sm text-[var(--text-muted)] px-3 py-1.5 rounded-md hover:bg-[var(--surface)] transition-colors disabled:opacity-50 shrink-0"
+      disabled={reauthBusy}
+      onclick={cancelReauth}
+    >
+      Cancel
+    </button>
+  </div>
+{/snippet}
+
 
 {#snippet topbarContent()}
   <div class="flex items-center gap-3 px-6 py-2 w-full">
@@ -897,12 +978,6 @@
             </div>
           </div>
 
-          {#if reauthFor?.kind === "settings"}
-            <p class="text-caption text-[var(--text-muted)] mt-4 flex items-center gap-1" role="status">
-              <Lock size={12} /> That change needs a recent sign-in. Confirm your password under
-              <strong>Members</strong> below and it will be saved.
-            </p>
-          {/if}
           {#if saveError}
             <p class="text-caption text-[var(--error)] mt-4 flex items-center gap-1" role="alert"><AlertTriangle size={12} /> {saveError}</p>
           {/if}
@@ -921,6 +996,22 @@
             {/if}
           </div>
         </fieldset>
+
+        <!-- A settings change refused for an old session: say so where the
+             change was made, and take the password right here. -->
+        {#if reauthFor?.kind === "settings"}
+          <div
+            bind:this={settingsReauthEl}
+            class="mt-3 rounded-xl border border-[color-mix(in_oklab,var(--warn)_45%,var(--border))]
+                   bg-[color-mix(in_oklab,var(--warn)_10%,var(--surface))] p-4 flex flex-col gap-2"
+            role="alert"
+          >
+            <p class="m-0 text-body-sm font-semibold text-[var(--warn-text)] flex items-center gap-1.5">
+              <Lock size={14} /> Not saved yet: this change needs a fresh sign-in
+            </p>
+            {@render reauthForm(reauthFor)}
+          </div>
+        {/if}
 
         <!-- ── MEMBERS ────────────────────────────────────── -->
         <section class="mt-10 animate-reveal delay-250">
@@ -975,66 +1066,9 @@
                  server refused for staleness, names which action is waiting,
                  and leaves that action's inputs alone so confirming resumes it
                  unchanged. -->
-            {#if reauthFor}
+            {#if reauthFor && reauthFor.kind !== "settings"}
               <div class="px-4 py-3 border-t border-[var(--border)] bg-[var(--bg-subtle)] flex flex-col gap-2">
-                <div class="flex items-start gap-2 text-caption text-[var(--text)]">
-                  <Lock size={13} class="shrink-0 mt-0.5 text-[var(--text-muted)]" />
-                  <p class="leading-relaxed">
-                    Verify it's you to
-                    {#if reauthFor.kind === "create"}
-                      create <span class="font-mono">@{reauthFor.username}</span>.
-                    {:else if reauthFor.kind === "promote"}
-                      make <span class="font-mono">@{reauthFor.username}</span> an admin.
-                    {:else if reauthFor.kind === "reactivate"}
-                      restore <span class="font-mono">@{reauthFor.username}</span>.
-                    {:else}
-                      save that instance setting.
-                    {/if}
-                    Expanding access needs a recent sign-in, and you have been signed in for a while.
-                  </p>
-                </div>
-                {#if autoReauthNote}
-                  <p class="text-caption text-[var(--text-muted)]" role="status">
-                    Signing you in automatically did not work ({autoReauthNote}).
-                  </p>
-                {/if}
-                {#if reauthError}
-                  <p class="text-caption text-[var(--error)] flex items-center gap-1" role="alert">
-                    <AlertTriangle size={12} /> {reauthError}
-                  </p>
-                {/if}
-                <div class="flex items-center gap-2 flex-wrap">
-                  <label class="flex-1 min-w-[180px]">
-                    <span class="sr-only">Your current password</span>
-                    <input
-                      bind:value={reauthPassword}
-                      type="password"
-                      placeholder="your current password"
-                      autocomplete="current-password"
-                      disabled={reauthBusy}
-                      class="w-full px-3 py-1.5 text-body-sm rounded-md border border-[var(--border)]
-                             bg-[var(--bg)] text-[var(--text)] outline-none focus-visible:ring-2
-                             focus-visible:ring-[var(--accent)] disabled:opacity-50"
-                      onkeydown={(e) => { if (e.key === 'Enter') submitReauth(); }}
-                    />
-                  </label>
-                  <button
-                    class="text-body-sm font-medium text-[var(--btn-success-text)] bg-[var(--btn-success)]
-                           px-3 py-1.5 rounded-md hover:bg-[var(--btn-success-hover)] transition-colors
-                           disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
-                    disabled={reauthBusy || !reauthPassword}
-                    onclick={submitReauth}
-                  >
-                    {reauthBusy ? "Verifying…" : "Confirm and continue"}
-                  </button>
-                  <button
-                    class="text-body-sm text-[var(--text-muted)] px-3 py-1.5 rounded-md hover:bg-[var(--surface)] transition-colors disabled:opacity-50 shrink-0"
-                    disabled={reauthBusy}
-                    onclick={cancelReauth}
-                  >
-                    Cancel
-                  </button>
-                </div>
+                {@render reauthForm(reauthFor)}
               </div>
             {/if}
 
