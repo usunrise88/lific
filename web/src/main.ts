@@ -1,5 +1,6 @@
 import { mount } from "svelte";
 import "./app.css";
+import "./radixThemes.css";
 import App from "./App.svelte";
 import { init as initTheme } from "./lib/theme";
 

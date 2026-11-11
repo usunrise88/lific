@@ -28,11 +28,13 @@
   import {
     themePreference, setPreference, type ThemePreference,
     getAccent, setAccent, type AccentPreset,
+    getThemePreset, setThemePreset, CLASSIC_THEME,
     getDensity, setDensity, type Density,
     getFontScale, setFontScale, type FontScale,
     getMotionPreference, setMotionPreference, type MotionPreference,
   } from "../lib/theme";
   import { ACCENT_PRESETS } from "../lib/appearance/presets";
+  import { RADIX_THEMES, type ThemeSwatch } from "../lib/appearance/themes";
   import {
     Plug, Check, Copy, X, AlertTriangle, Sun, Moon, Monitor,
     Palette, Lock, LogOut, Eye, EyeOff, KeyRound, FileCode2, Terminal,
@@ -201,6 +203,24 @@
 
   // Appearance
   let accentPref = $state<AccentPreset>("indigo");
+  let themePresetPref = $state<string>(CLASSIC_THEME);
+
+  // Fork: the original palette as the first theme, then the Radix Colors
+  // ones. Classic's swatches mirror app.css (its default indigo accent).
+  const THEME_CHOICES: { id: string; label: string; light: ThemeSwatch; dark: ThemeSwatch }[] = [
+    {
+      id: CLASSIC_THEME,
+      label: "Classic",
+      light: { bg: "#eef4f1", surface: "#f7faf9", accent: "#5746a0", text: "#18201d" },
+      dark: { bg: "#0d1110", surface: "#252c29", accent: "#9287d7", text: "#e3e8e6" },
+    },
+    ...RADIX_THEMES,
+  ];
+
+  function pickThemePreset(id: string) {
+    themePresetPref = id;
+    setThemePreset(id);
+  }
   let densityPref = $state<Density>("comfortable");
   let fontScalePref = $state<FontScale>("md");
   let motionPref = $state<MotionPreference>("system");
@@ -220,6 +240,7 @@
 
   $effect(() => {
     accentPref = getAccent();
+    themePresetPref = getThemePreset();
     densityPref = getDensity();
     fontScalePref = getFontScale();
     motionPref = getMotionPreference();
@@ -631,7 +652,41 @@
           {/each}
         </div>
 
-        <!-- Accent color -->
+        <!-- Theme (fork): Classic or a Radix Colors palette. Each card previews
+             the theme in light and dark. -->
+        <div class="mt-5 pt-5 border-t border-[var(--border)]">
+          <span class="block text-micro font-semibold uppercase tracking-widest text-[var(--text-faint)] mb-2.5">Theme</span>
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
+            {#each THEME_CHOICES as th (th.id)}
+              {@const on = themePresetPref === th.id}
+              <button
+                type="button"
+                class="group text-left rounded-xl p-1.5 transition-all motion-safe:active:scale-[0.98]
+                       {on ? 'ring-2 ring-[var(--accent)] bg-[var(--accent-subtle)]' : 'ring-1 ring-[var(--border)] hover:ring-[var(--text-faint)]'}"
+                aria-pressed={on}
+                onclick={() => pickThemePreset(th.id)}
+              >
+                <span class="flex h-12 rounded-lg overflow-hidden" aria-hidden="true">
+                  {#each [th.light, th.dark] as sw, i (i)}
+                    <span class="flex-1 flex items-center justify-center p-1.5" style:background-color={sw.bg}>
+                      <span class="w-full h-full rounded-md flex flex-col justify-center gap-1 px-1.5" style:background-color={sw.surface}>
+                        <span class="h-1 w-3/4 rounded-full opacity-80" style:background-color={sw.text}></span>
+                        <span class="h-1.5 w-1/2 rounded-full" style:background-color={sw.accent}></span>
+                      </span>
+                    </span>
+                  {/each}
+                </span>
+                <span class="flex items-center justify-between gap-1 px-1 pt-1.5 pb-0.5 text-body-sm {on ? 'font-semibold text-[var(--text)]' : 'text-[var(--text-muted)]'}">
+                  {th.label}
+                  {#if on}<Check size={13} class="text-[var(--accent)]" />{/if}
+                </span>
+              </button>
+            {/each}
+          </div>
+        </div>
+
+        <!-- Accent color: only for Classic; a Radix theme brings its own. -->
+        {#if themePresetPref === CLASSIC_THEME}
         <div class="mt-5 pt-5 border-t border-[var(--border)]">
           <span class="block text-micro font-semibold uppercase tracking-widest text-[var(--text-faint)] mb-2.5">Accent color</span>
           <div class="flex items-center gap-2.5 flex-wrap">
@@ -653,6 +708,7 @@
             {/each}
           </div>
         </div>
+        {/if}
 
         <!-- Density -->
         <div class="mt-5 pt-5 border-t border-[var(--border)]">
