@@ -42,9 +42,13 @@
     type FeedFilters,
     type FeedSubject,
     type AgentMode,
+    loadDensity,
+    saveDensity,
+    type Density,
   } from "../lib/feed";
   import { startAutoRefresh } from "../lib/autoRefresh.svelte";
-  import { openPeek } from "../lib/issues/peek.svelte";
+  import { openPeek, peekState, dockPeek } from "../lib/issues/peek.svelte";
+  import PeekPanel from "../lib/issues/PeekPanel.svelte";
   import { toast } from "../lib/toast/toast.svelte";
   import StatusIcon from "../lib/StatusIcon.svelte";
   import ProjectIcon from "../lib/ProjectIcon.svelte";
@@ -56,6 +60,7 @@
     CirclePlus, ArrowRightLeft, MessageSquare, Pencil, UserRound, Tag, Link2,
     FileText, ListChecks, Box, SlidersHorizontal, X, SendHorizontal,
     ArrowUpRight, ArrowUp, Bot, Users, Search, Activity as ActivityIcon,
+    Rows3, Rows2,
   } from "lucide-svelte";
 
   const PAGE_SIZE = 60;
@@ -223,6 +228,32 @@
     }),
   );
 
+  // On wide screens the issue preview takes the filter rail's place instead
+  // of sliding over the feed; narrower screens keep the usual overlay.
+  $effect(() => {
+    const wide = window.matchMedia("(min-width: 1024px)");
+    let undock: (() => void) | null = null;
+    const sync = () => {
+      if (wide.matches && !undock) undock = dockPeek();
+      else if (!wide.matches && undock) {
+        undock();
+        undock = null;
+      }
+    };
+    sync();
+    wide.addEventListener("change", sync);
+    return () => {
+      wide.removeEventListener("change", sync);
+      undock?.();
+    };
+  });
+
+  let previewing = $derived(peekState.docked && peekState.open);
+
+  function isPreviewed(card: FeedCard): boolean {
+    return previewing && !card.batch && card.subjects[0].label === peekState.identifier;
+  }
+
   // Infinite scroll.
   $effect(() => {
     if (!sentinel || !scroller) return;
@@ -257,6 +288,13 @@
   });
 
   let filterCount = $derived(activeFilterCount(filters));
+
+  // Compact rows or full cards, per browser like the filters.
+  let density = $state<Density>(loadDensity());
+  function setDensity(d: Density) {
+    density = d;
+    saveDensity(d);
+  }
 
   let shownProjects = $derived(
     projectQuery.trim()
@@ -474,12 +512,13 @@
   {/each}
 {/snippet}
 
-{#snippet feedCard(card: FeedCard)}
+{#snippet compactRow(card: FeedCard)}
   {@const s = card.subjects[0]}
   {@const target = commentTarget(card)}
   {@const isFresh = card.rows.some((r) => fresh.has(r.id))}
   <article
-    class="feed-row group relative flex gap-2.5 px-3 py-2 transition-colors hover:bg-[var(--bg-subtle)]
+    class="feed-row group relative flex gap-2.5 px-3 py-2 transition-colors
+           {isPreviewed(card) ? 'bg-[var(--accent-subtle)]' : 'hover:bg-[var(--bg-subtle)]'}
            {isFresh ? 'feed-fresh' : ''}"
     in:fly={{ y: -4, duration: 200 }}
   >
@@ -591,6 +630,253 @@
     </div>
   </article>
 {/snippet}
+
+<!-- Full density: roomy cards with whole comments and labeled actions. -->
+{#snippet chip(text: string, tone: "plain" | "add" | "remove" = "plain")}
+  <span
+    class="inline-flex items-center text-micro font-medium px-1.5 py-0.5 rounded-full border
+           {tone === 'remove'
+      ? 'border-[var(--border)] text-[var(--text-faint)] line-through'
+      : 'border-[var(--border)] text-[var(--text-muted)]'}"
+  >{tone === "add" ? "+ " : ""}{text}</span>
+{/snippet}
+
+{#snippet fullDetails(card: FeedCard)}
+  {@const comments = card.rows.filter((r) => r.kind === "comment" && r.action !== "delete")}
+  {@const labels = card.rows.filter((r) => r.kind === "label")}
+  {@const assigns = card.rows.filter((r) => r.kind === "assignee")}
+  {@const links = card.rows.filter((r) => r.kind === "link")}
+  {@const edits = card.rows.filter((r) => r.kind === "edit")}
+  {@const steps = card.rows.filter((r) => r.entity_type === "plan_step" && r.action === "create")}
+  {@const isOpen = expanded.has(card.key)}
+
+  {#if card.batch}
+    {@const list = isOpen ? card.subjects : card.subjects.slice(0, BATCH_PREVIEW)}
+    <ul class="mt-2 flex flex-col gap-1 m-0 p-0 list-none">
+      {#each list as s (s.key)}
+        <li class="flex items-center gap-2 min-w-0 text-body-sm">
+          <StatusIcon status={s.status ?? ""} size={12} />
+          {@render subjectRef(s, false)}
+          <button
+            class="truncate text-left text-[var(--text-muted)] hover:text-[var(--text)]"
+            onclick={() => openSubject(s)}
+          >{s.title ?? ""}</button>
+        </li>
+      {/each}
+    </ul>
+    {#if card.subjects.length > BATCH_PREVIEW}
+      <button class="mt-1 text-caption text-[var(--text-faint)] hover:text-[var(--text)]" onclick={() => toggleExpanded(card.key)}>
+        {isOpen ? "Show less" : `Show all ${card.subjects.length}`}
+      </button>
+    {/if}
+  {/if}
+
+  {#if edits.length}
+    <div class="mt-2 flex flex-col gap-1">
+      {#each edits as e (e.id)}
+        {#if e.field === "description" || e.field === "content"}
+          <p class="m-0 text-caption text-[var(--text-muted)] line-clamp-2">
+            <span class="text-[var(--text-faint)]">{humanField(e.field)}:</span> {plainSnippet(e.new_value, 220) || "(cleared)"}
+          </p>
+        {:else if e.field === "priority" || e.field === "title" || e.field === "module" || e.field?.endsWith("date")}
+          <p class="m-0 text-caption text-[var(--text-muted)] break-words">
+            <span class="text-[var(--text-faint)]">{humanField(e.field)}:</span>
+            <span class="line-through decoration-[var(--text-faint)]">{plainSnippet(e.old_value, 80) || "none"}</span>
+            <span class="text-[var(--text-faint)]">→</span>
+            <span class="text-[var(--text)]">{plainSnippet(e.new_value, 80) || "none"}</span>
+          </p>
+        {/if}
+      {/each}
+    </div>
+  {/if}
+
+  {#if labels.length || assigns.length || links.length}
+    <div class="mt-2 flex flex-wrap items-center gap-1.5">
+      {#each labels as l (l.id)}
+        {@render chip((l.action === "detach" ? l.old_value : l.new_value) ?? "", l.action === "detach" ? "remove" : card.kind === "created" ? "plain" : "add")}
+      {/each}
+      {#each assigns as a (a.id)}
+        <span class="inline-flex items-center gap-1 text-micro text-[var(--text-muted)]">
+          <UserRound size={11} />{a.action === "unassign" ? `− ${assigneeLabel(a.old_value)}` : assigneeLabel(a.new_value)}
+        </span>
+      {/each}
+      {#each links as l (l.id)}
+        {@const target = l.action === "unlink" ? l.old_value : l.new_value}
+        <span class="inline-flex items-center gap-1 text-micro text-[var(--text-muted)] {l.action === 'unlink' ? 'line-through' : ''}">
+          <Link2 size={11} />{relationLabel(l.field)}
+          {#if target}
+            <button class="font-mono text-[var(--accent)] hover:underline" onclick={() => openPeek(target)}>{target}</button>
+          {/if}
+        </span>
+      {/each}
+    </div>
+  {/if}
+
+  {#if steps.length && card.lead.entity_type === "plan"}
+    <p class="mt-2 m-0 text-caption text-[var(--text-muted)]">
+      {steps.length} step{steps.length === 1 ? "" : "s"}
+      {#if steps.length}· {steps.slice(-3).reverse().map((s) => plainSnippet(s.new_value, 40)).join(" · ")}{steps.length > 3 ? " …" : ""}{/if}
+    </p>
+  {:else if card.kind === "plan" && card.lead.entity_type === "plan_step"}
+    <p class="mt-2 m-0 text-caption text-[var(--text-muted)] line-clamp-2">
+      {card.rows.filter((r) => r.entity_type === "plan_step").map((s) => plainSnippet(s.new_value, 60)).filter(Boolean).join(" · ")}
+    </p>
+  {/if}
+
+  {#if card.kind === "structure"}
+    {@const v = card.lead.new_value ?? card.lead.old_value}
+    {#if v && v !== card.lead.entity_label}
+      <p class="mt-1.5 m-0 text-caption text-[var(--text-muted)] line-clamp-2">{plainSnippet(v, 200)}</p>
+    {/if}
+  {/if}
+
+  {#each comments as c (c.id)}
+    {@const long = (c.new_value ?? "").length > 420}
+    {@const showAll = expanded.has(`${card.key}:${c.id}`)}
+    <div
+      class="feed-comment mt-2.5 relative rounded-lg border border-[var(--border)] bg-[var(--bg-subtle)]
+             px-3 py-2 text-body-sm {long && !showAll ? 'max-h-44 overflow-hidden' : ''}"
+    >
+      <Markdown content={c.new_value ?? ""} />
+      {#if long && !showAll}
+        <div class="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-[var(--bg-subtle)] to-transparent pointer-events-none"></div>
+      {/if}
+    </div>
+    {#if long}
+      <button class="mt-1 text-caption text-[var(--text-faint)] hover:text-[var(--text)]" onclick={() => toggleExpanded(`${card.key}:${c.id}`)}>
+        {showAll ? "Show less" : "Show full comment"}
+      </button>
+    {/if}
+  {/each}
+{/snippet}
+
+{#snippet fullCard(card: FeedCard)}
+  {@const s = card.subjects[0]}
+  {@const target = commentTarget(card)}
+  {@const isFresh = card.rows.some((r) => fresh.has(r.id))}
+  <article
+    class="feed-row feed-card relative flex gap-3 px-3.5 sm:px-4 py-3.5 rounded-xl border bg-[var(--surface)]
+           transition-colors {isFresh || isPreviewed(card) ? 'feed-fresh border-[var(--accent)]' : 'border-[var(--border)]'}"
+    in:fly={{ y: -6, duration: 220 }}
+  >
+    <!-- Avatar with the event kind tucked into its corner. -->
+    <button class="relative shrink-0 self-start" title="Only {card.actorName}" onclick={() => onlyActor(card)}>
+      <span
+        class="size-8 rounded-full grid place-items-center text-micro font-bold select-none
+               {card.isBot
+          ? 'bg-[var(--accent-subtle)] text-[var(--accent)] border border-[var(--accent)]'
+          : 'bg-[var(--accent)] text-[var(--accent-text)]'}"
+      >{initials(card.actorName)}</span>
+      <span
+        class="absolute -bottom-1 -right-1 size-[18px] rounded-full grid place-items-center
+               bg-[var(--surface)] border border-[var(--border)]"
+        style="color: {KIND_TONE[card.kind]}"
+      >{@render kindIcon(card.kind, 10)}</span>
+    </button>
+
+    <div class="flex-1 min-w-0">
+      <header class="flex items-center gap-1.5 min-w-0 text-body-sm">
+        <button class="font-semibold text-[var(--text)] truncate hover:underline" onclick={() => onlyActor(card)}>
+          {card.actorName}
+        </button>
+        {#if card.isBot}
+          <span class="shrink-0 text-micro font-semibold uppercase tracking-wider px-1 py-px rounded bg-[var(--accent-subtle)] text-[var(--accent)]">agent</span>
+        {/if}
+        <span class="hidden sm:inline shrink-0 text-micro text-[var(--text-faint)]">via {card.transport}</span>
+        <span class="ml-auto shrink-0 flex items-center gap-2">
+          {#if card.project}
+            <button
+              class="text-micro font-mono font-medium text-[var(--text-muted)] px-1.5 py-0.5 rounded
+                     bg-[var(--bg-subtle)] hover:text-[var(--text)]"
+              title="Only {card.projectName ?? card.project}"
+              onclick={() => onlyProject(card.project)}
+            >{card.project}</button>
+          {/if}
+          <TimeAgo class="text-micro text-[var(--text-faint)] tabular-nums" date={card.ts} />
+        </span>
+      </header>
+
+      <p class="mt-1 m-0 text-body-sm leading-relaxed text-[var(--text-muted)] break-words">
+        {verbFor(card)}
+        {#if card.kind === "status"}
+          {#if !card.batch}{@render subjectRef(s, false)} to{/if}
+          {@render statusChip(card.lead.new_value)}
+          {#if !card.batch && card.lead.old_value}
+            <span class="text-micro text-[var(--text-faint)]">from {statusLabel(card.lead.old_value)}</span>
+          {/if}
+        {:else if !card.batch}
+          {#if card.kind === "assignee"}
+            {@render subjectRef(s, false)} to <span class="text-[var(--text)]">{assigneeLabel(card.lead.new_value ?? card.lead.old_value)}</span>
+          {:else if card.kind === "link"}
+            {@render subjectRef(s, false)}
+          {:else if card.kind === "structure"}
+            <span class="font-medium text-[var(--text)]">{card.lead.entity_label ?? ""}</span>
+          {:else}
+            {@render subjectRef(s, false)}
+          {/if}
+        {/if}
+      </p>
+
+      {#if !card.batch && s.title && card.kind !== "structure"}
+        <p class="mt-0.5 m-0 flex items-start gap-1.5 text-body leading-snug min-w-0">
+          {#if s.type === "issue" && s.status}
+            <span class="mt-[3px] shrink-0"><StatusIcon status={s.status} size={13} /></span>
+          {/if}
+          {@render subjectRef({ ...s, label: null }, true)}
+        </p>
+      {/if}
+
+      {@render fullDetails(card)}
+
+      <footer class="mt-2.5 flex items-center gap-1 -ml-1.5">
+        {#if target}
+          <button
+            class="inline-flex items-center gap-1.5 text-caption px-1.5 py-1 rounded-md transition-colors
+                   {composerFor === card.key ? 'text-[var(--text)] bg-[var(--bg-subtle)]' : 'text-[var(--text-faint)] hover:text-[var(--text)] hover:bg-[var(--bg-subtle)]'}"
+            onclick={() => openComposer(card)}
+          ><MessageSquare size={13} />Comment</button>
+        {/if}
+        {#if !card.batch && s.href}
+          <button
+            class="inline-flex items-center gap-1 text-caption px-1.5 py-1 rounded-md text-[var(--text-faint)]
+                   hover:text-[var(--text)] hover:bg-[var(--bg-subtle)] transition-colors"
+            onclick={() => navigate(s.href!)}
+          >Open<ArrowUpRight size={12} /></button>
+        {/if}
+      </footer>
+
+      {#if composerFor === card.key && target}
+        <div class="mt-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg)] focus-within:border-[var(--accent)] transition-colors" transition:fly={{ y: -4, duration: 150 }}>
+          <textarea
+            data-composer={card.key}
+            class="block w-full resize-none bg-transparent px-3 py-2 text-body-sm text-[var(--text)]
+                   placeholder:text-[var(--text-faint)] outline-none min-h-[64px]"
+            placeholder="Comment on {target.label ?? 'this page'}… Markdown works"
+            bind:value={draft}
+            use:autoGrow
+            onkeydown={(e) => composerKey(e, card)}
+            disabled={sending}
+          ></textarea>
+          <div class="flex items-center justify-end gap-2 px-2 pb-2">
+            <span class="hidden sm:inline mr-auto pl-1 text-micro text-[var(--text-faint)]">⌘/Ctrl + Enter to send · Esc to close</span>
+            <button
+              class="text-caption px-2.5 py-1 rounded-md text-[var(--text-muted)] hover:bg-[var(--bg-subtle)]"
+              onclick={() => (composerFor = null)}
+            >Cancel</button>
+            <button
+              class="inline-flex items-center gap-1.5 text-caption font-medium px-2.5 py-1 rounded-md
+                     text-[var(--btn-success-text)] bg-[var(--btn-success)] hover:bg-[var(--btn-success-hover)]
+                     disabled:opacity-50 transition-colors"
+              disabled={!draft.trim() || sending}
+              onclick={() => sendComment(card)}
+            ><SendHorizontal size={12} />{sending ? "Sending…" : "Send"}</button>
+          </div>
+        </div>
+      {/if}
+    </div>
+  </article>
+{/snippet}
+
 
 {#snippet sectionLabel(text: string, extra?: string)}
   <div class="flex items-center gap-2 mb-2">
@@ -717,6 +1003,17 @@
       Live
     </span>
     <div class="ml-auto flex items-center gap-2">
+      <div class="flex p-0.5 rounded-md bg-[var(--bg-subtle)] border border-[var(--border)]" role="group" aria-label="Density">
+        {#each [["compact", "Compact"], ["full", "Full"]] as [d, label] (d)}
+          <button
+            class="inline-flex items-center gap-1 text-caption px-1.5 sm:px-2 py-0.5 rounded transition-colors
+                   {density === d ? 'bg-[var(--surface)] text-[var(--text)] shadow-sm font-medium' : 'text-[var(--text-muted)] hover:text-[var(--text)]'}"
+            title="{label} view"
+            aria-pressed={density === d}
+            onclick={() => setDensity(d as Density)}
+          >{#if d === "compact"}<Rows3 size={12} />{:else}<Rows2 size={12} />{/if}<span class="hidden sm:inline">{label}</span></button>
+        {/each}
+      </div>
       {#if filterCount}
         <button class="hidden lg:inline-flex items-center gap-1 text-caption text-[var(--text-muted)] hover:text-[var(--text)]" onclick={resetFilters}>
           <X size={12} />Reset
@@ -790,11 +1087,19 @@
                 <span class="text-micro text-[var(--text-faint)] tabular-nums">{day.cards.length}</span>
                 <div class="flex-1 h-px bg-[var(--border)]"></div>
               </div>
+              {#if density === "full"}
+                <div class="flex flex-col gap-2.5">
+                  {#each day.cards as card (card.key)}
+                    {@render fullCard(card)}
+                  {/each}
+                </div>
+              {:else}
               <div class="flex flex-col rounded-xl border border-[var(--border)] bg-[var(--surface)] divide-y divide-[var(--border)] overflow-hidden">
                 {#each day.cards as card (card.key)}
-                  {@render feedCard(card)}
+                  {@render compactRow(card)}
                 {/each}
               </div>
+              {/if}
             </section>
           {/each}
           <div bind:this={sentinel} class="h-px"></div>
@@ -806,9 +1111,17 @@
         {/if}
       </div>
 
-      <aside class="hidden lg:block w-[272px] shrink-0 sticky top-5 max-h-[calc(100vh-7rem)] overflow-y-auto pb-6">
+      {#if previewing}
+        <!-- The issue preview, in place of the filters (closing it brings
+             them back). -->
+        <aside class="hidden lg:block w-[400px] xl:w-[440px] shrink-0 sticky top-5 h-[calc(100vh-7rem)]">
+          <PeekPanel {navigate} embedded />
+        </aside>
+      {:else}
+      <aside class="feed-rail hidden lg:block w-[272px] shrink-0 sticky top-5 max-h-[calc(100vh-7rem)] overflow-y-auto pb-6">
         {@render filterPanel()}
       </aside>
+      {/if}
     </div>
   </div>
 </div>
@@ -835,6 +1148,10 @@
     :global(.feed-row:hover) .feed-actions,
     .feed-actions:focus-within { opacity: 1; }
   }
+  /* The filter rail still scrolls when it outgrows the screen, but without
+     a scrollbar beside it. */
+  .feed-rail { scrollbar-width: none; }
+  .feed-rail::-webkit-scrollbar { display: none; }
   .feed-comment :global(p:first-child) { margin-top: 0; }
   .feed-comment :global(p:last-child) { margin-bottom: 0; }
 </style>

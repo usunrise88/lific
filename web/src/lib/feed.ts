@@ -443,3 +443,26 @@ export function selectedProjectIds(
 export function toggle<T>(list: T[], value: T): T[] {
   return list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
 }
+
+// ── Density ──────────────────────────────────────────────
+
+/** Compact rows or full cards. */
+export type Density = "compact" | "full";
+
+const DENSITY_KEY = "lific:feed:density";
+
+export function loadDensity(): Density {
+  try {
+    return localStorage.getItem(DENSITY_KEY) === "full" ? "full" : "compact";
+  } catch {
+    return "compact";
+  }
+}
+
+export function saveDensity(d: Density): void {
+  try {
+    localStorage.setItem(DENSITY_KEY, d);
+  } catch {
+    // ignore
+  }
+}

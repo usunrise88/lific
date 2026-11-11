@@ -18,6 +18,10 @@
 class PeekState {
   open = $state(false);
   identifier = $state<string | null>(null);
+  /** Fork: a route that has room for the preview (the Feed's right rail on
+   *  wide screens) docks it: the global overlay stands down and the route
+   *  renders `<PeekPanel embedded />` in place instead. */
+  docked = $state(false);
 }
 
 export const peekState = new PeekState();
@@ -79,4 +83,16 @@ export function openPeek(identifier: string): void {
  *  rendering the last-loaded issue while it slides out). */
 export function closePeek(): void {
   peekState.open = false;
+}
+
+/** Fork: dock the preview into the calling route (see `PeekState.docked`).
+ *  Returns the undock function for the route's effect cleanup; undocking
+ *  also closes the preview so it does not reappear as an overlay on the
+ *  next page. */
+export function dockPeek(): () => void {
+  peekState.docked = true;
+  return () => {
+    peekState.docked = false;
+    peekState.open = false;
+  };
 }

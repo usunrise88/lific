@@ -58,9 +58,17 @@
 
   let {
     navigate,
+    embedded = false,
   }: {
     navigate: (path: string) => void;
+    /** Fork: render in the host route's layout instead of as an overlay.
+     *  Exactly one instance is live at a time: the embedded one while a
+     *  route has docked the preview, the global overlay otherwise. */
+    embedded?: boolean;
   } = $props();
+
+  let live = $derived(embedded === peekState.docked);
+  let shown = $derived(live && peekState.open);
 
   let issue = $state<Issue | null>(null);
   let modules = $state<Module[]>([]);
@@ -85,6 +93,7 @@
 
   $effect(() => {
     const ident = peekState.identifier;
+    if (!live) return;
     if (!ident) {
       issue = null;
       return;
@@ -251,7 +260,7 @@
   }
 
   function handleKeydown(e: KeyboardEvent) {
-    if (!peekState.open) return;
+    if (!shown) return;
     if (e.key === "Escape") {
       e.preventDefault();
       closePeek();
@@ -265,7 +274,8 @@
      the panel is closed. -->
 <svelte:window onkeydown={handleKeydown} />
 
-{#if peekState.open}
+{#if shown}
+  {#if !embedded}
   <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
   <!-- Deliberately doesn't touch body/html overflow — the list/board
        behind the scrim stays exactly as scrollable as it was; peek is a
@@ -275,19 +285,22 @@
     onclick={closePeek}
     transition:fade={scrimParams()}
   ></div>
+  {/if}
 
   <div
-    class="fixed z-[95] flex flex-col bg-[var(--surface)] shadow-2xl
-           inset-x-0 bottom-0 h-[85dvh] rounded-t-xl border-t border-[var(--border)]
-           pb-[env(safe-area-inset-bottom)]
-           md:inset-y-0 md:right-0 md:left-auto md:bottom-auto
-           md:h-full md:w-[480px] md:max-w-[92vw]
-           md:rounded-none md:border-t-0 md:border-l"
+    class={embedded
+      ? "flex flex-col h-full bg-[var(--surface)] rounded-xl border border-[var(--border)] overflow-hidden"
+      : `fixed z-[95] flex flex-col bg-[var(--surface)] shadow-2xl
+         inset-x-0 bottom-0 h-[85dvh] rounded-t-xl border-t border-[var(--border)]
+         pb-[env(safe-area-inset-bottom)]
+         md:inset-y-0 md:right-0 md:left-auto md:bottom-auto
+         md:h-full md:w-[480px] md:max-w-[92vw]
+         md:rounded-none md:border-t-0 md:border-l`}
     bind:this={sheetEl}
-    in:fly={panelInParams()}
-    out:fly={panelOutParams()}
-    role="dialog"
-    aria-modal="true"
+    in:fly={embedded ? { x: 16, duration: motionReduced() ? 0 : 160 } : panelInParams()}
+    out:fly={embedded ? { duration: 0 } : panelOutParams()}
+    role={embedded ? "region" : "dialog"}
+    aria-modal={embedded ? undefined : "true"}
     aria-label={issue ? `${issue.identifier} preview` : "Issue preview"}
   >
     <!-- Grab zone: pill + header. On mobile, dragging anywhere here slides
