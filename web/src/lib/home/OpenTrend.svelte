@@ -3,6 +3,7 @@
   // scoreboard: in a tracker that captures every idea, a rising count is
   // normal, so the chart only answers "is the pile growing or shrinking".
   import type { DayCount } from "../api";
+  import { t, locale } from "../i18n";
   import { smoothAreaPath, smoothPath, type Point } from "../insights/curve";
 
   let { points }: { points: DayCount[] } = $props();
@@ -26,15 +27,15 @@
 
   function label(iso: string | undefined): string {
     if (!iso) return "";
-    return new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    return new Date(`${iso}T00:00:00`).toLocaleDateString(locale(), { month: "short", day: "numeric" });
   }
 
   let hover = $state<number | null>(null);
 
   function onMove(e: PointerEvent) {
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const t = (e.clientX - rect.left) / rect.width;
-    hover = Math.min(points.length - 1, Math.max(0, Math.round(t * (points.length - 1))));
+    const frac = (e.clientX - rect.left) / rect.width;
+    hover = Math.min(points.length - 1, Math.max(0, Math.round(frac * (points.length - 1))));
   }
 </script>
 
@@ -45,7 +46,7 @@
     onpointermove={onMove}
     onpointerleave={() => (hover = null)}
   >
-    <svg viewBox="0 0 {VB_W} {VB_H}" preserveAspectRatio="none" class="w-full h-[72px] block" role="img" aria-label="Open issues over the last 90 days">
+    <svg viewBox="0 0 {VB_W} {VB_H}" preserveAspectRatio="none" class="w-full h-[72px] block" role="img" aria-label={t("home.trend.aria")}>
       <path d={smoothAreaPath(pts, VB_H)} fill="var(--success)" opacity="0.1" />
       <path
         d={smoothPath(pts)}
@@ -66,12 +67,12 @@
         style="left: {Math.min(90, Math.max(10, (pts[hover].x / VB_W) * 100))}%"
       >
         <span class="text-[var(--text-muted)]">{label(points[hover].date)}</span>
-        <span class="ml-1.5 font-medium tabular-nums text-[var(--text)]">{points[hover].count} open</span>
+        <span class="ml-1.5 font-medium tabular-nums text-[var(--text)]">{t("home.openCount", { count: points[hover].count })}</span>
       </div>
     {/if}
   </div>
   <div class="flex justify-between mt-1 text-micro text-[var(--text-faint)]">
     <span>{label(points[0]?.date)}</span>
-    <span>Today</span>
+    <span>{t("common.today")}</span>
   </div>
 {/if}

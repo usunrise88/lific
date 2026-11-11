@@ -8,6 +8,7 @@
   // they get.
   import { importGithub, type ImportSummary } from "./api";
   import { Download, ArrowRight, Check, Loader, AlertTriangle } from "lucide-svelte";
+  import { t } from "./i18n";
 
   let {
     projectId,
@@ -88,11 +89,10 @@
 <section>
   <div class="flex items-center gap-2 mb-1">
     <Download size={16} class="text-[var(--text-muted)]" />
-    <h2 class="text-body-sm font-semibold text-[var(--text)]">Import from GitHub</h2>
+    <h2 class="text-body-sm font-semibold text-[var(--text)]">{t("importer.title")}</h2>
   </div>
   <p class="text-caption text-[var(--text-muted)] mb-3 leading-relaxed">
-    Pull issues from a GitHub repo into this project. Pull requests are skipped.
-    Re-running never duplicates — already-imported issues are recognized and left alone.
+    {t("importer.intro")}
   </p>
 
   <div class="rounded-xl bg-[var(--surface)] shadow-[0_1px_2px_rgba(0,0,0,0.06)] p-4">
@@ -100,12 +100,12 @@
       <div class="flex flex-col gap-4">
         <div>
           <label for="import-repo" class="block text-body-sm font-medium text-[var(--text)] mb-1.5">
-            Repository
+            {t("importer.repo")}
           </label>
           <input
             id="import-repo"
             bind:value={repo}
-            placeholder="owner/name"
+            placeholder={t("importer.repoPlaceholder")}
             spellcheck="false"
             class="w-full rounded-md px-3 py-2 text-body font-mono
                    border border-[var(--border)] bg-[var(--bg-subtle)] text-[var(--text)]
@@ -116,7 +116,7 @@
 
         <div>
           <label for="import-token" class="block text-body-sm font-medium text-[var(--text)] mb-1.5">
-            Token <span class="text-caption text-[var(--text-faint)]">optional for public repos</span>
+            {t("importer.token")} <span class="text-caption text-[var(--text-faint)]">{t("importer.tokenHint")}</span>
           </label>
           <input
             id="import-token"
@@ -133,38 +133,38 @@
 
         <div class="flex gap-4 flex-wrap">
           <div>
-            <label for="import-state" class="block text-body-sm font-medium text-[var(--text)] mb-1.5">Issues</label>
+            <label for="import-state" class="block text-body-sm font-medium text-[var(--text)] mb-1.5">{t("importer.issues")}</label>
             <select
               id="import-state"
               bind:value={stateFilter}
               class="text-body-sm rounded-md border border-[var(--border)] bg-[var(--bg-subtle)]
                      text-[var(--text)] px-2.5 py-2 outline-none focus:border-[var(--accent)]"
             >
-              <option value="all">Open + closed</option>
-              <option value="open">Open only</option>
-              <option value="closed">Closed only</option>
+              <option value="all">{t("importer.state.all")}</option>
+              <option value="open">{t("importer.state.open")}</option>
+              <option value="closed">{t("importer.state.closed")}</option>
             </select>
           </div>
           <div>
-            <label for="map-open" class="block text-body-sm font-medium text-[var(--text)] mb-1.5">Open →</label>
+            <label for="map-open" class="block text-body-sm font-medium text-[var(--text)] mb-1.5">{t("importer.mapOpen")}</label>
             <select
               id="map-open"
               bind:value={mapOpen}
               class="text-body-sm rounded-md border border-[var(--border)] bg-[var(--bg-subtle)]
                      text-[var(--text)] px-2.5 py-2 outline-none focus:border-[var(--accent)]"
             >
-              {#each STATUSES as s}<option value={s}>{s}</option>{/each}
+              {#each STATUSES as s}<option value={s}>{t(`importer.status.${s}`)}</option>{/each}
             </select>
           </div>
           <div>
-            <label for="map-closed" class="block text-body-sm font-medium text-[var(--text)] mb-1.5">Closed →</label>
+            <label for="map-closed" class="block text-body-sm font-medium text-[var(--text)] mb-1.5">{t("importer.mapClosed")}</label>
             <select
               id="map-closed"
               bind:value={mapClosed}
               class="text-body-sm rounded-md border border-[var(--border)] bg-[var(--bg-subtle)]
                      text-[var(--text)] px-2.5 py-2 outline-none focus:border-[var(--accent)]"
             >
-              {#each STATUSES as s}<option value={s}>{s}</option>{/each}
+              {#each STATUSES as s}<option value={s}>{t(`importer.status.${s}`)}</option>{/each}
             </select>
           </div>
         </div>
@@ -185,7 +185,7 @@
             disabled={!repoValid() || busy}
             onclick={runPreview}
           >
-            {#if busy}<Loader size={14} class="animate-spin" /> Previewing…{:else}Preview import <ArrowRight size={14} />{/if}
+            {#if busy}<Loader size={14} class="animate-spin" /> {t("importer.previewing")}{:else}{t("importer.preview")} <ArrowRight size={14} />{/if}
           </button>
         </div>
       </div>
@@ -193,20 +193,20 @@
     {:else if step === "preview" && preview}
       <div class="flex flex-col gap-4">
         <p class="text-body-sm text-[var(--text-muted)]">
-          Previewing <span class="font-mono text-[var(--text)]">{repo.trim()}</span>. This will create:
+          {t("importer.previewNote.before")} <span class="font-mono text-[var(--text)]">{repo.trim()}</span>{t("importer.previewNote.after")}
         </p>
         <div class="grid grid-cols-3 gap-3">
-          {@render stat("Issues", preview.issues_created)}
-          {@render stat("Comments", preview.comments_planned)}
-          {@render stat("Labels", preview.labels_planned)}
+          {@render stat(t("importer.stat.issues"), preview.issues_created)}
+          {@render stat(t("importer.stat.comments"), preview.comments_planned)}
+          {@render stat(t("importer.stat.labels"), preview.labels_planned)}
         </div>
         {#if preview.issues_skipped_existing > 0 || preview.skipped_non_issues > 0}
           <p class="text-caption text-[var(--text-faint)]">
             {#if preview.issues_skipped_existing > 0}
-              {preview.issues_skipped_existing} already imported (will be skipped).
+              {t("importer.alreadyImported", { count: preview.issues_skipped_existing })}
             {/if}
             {#if preview.skipped_non_issues > 0}
-              {preview.skipped_non_issues} pull request(s) excluded.
+              {t("importer.prsExcluded", { count: preview.skipped_non_issues })}
             {/if}
           </p>
         {/if}
@@ -226,14 +226,14 @@
             disabled={busy || preview.issues_created === 0}
             onclick={runImport}
           >
-            {#if busy}<Loader size={14} class="animate-spin" /> Importing…{:else}Import {preview.issues_created} issue{preview.issues_created !== 1 ? "s" : ""}{/if}
+            {#if busy}<Loader size={14} class="animate-spin" /> {t("importer.importing")}{:else}{t("importer.run", { count: preview.issues_created })}{/if}
           </button>
           <button
             class="text-body-sm text-[var(--text-muted)] px-3 py-2 rounded-md hover:bg-[var(--bg-subtle)] transition-colors"
             disabled={busy}
             onclick={reset}
           >
-            Back
+            {t("common.back")}
           </button>
         </div>
       </div>
@@ -242,16 +242,16 @@
       <div class="flex flex-col gap-4">
         <div class="flex items-center gap-2 text-[var(--success)]">
           <span class="grid place-items-center size-7 rounded-full bg-[var(--success-bg)]"><Check size={15} /></span>
-          <span class="text-body font-medium text-[var(--text)]">Import complete</span>
+          <span class="text-body font-medium text-[var(--text)]">{t("importer.complete")}</span>
         </div>
         <div class="grid grid-cols-3 gap-3">
-          {@render stat("Issues", result.issues_created)}
-          {@render stat("Comments", result.comments_created)}
-          {@render stat("Labels", result.labels_created)}
+          {@render stat(t("importer.stat.issues"), result.issues_created)}
+          {@render stat(t("importer.stat.comments"), result.comments_created)}
+          {@render stat(t("importer.stat.labels"), result.labels_created)}
         </div>
         {#if result.issues_skipped_existing > 0}
           <p class="text-caption text-[var(--text-faint)]">
-            {result.issues_skipped_existing} already-imported issue(s) skipped.
+            {t("importer.skipped", { count: result.issues_skipped_existing })}
           </p>
         {/if}
         <div>
@@ -259,7 +259,7 @@
             class="text-body-sm text-[var(--text-muted)] border border-[var(--border)] px-3 py-1.5 rounded-md hover:bg-[var(--bg-subtle)] transition-colors"
             onclick={reset}
           >
-            Import another repo
+            {t("importer.another")}
           </button>
         </div>
       </div>

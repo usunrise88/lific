@@ -1,4 +1,5 @@
-import { ARCHIVE_UNKNOWN, importProjectArchive, onSessionChange, type ArchiveImportResult } from "./api";
+import { importProjectArchive, onSessionChange, type ArchiveImportResult } from "./api";
+import { t } from "./i18n";
 
 const pendingKey = (userId: number) => `lific:archive-import-pending:${userId}`;
 let owner: number | null = null;
@@ -32,7 +33,7 @@ export function restoreArchiveImport(userId: number, token: string) {
   const pending = sessionStorage.getItem(pendingKey(userId)) === "1";
   Object.assign(archiveImport, {
     phase: pending ? "unknown" : "idle",
-    progress: null, error: pending ? ARCHIVE_UNKNOWN : "", result: null,
+    progress: null, error: pending ? t("archive.import.unknown") : "", result: null,
   });
 }
 
@@ -56,7 +57,8 @@ export async function startArchiveImport(file: File) {
     archiveImport.result = result.data;
     archiveImport.phase = "success";
   } else {
-    archiveImport.error = result.error;
+    // A lost connection carries the client-side "may have completed" text.
+    archiveImport.error = result.status === null ? t("archive.import.unknown") : result.error;
     archiveImport.phase = result.status === null ? "unknown" : "error";
     if (result.status !== null) sessionStorage.removeItem(key);
   }

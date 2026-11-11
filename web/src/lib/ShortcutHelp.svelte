@@ -10,14 +10,16 @@
   // scrim, corner radius, shadow, border) so the two overlays read as one
   // family rather than two different modal languages.
   import { shortcutHelpState, closeShortcutHelp } from "./shortcutHelpState.svelte";
-  import { SHORTCUTS, SCOPE_ORDER, SCOPE_LABEL } from "./shortcuts";
+  import { shortcuts, SCOPE_ORDER, scopeLabel } from "./shortcuts";
+  import { t } from "./i18n";
   import { X } from "lucide-svelte";
 
+  const all = shortcuts();
   let grouped = $derived(
     SCOPE_ORDER.map((scope) => ({
       scope,
-      label: SCOPE_LABEL[scope],
-      entries: SHORTCUTS.filter((s) => s.scope === scope),
+      label: scopeLabel(scope),
+      entries: all.filter((s) => s.scope === scope),
     })).filter((g) => g.entries.length > 0),
   );
 
@@ -55,14 +57,14 @@
       onclick={(e) => e.stopPropagation()}
       role="dialog"
       aria-modal="true"
-      aria-label="Keyboard shortcuts"
+      aria-label={t("shortcuts.title")}
     >
       <div class="sm:hidden flex justify-center pt-2 pb-0.5 shrink-0">
         <div class="h-1 w-9 rounded-full bg-[var(--border)]"></div>
       </div>
       <div class="flex items-center gap-2.5 px-4 py-3 border-b border-[var(--border)] shrink-0">
         <span class="flex-1 text-body-lg font-medium text-[var(--text)]">
-          Keyboard shortcuts
+          {t("shortcuts.title")}
         </span>
         <kbd
           class="px-1.5 py-0.5 rounded border border-[var(--border)]
@@ -75,7 +77,7 @@
           class="size-11 sm:size-6 flex items-center justify-center rounded-md
                  text-[var(--text-faint)] hover:text-[var(--text)]
                  hover:bg-[var(--bg-subtle)] transition-colors"
-          aria-label="Close"
+          aria-label={t("common.close")}
           onclick={closeShortcutHelp}
         >
           <X size={14} />

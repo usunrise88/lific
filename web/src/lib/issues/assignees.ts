@@ -7,6 +7,7 @@
 // filter and the labels can be unit tested without a component.
 
 import type { Issue, IssueAssignee } from "../api";
+import { locale, t } from "../i18n";
 
 export type AssignmentKind = "agents" | "human" | "people";
 
@@ -57,9 +58,9 @@ export function initials(name: string): string {
 export function describeAssignment(issue: Assignable): string {
   switch (assignmentKind(issue)) {
     case "agents":
-      return "Any agent";
+      return t("issues.assignee.anyAgent");
     case "human":
-      return "Any person";
+      return t("issues.assignee.anyPerson");
     case "people":
       return (issue.assignees ?? []).map(personName).join(", ");
   }
@@ -68,8 +69,8 @@ export function describeAssignment(issue: Assignable): string {
 /** Same as {@link describeAssignment}, from a write value. Names resolve
  *  through `people` when known and fall back to `@username`. */
 export function describeNames(names: string[], people: Person[] = []): string {
-  if (names.length === 0) return "Any agent";
-  if (names.length === 1 && names[0] === HUMAN) return "Any person";
+  if (names.length === 0) return t("issues.assignee.anyAgent");
+  if (names.length === 1 && names[0] === HUMAN) return t("issues.assignee.anyPerson");
   return names
     .map((n) => {
       const p = people.find((x) => x.username.toLowerCase() === n.toLowerCase());
@@ -111,7 +112,7 @@ export function sameNames(a: string[], b: string[]): boolean {
 export function orderPeople(people: Person[], me: Person | null): Person[] {
   const rest = people
     .filter((p) => p.user_id !== me?.user_id)
-    .sort((a, b) => personName(a).localeCompare(personName(b), undefined, { sensitivity: "base" }));
+    .sort((a, b) => personName(a).localeCompare(personName(b), locale(), { sensitivity: "base" }));
   return me ? [me, ...rest] : rest;
 }
 
@@ -188,7 +189,7 @@ export function assigneesIn(issues: Assignable[]): IssueAssignee[] {
     for (const a of issue.assignees ?? []) if (!seen.has(a.user_id)) seen.set(a.user_id, a);
   }
   return [...seen.values()].sort((a, b) =>
-    personName(a).localeCompare(personName(b), undefined, { sensitivity: "base" }),
+    personName(a).localeCompare(personName(b), locale(), { sensitivity: "base" }),
   );
 }
 
@@ -200,9 +201,9 @@ export function assignActivity(
 ): { verb: string; subject: string | null } {
   const human = value === HUMAN;
   if (action === "assign") {
-    return human ? { verb: "marked for any person", subject: null } : { verb: "assigned", subject: value };
+    return human ? { verb: t("issues.activity.markedForPerson"), subject: null } : { verb: t("issues.activity.assigned"), subject: value };
   }
   return human
-    ? { verb: "removed the any-person mark", subject: null }
-    : { verb: "unassigned", subject: value };
+    ? { verb: t("issues.activity.removedPersonMark"), subject: null }
+    : { verb: t("issues.activity.unassigned"), subject: value };
 }

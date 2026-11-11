@@ -10,6 +10,7 @@
   import type { Snippet } from "svelte";
   import { Download } from "lucide-svelte";
   import { downloadAttachment, formatBytes } from "../../api";
+  import { t } from "../../i18n";
 
   let {
     id,
@@ -49,8 +50,8 @@
     <button
       type="button"
       class="vf__btn"
-      title="Download {filename}"
-      aria-label="Download {filename}"
+      title={t("viewers.download", { name: filename })}
+      aria-label={t("viewers.download", { name: filename })}
       onclick={() => void downloadAttachment(id, filename)}
     >
       <Download size={13} />

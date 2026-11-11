@@ -34,6 +34,7 @@
     hashWithLineTarget,
     lineTargetFromHash,
   } from "./deepLink";
+  import { t } from "../../i18n";
 
   let {
     id,
@@ -78,7 +79,7 @@
       return;
     }
     if (res.text.length > MAX_INLINE_BYTES) {
-      loadError = "This file is too large to preview inline.";
+      loadError = t("viewers.data.tooLarge");
       return;
     }
     text = res.text;
@@ -239,7 +240,7 @@
   async function copyLink() {
     if (!selectionToken) return;
     await copyToClipboard(fullLineLink(selectionToken, window.location), {
-      label: "link to lines",
+      label: t("viewers.text.linkLabel"),
     });
   }
 
@@ -321,7 +322,7 @@
     {id}
     {filename}
     {sizeBytes}
-    meta={text === null ? null : `${total} ${total === 1 ? "line" : "lines"}`}
+    meta={text === null ? null : t("viewers.text.lines", { count: total })}
     tone="flush"
   >
     {#snippet icon()}<FileText size={14} />{/snippet}
@@ -332,12 +333,12 @@
           type="button"
           class="vf__btn"
           aria-pressed={findOpen}
-          title="Find in file"
+          title={t("viewers.text.find")}
           onclick={() => (findOpen ? closeFind() : void openFind())}
         >
           <Search size={13} />
         </button>
-        <button type="button" class="vf__btn" title="Copy file contents" onclick={copyAll}>
+        <button type="button" class="vf__btn" title={t("viewers.text.copyAll")} onclick={copyAll}>
           <Copy size={13} />
         </button>
       {/if}
@@ -346,20 +347,20 @@
         class="vf__btn vf__btn--label"
         onclick={() => (expanded ? (expanded = false) : void expand())}
       >
-        {expanded ? "Collapse" : "Expand"}
+        {expanded ? t("viewers.collapse") : t("viewers.expand")}
       </button>
     {/snippet}
 
     {#if loadError}
       <p class="tv__note">{loadError}</p>
     {:else if text === null}
-      <p class="tv__note">{loading ? "Loading preview..." : "Preview not loaded yet."}</p>
+      <p class="tv__note">{loading ? t("viewers.data.loading") : t("viewers.notLoaded")}</p>
     {:else if !expanded}
       <div class="tv__preview">
         <pre class="tv__pre">{previewLines.join("\n")}</pre>
         {#if total > PREVIEW_LINES}
           <button type="button" class="tv__more" onclick={() => void expand()}>
-            Expand to see all {total} lines
+            {t("viewers.text.expandAll", { count: total })}
           </button>
         {/if}
       </div>
@@ -376,8 +377,8 @@
               bind:value={query}
               class="tv__find-input"
               type="search"
-              placeholder="Find in file"
-              aria-label="Find in file"
+              placeholder={t("viewers.text.find")}
+              aria-label={t("viewers.text.find")}
               onkeydown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault();
@@ -391,15 +392,15 @@
             <span class="tv__find-count">
               {matches.length === 0
                 ? query.trim()
-                  ? "No results"
+                  ? t("viewers.text.noResults")
                   : ""
-                : `${currentMatch + 1} of ${matches.length}`}
+                : t("viewers.text.matchOf", { n: currentMatch + 1, total: matches.length })}
             </span>
             <button
               type="button"
               class="tv__find-btn"
-              title="Previous match"
-              aria-label="Previous match"
+              title={t("viewers.text.prev")}
+              aria-label={t("viewers.text.prev")}
               onclick={() => void gotoMatch(-1)}
             >
               <ChevronUp size={13} />
@@ -407,8 +408,8 @@
             <button
               type="button"
               class="tv__find-btn"
-              title="Next match"
-              aria-label="Next match"
+              title={t("viewers.text.next")}
+              aria-label={t("viewers.text.next")}
               onclick={() => void gotoMatch(1)}
             >
               <ChevronDown size={13} />
@@ -417,8 +418,8 @@
               <button
                 type="button"
                 class="tv__find-btn"
-                title="Copy link to selected lines"
-                aria-label="Copy link to selected lines"
+                title={t("viewers.text.copyLinkTitle")}
+                aria-label={t("viewers.text.copyLinkTitle")}
                 onclick={copyLink}
               >
                 <LinkIcon size={13} />
@@ -427,8 +428,8 @@
             <button
               type="button"
               class="tv__find-btn"
-              title="Close find"
-              aria-label="Close find"
+              title={t("viewers.text.closeFind")}
+              aria-label={t("viewers.text.closeFind")}
               onclick={closeFind}
             >
               <X size={13} />
@@ -441,10 +442,10 @@
             {#if row === "gap"}
               <div class="tv__gap">
                 <span>
-                  Showing the first {HEAD_TAIL_COUNT} and last {HEAD_TAIL_COUNT} lines of {total}.
+                  {t("viewers.text.headTail", { n: HEAD_TAIL_COUNT, count: total })}
                 </span>
                 <button type="button" class="tv__more" onclick={() => (showAll = true)}>
-                  Expand all
+                  {t("viewers.text.showAll")}
                 </button>
               </div>
             {:else}
@@ -452,7 +453,7 @@
                 <button
                   type="button"
                   class="tv__num"
-                  title="Select line {row} (shift-click for a range)"
+                  title={t("viewers.text.selectLine", { n: row })}
                   onclick={(e) => selectLine(row, e.shiftKey)}
                 >{row}</button>
                 <span class="tv__text"
@@ -474,11 +475,14 @@
         <div class="tv__foot">
           <span class="tv__foot-label">
             {selEnd !== null && selEnd !== selStart
-              ? `Lines ${Math.min(selStart ?? 0, selEnd)} to ${Math.max(selStart ?? 0, selEnd)} selected`
-              : `Line ${selStart} selected`}
+              ? t("viewers.text.rangeSelected", {
+                  from: Math.min(selStart ?? 0, selEnd),
+                  to: Math.max(selStart ?? 0, selEnd),
+                })
+              : t("viewers.text.lineSelected", { n: selStart ?? 0 })}
           </span>
           <button type="button" class="tv__foot-btn" onclick={copyLink}>
-            <LinkIcon size={12} /> Copy link
+            <LinkIcon size={12} /> {t("viewers.text.copyLink")}
           </button>
           <button
             type="button"
@@ -489,7 +493,7 @@
               writeHash();
             }}
           >
-            Clear
+            {t("viewers.text.clear")}
           </button>
         </div>
       {/if}

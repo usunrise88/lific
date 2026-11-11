@@ -58,6 +58,7 @@
   import { projectRole, loadProjectRole } from "../lib/projectRole.svelte"; // LIF-234
   import { loadSubTab, saveSubTab } from "../lib/subtab";
   import { toast } from "../lib/toast/toast.svelte";
+  import { t, locale } from "../lib/i18n";
   import { safeLabelColor } from "../lib/labelColors";
 
   // LIF-234: pages are content — create/edit/delete + folder management are
@@ -202,10 +203,10 @@
   // status filter. The filter's default ("__active") hides archived
   // pages; "" means show All (including archived).
   const PAGE_STATUSES = [
-    { value: "draft", label: "Draft", icon: PenLine },
-    { value: "active", label: "Active", icon: CircleDot },
-    { value: "complete", label: "Complete", icon: CheckCircle2 },
-    { value: "archived", label: "Archived", icon: Archive },
+    { value: "draft", label: t("pages.status.draft"), icon: PenLine },
+    { value: "active", label: t("pages.status.active"), icon: CircleDot },
+    { value: "complete", label: t("pages.status.complete"), icon: CheckCircle2 },
+    { value: "archived", label: t("pages.status.archived"), icon: Archive },
   ] as const;
 
   function statusMeta(value: string) {
@@ -232,8 +233,8 @@
   // per concrete status.
   const HIDE_ARCHIVED = "__active";
   const statusFilterOptions = [
-    { value: HIDE_ARCHIVED, label: "Active" },
-    { value: "", label: "All" },
+    { value: HIDE_ARCHIVED, label: t("pages.filter.active") },
+    { value: "", label: t("pages.filter.all") },
     ...PAGE_STATUSES.map((s) => ({ value: s.value, label: s.label })),
   ];
 
@@ -270,10 +271,10 @@
   );
 
   let pageSubTabs = $derived([
-    { id: "browse", label: "Browse" },
-    { id: "recent", label: "Recent" },
-    { id: "drafts", label: "Drafts", count: draftPages.length },
-    { id: "archived", label: "Archived", count: archivedPages.length },
+    { id: "browse", label: t("pages.tabs.browse") },
+    { id: "recent", label: t("pages.tabs.recent") },
+    { id: "drafts", label: t("pages.tabs.drafts"), count: draftPages.length },
+    { id: "archived", label: t("pages.tabs.archived"), count: archivedPages.length },
   ]);
 
   // Search keeps the Browse filter semantics it had when filters were
@@ -355,12 +356,12 @@
   }
 
   let labelOptions = $derived([
-    { value: "", label: "Label" },
+    { value: "", label: t("pages.filter.label") },
     ...labels.map((l) => ({ value: l.name, label: l.name, color: l.color })),
   ]);
 
   let moveFolderOptions = $derived([
-    { value: null, label: "No folder / root" },
+    { value: null, label: t("pages.move.root") },
     ...folders.map((folder) => ({ value: folder.id, label: folder.name })),
   ]);
 
@@ -404,7 +405,7 @@
     } else {
       cacheProjects(projRes.data);
       const found = projRes.data.find((p: Project) => p.identifier === ident);
-      if (!found) { error = `Project ${ident} not found`; projectLoading = false; return; }
+      if (!found) { error = t("pages.projectNotFound", { ident }); projectLoading = false; return; }
       // A slow response for a project the user has already navigated away
       // from must not re-point this component at it.
       if (ident !== projectIdentifier) return;
@@ -597,7 +598,7 @@
         pages = pages.map((p) =>
           p.id === page.id ? { ...p, folder_id: previousFolderId } : p
         );
-        toast(`Couldn't move ${page.identifier}: ${res.error}`, { kind: "error" });
+        toast(t("pages.toast.moveFailed", { identifier: page.identifier, error: res.error }), { kind: "error" });
         return false;
       }
 
@@ -704,13 +705,13 @@
     }
     const lines = text.split("\n");
     const firstIdx = lines.findIndex((l) => l.trim());
-    const rawTitle = lines[firstIdx] ?? "Pasted page";
+    const rawTitle = lines[firstIdx] ?? t("pages.pastedTitle");
     const title =
       rawTitle
         .replace(/^#+\s*/, "")
         .replace(/[*_`>\[\]]/g, "")
         .trim()
-        .slice(0, 120) || "Pasted page";
+        .slice(0, 120) || t("pages.pastedTitle");
     const body = lines.slice(firstIdx + 1).join("\n").trim();
     const res = await createPage({
       project_id: project.id,
@@ -728,14 +729,14 @@
     newMenuOpen = false;
     if (!project) return;
     const now = new Date();
-    const stamp = now.toLocaleDateString("en-US", {
+    const stamp = now.toLocaleDateString(locale(), {
       month: "short",
       day: "numeric",
       year: "numeric",
     });
     const res = await createPage({
       project_id: project.id,
-      title: `Note · ${stamp}`,
+      title: t("pages.quickNote.title", { date: stamp }),
       status: "draft",
       ...(focusedFolderId != null ? { folder_id: focusedFolderId } : {}),
     });
@@ -747,10 +748,10 @@
   // a failed delete left the sidebar showing a folder that still existed.
   async function handleDeleteFolder(id: number, e: Event) {
     e.stopPropagation();
-    const name = folders.find((f) => f.id === id)?.name ?? "folder";
+    const name = folders.find((f) => f.id === id)?.name ?? t("pages.folder.fallbackName");
     const res = await withMutation(() => deleteFolder(id));
     if (!res.ok) {
-      toast(`Couldn't delete ${name}: ${res.error}`, { kind: "error" });
+      toast(t("pages.toast.deleteFolderFailed", { name, error: res.error }), { kind: "error" });
       return;
     }
     folders = folders.filter((f) => f.id !== id && f.parent_id !== id);
@@ -789,7 +790,7 @@
       </button>
       <ChevronRight size={12} class="hidden sm:block text-[var(--text-faint)]" />
       <span class="text-body-sm font-medium text-[var(--text)]">
-        Pages
+        {t("pages.title")}
       </span>
       {#if !loading}
         <span
@@ -816,7 +817,7 @@
         <Select
           options={labelOptions}
           bind:value={filterLabel}
-          placeholder="Label"
+          placeholder={t("pages.filter.label")}
           size="sm"
           class="w-auto"
         >
@@ -847,7 +848,7 @@
                    hover:text-[var(--text)] px-1.5 py-1 rounded-md
                    hover:bg-[var(--bg-subtle)] transition-colors"
             onclick={() => { filterLabel = ""; }}
-            title="Clear label filter"
+            title={t("pages.filter.clearLabel")}
           >
             <X size={12} />
           </button>
@@ -891,12 +892,12 @@
       <!-- LIF-231: overview/folder-navigator toggle (below lg, where the
            sidebar is off-canvas). -->
       {#if !loading && !error && (pages.length > 0 || folders.length > 0)}
-        <Tooltip content="Overview & folders" placement="bottom">
+        <Tooltip content={t("pages.overview.tooltip")} placement="bottom">
           <button
             class="lg:hidden size-9 sm:size-7 flex items-center justify-center rounded-md
                    text-[var(--text-muted)] hover:text-[var(--text)]
                    hover:bg-[var(--bg-subtle)] transition-colors"
-            aria-label="Show overview and folders"
+            aria-label={t("pages.overview.show")}
             aria-expanded={overviewOpen}
             onclick={(e) => { e.stopPropagation(); overviewOpen = true; }}
           >
@@ -921,7 +922,7 @@
             <!-- svelte-ignore a11y_autofocus -->
             <input
               type="text"
-              placeholder="Search pages..."
+              placeholder={t("pages.search.placeholder")}
               enterkeyhint="search"
               bind:this={searchInputEl}
               bind:value={searchQuery}
@@ -944,7 +945,7 @@
           </div>
         </div>
       {:else}
-        <Tooltip content="Search" placement="bottom">
+        <Tooltip content={t("common.search")} placement="bottom">
           <button
             class="size-7 flex items-center justify-center rounded-md
                    text-[var(--text-muted)] hover:text-[var(--text)]
@@ -979,7 +980,7 @@
           onclick={(e) => { e.stopPropagation(); newMenuOpen = !newMenuOpen; }}
         >
           <Plus size={14} class="shrink-0" />
-          <span class="hidden sm:inline">New</span>
+          <span class="hidden sm:inline">{t("pages.new.button")}</span>
           <ChevronDown
             size={14}
             class="motion-safe:transition-transform {newMenuOpen ? 'rotate-180' : ''}"
@@ -1004,7 +1005,7 @@
               onclick={() => startCreate("page", focusedFolderId)}
             >
               <FileText size={14} class="text-[var(--text-muted)]" />
-              <span class="flex-1">New page</span>
+              <span class="flex-1">{t("pages.new.page")}</span>
             </button>
             <button
               role="menuitem"
@@ -1014,7 +1015,7 @@
               onclick={() => startCreate("folder", focusedFolderId)}
             >
               <FolderPlus size={14} class="text-[var(--text-muted)]" />
-              <span class="flex-1">New folder</span>
+              <span class="flex-1">{t("pages.new.folder")}</span>
             </button>
 
             <div class="my-1 h-px bg-[var(--border)]"></div>
@@ -1027,7 +1028,7 @@
               onclick={pasteAsNewPage}
             >
               <ClipboardPaste size={14} class="text-[var(--success)]" />
-              <span class="flex-1">Paste as new page</span>
+              <span class="flex-1">{t("pages.new.paste")}</span>
             </button>
             <button
               role="menuitem"
@@ -1037,15 +1038,15 @@
               onclick={quickNote}
             >
               <NotebookPen size={14} class="text-[var(--success)]" />
-              <span class="flex-1">Quick note</span>
+              <span class="flex-1">{t("pages.new.quickNote")}</span>
             </button>
 
             <div class="my-1 h-px bg-[var(--border)]"></div>
             <div class="px-3 pb-1 pt-0.5 text-micro uppercase tracking-widest
                         font-semibold text-[var(--text-faint)]">
-              New page as
+              {t("pages.new.asStatus")}
             </div>
-            {#each [["draft", "Draft", PenLine], ["active", "Active", CircleDot], ["complete", "Complete", CheckCircle2]] as [value, label, Icon]}
+            {#each [["draft", t("pages.status.draft"), PenLine], ["active", t("pages.status.active"), CircleDot], ["complete", t("pages.status.complete"), CheckCircle2]] as [value, label, Icon]}
               {@const IconComp = Icon as typeof PenLine}
               <button
                 role="menuitem"
@@ -1117,44 +1118,43 @@
         {/each}
       </div>
     {:else if error}
-      <ErrorState title="Couldn't load pages" message={error}>
+      <ErrorState title={t("pages.loadError")} message={error}>
         <button
           class="text-body-sm font-medium text-[var(--btn-success-text)] bg-[var(--btn-success)] px-3 py-1.5 rounded-md hover:bg-[var(--btn-success-hover)] transition-colors"
           onclick={() => loadData(projectIdentifier)}
         >
-          Try again
+          {t("common.retry")}
         </button>
         <button
           class="text-body-sm text-[var(--text-muted)] border border-[var(--border)] px-3 py-1.5 rounded-md hover:bg-[var(--bg-subtle)] transition-colors"
           onclick={() => navigate(`/${projectIdentifier}/overview`)}
         >
-          Project overview
+          {t("pages.projectOverview")}
         </button>
       </ErrorState>
     {:else if activeSubTab === "recent"}
       <div class="px-6 py-4">
         {@render flatPageList(
           recentPages,
-          "A blank page",
-          "Pages are your project's docs: specs, notes, decisions. Start the first one and give the ideas a home.",
+          t("pages.empty.title"),
+          t("pages.empty.body"),
         )}
       </div>
     {:else if activeSubTab === "drafts"}
       <div class="px-6 py-4">
-        {@render flatPageList(draftPages, "No drafts")}
+        {@render flatPageList(draftPages, t("pages.empty.drafts"))}
       </div>
     {:else if activeSubTab === "archived"}
       <div class="px-6 py-4">
-        {@render flatPageList(archivedPages, "No archived pages")}
+        {@render flatPageList(archivedPages, t("pages.empty.archived"))}
       </div>
     {:else if pages.length === 0 && folders.length === 0 && !createTarget}
       <div class="flex flex-col items-center py-16 gap-4 px-6 max-w-[460px] mx-auto text-center">
         <Mascot src="/LizzyReading.png" nativeW={487} nativeH={714} />
         <div class="flex flex-col items-center gap-1.5">
-          <p class="text-heading font-medium text-[var(--text)]">A blank page</p>
+          <p class="text-heading font-medium text-[var(--text)]">{t("pages.empty.title")}</p>
           <p class="text-body-sm text-[var(--text-muted)] leading-relaxed">
-            Pages are your project's docs: specs, notes, decisions. Start the
-            first one and give the ideas a home.
+            {t("pages.empty.body")}
           </p>
         </div>
         {#if canEdit}
@@ -1166,7 +1166,7 @@
             onclick={() => startCreate("page")}
           >
             <Plus size={15} />
-            Create a page
+            {t("pages.empty.create")}
           </button>
         {/if}
       </div>
@@ -1181,19 +1181,19 @@
           <div class="flex flex-col items-center py-16 gap-3">
             <Mascot src="/LizzyReading.png" nativeW={487} nativeH={714} scale={0.16} />
             <p class="text-body-lg text-[var(--text-muted)]">
-              No pages match "{searchQuery}"
+              {t("pages.search.noMatch", { query: searchQuery })}
             </p>
             <button
               class="text-body-sm text-[var(--accent)] hover:underline"
               onclick={() => { searchQuery = ""; searchExpanded = false; }}
             >
-              Clear search
+              {t("pages.search.clear")}
             </button>
           </div>
         {:else}
           {#if filteredPages.length === RESULT_CAP}
             <div class="text-micro text-[var(--text-faint)] uppercase tracking-widest font-semibold mb-2 px-1.5">
-              Top {RESULT_CAP} matches — narrow the query for fewer results
+              {t("pages.search.capped", { count: RESULT_CAP })}
             </div>
           {/if}
           {#each filteredPages as hit (hit.page.id)}
@@ -1265,7 +1265,7 @@
               class="text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
               onclick={() => focusFolder(null)}
             >
-              All pages
+              {t("pages.allPages")}
             </button>
             <ChevronRight size={13} class="text-[var(--text-faint)]" />
             <span class="flex items-center gap-1.5 font-medium text-[var(--text)]">
@@ -1283,7 +1283,7 @@
             <div class="flex items-center gap-1.5 mb-2 px-1">
               <Pin size={12} class="text-[var(--text-faint)]" />
               <h2 class="text-micro font-semibold uppercase tracking-widest text-[var(--text-muted)]">
-                Pinned
+                {t("pages.pinned.title")}
               </h2>
               <span class="text-micro text-[var(--text-faint)] tabular-nums">
                 {pinnedPages.length}
@@ -1323,7 +1323,7 @@
                                    pointer-coarse:opacity-100 hover:text-[var(--accent)] transition"
                             role="button"
                             tabindex="0"
-                            title="Unpin"
+                            title={t("pages.pin.unpin")}
                             onclick={(e) => togglePin(page, e)}
                             onkeydown={(e) => { if (e.key === "Enter") togglePin(page, e); }}
                           >
@@ -1363,7 +1363,7 @@
     {#if overviewOpen}
       <button
         class="lg:hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-[1px]"
-        aria-label="Close overview"
+        aria-label={t("pages.overview.close")}
         onclick={() => (overviewOpen = false)}
       ></button>
     {/if}
@@ -1379,7 +1379,7 @@
         <button
           class="size-9 grid place-items-center rounded-md text-[var(--text-muted)]
                  hover:text-[var(--text)] hover:bg-[var(--bg-subtle)] transition-colors"
-          aria-label="Close overview"
+          aria-label={t("pages.overview.close")}
           onclick={() => (overviewOpen = false)}
         >
           <X size={18} />
@@ -1392,7 +1392,7 @@
             {visiblePages.length}
           </p>
           <p class="text-micro font-semibold uppercase tracking-widest text-[var(--text-faint)] mt-1">
-            {visiblePages.length === 1 ? "Page" : "Pages"}
+            {t("pages.overview.pages", { count: visiblePages.length })}
           </p>
         </div>
         <div>
@@ -1400,7 +1400,7 @@
             {folders.length}
           </p>
           <p class="text-micro font-semibold uppercase tracking-widest text-[var(--text-faint)] mt-1">
-            {folders.length === 1 ? "Folder" : "Folders"}
+            {t("pages.overview.folders", { count: folders.length })}
           </p>
         </div>
       </div>
@@ -1422,7 +1422,7 @@
 
       <!-- Folder navigator -->
       <p class="text-micro font-semibold uppercase tracking-widest text-[var(--text-faint)] mb-2 px-1">
-        Folders
+        {t("pages.overview.folderNav")}
       </p>
       <div class="flex flex-col gap-0.5">
         <button
@@ -1434,7 +1434,7 @@
           onclick={() => focusFolder(null)}
         >
           <FileText size={14} class="shrink-0 text-[var(--text-faint)]" />
-          <span class="flex-1 truncate">All pages</span>
+          <span class="flex-1 truncate">{t("pages.allPages")}</span>
           <span class="tabular-nums text-micro text-[var(--text-faint)]">{visiblePages.length}</span>
         </button>
         {#each sidebarFolders as folder (folder.id)}
@@ -1485,19 +1485,19 @@
              border border-[var(--border)] rounded-xl shadow-[0_16px_48px_rgba(0,0,0,0.28)]"
       role="dialog"
       aria-modal="true"
-      aria-label="Move page to folder"
+      aria-label={t("pages.move.dialog")}
       tabindex="-1"
     >
       <div class="flex items-center gap-3 px-4 py-3 border-b border-[var(--border)]">
         <FolderOpen size={16} class="shrink-0 text-[var(--accent)]" />
         <div class="flex-1 min-w-0">
-          <h2 class="text-body-lg font-semibold text-[var(--text)]">Move to folder</h2>
+          <h2 class="text-body-lg font-semibold text-[var(--text)]">{t("pages.move.title")}</h2>
           <p class="text-caption text-[var(--text-faint)] truncate">{movePage.title}</p>
         </div>
         <button
           class="size-7 grid place-items-center rounded-md text-[var(--text-muted)]
                  hover:text-[var(--text)] hover:bg-[var(--bg-subtle)] transition-colors"
-          aria-label="Close move folder picker"
+          aria-label={t("pages.move.close")}
           disabled={movingPage}
           onclick={() => (movePage = null)}
         >
@@ -1506,7 +1506,7 @@
       </div>
       <div class="px-4 py-4">
         <p class="mb-2 text-micro uppercase tracking-widest font-semibold text-[var(--text-faint)]">
-          Folder
+          {t("pages.move.folder")}
         </p>
         <Select
           options={moveFolderOptions}
@@ -1600,7 +1600,7 @@
         class="flex-1 px-2 py-1 text-body-lg rounded
                border border-[var(--btn-success)] bg-transparent
                text-[var(--text)] outline-none"
-        placeholder={createTarget.type === "folder" ? "Folder name" : "Page title"}
+        placeholder={createTarget.type === "folder" ? t("pages.create.folderName") : t("pages.create.pageTitle")}
         autofocus
         onkeydown={(e) => {
           if (e.key === "Enter") commitCreate();
@@ -1652,7 +1652,7 @@
             class="size-6 flex items-center justify-center rounded
                    text-[var(--text-faint)] hover:text-[var(--accent)]
                    hover:bg-[var(--accent-subtle)]"
-            title="New page"
+            title={t("pages.new.page")}
             onclick={(e) => { e.stopPropagation(); startCreate("page", folder.id); }}
           >
             <FileText size={13} />
@@ -1661,7 +1661,7 @@
             class="size-6 flex items-center justify-center rounded
                    text-[var(--text-faint)] hover:text-[var(--accent)]
                    hover:bg-[var(--accent-subtle)]"
-            title="New subfolder"
+            title={t("pages.folder.newSubfolder")}
             onclick={(e) => { e.stopPropagation(); startCreate("folder", folder.id); }}
           >
             <Plus size={13} />
@@ -1670,7 +1670,7 @@
             class="size-6 flex items-center justify-center rounded
                    text-[var(--text-faint)] hover:text-[var(--error)]
                    hover:bg-[var(--error-bg)]"
-            title="Delete folder"
+            title={t("pages.folder.delete")}
             onclick={(e) => handleDeleteFolder(folder.id, e)}
           >
             <Trash2 size={13} />
@@ -1759,7 +1759,7 @@
                      pointer-coarse:opacity-100 hover:text-[var(--accent)] transition"
               role="button"
               tabindex="0"
-              title="Move to folder…"
+              title={t("pages.move.tooltip")}
               onclick={(e) => openMovePicker(page, e)}
               onkeydown={(e) => { if (e.key === "Enter") openMovePicker(page, e); }}
             >
@@ -1778,7 +1778,7 @@
                 : 'text-[var(--text-faint)] opacity-0 group-hover:opacity-100 pointer-coarse:opacity-100 hover:text-[var(--accent)]'}"
               role="button"
               tabindex="0"
-              title={page.pinned ? "Unpin" : "Pin to top"}
+              title={page.pinned ? t("pages.pin.unpin") : t("pages.pin.pin")}
               onclick={(e) => togglePin(page, e)}
               onkeydown={(e) => { if (e.key === "Enter") togglePin(page, e); }}
             >
@@ -1789,7 +1789,7 @@
               {/if}
             </span>
           {:else if page.pinned}
-            <span class="shrink-0 text-[var(--accent)]" title="Pinned">
+            <span class="shrink-0 text-[var(--accent)]" title={t("pages.pin.pinned")}>
               <Pin size={13} class="fill-current" />
             </span>
           {/if}

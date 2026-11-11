@@ -3,6 +3,7 @@ import {
   mermaidIsTooComplex,
   type MermaidBudget,
 } from "./mermaidLimits";
+import { t } from "./i18n";
 
 function showMermaidMessage(block: HTMLDivElement, message: string): void {
   block.style.color = "var(--error)";
@@ -28,12 +29,12 @@ export async function renderMermaidBlock(
   try {
     source = decodeURIComponent(block.dataset.mermaid ?? "");
   } catch {
-    showMermaidMessage(block, "Mermaid diagram skipped: source is malformed.");
+    showMermaidMessage(block, t("markdown.mermaid.malformed"));
     return;
   }
 
   if (mermaidIsTooComplex(source)) {
-    showMermaidMessage(block, "Mermaid diagram skipped: source is too complex.");
+    showMermaidMessage(block, t("markdown.mermaid.tooComplex"));
     return;
   }
 
@@ -45,8 +46,8 @@ export async function renderMermaidBlock(
     showMermaidMessage(
       block,
       budgetError === "blocks"
-        ? "Mermaid diagram skipped: this document contains too many diagrams."
-        : "Mermaid diagram skipped: this document contains too much diagram source.",
+        ? t("markdown.mermaid.tooMany")
+        : t("markdown.mermaid.tooMuchSource"),
     );
     return;
   }
@@ -59,6 +60,6 @@ export async function renderMermaidBlock(
       block.dataset.rendered = "true";
     }
   } catch (error) {
-    if (!cancelled()) showMermaidMessage(block, `Mermaid error: ${String(error)}`);
+    if (!cancelled()) showMermaidMessage(block, t("markdown.mermaid.error", { error: String(error) }));
   }
 }

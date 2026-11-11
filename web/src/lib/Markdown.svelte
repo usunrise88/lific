@@ -26,6 +26,7 @@
   import { inPublicScope } from "./publicScope"; // LIF-471
   import { normalizeEscapedNewlines, setTaskChecked, taskStates } from "./taskList"; // LIF-502
   import { toast } from "./toast/toast.svelte";
+  import { t } from "./i18n";
   import { tick } from "svelte";
 
   // LIF-471: in public scope an <img> may only point at this instance's own
@@ -182,13 +183,19 @@
   // LIF-107: intercept fenced code. ```mermaid blocks become a placeholder
   // div carrying the (encoded) source; a post-render effect swaps in the
   // SVG. All other code passes through marked's default renderer.
+  const STATUS_LABELS = new Set(["backlog", "todo", "active", "done", "cancelled"]);
+  /** Escape catalog text placed into raw HTML (a translation may hold `<` or `&`). */
+  function escapeText(text: string): string {
+    return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
   const renderer = new marked.Renderer();
   const origCode = renderer.code.bind(renderer);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   renderer.code = function (token: any): string {
     if (token?.lang === "mermaid") {
       if (typeof token.text !== "string" || mermaidIsTooComplex(token.text)) {
-        return `<div class="mermaid-block mermaid-skipped" data-rendered="skipped">Mermaid diagram skipped: source is too complex.</div>`;
+        return `<div class="mermaid-block mermaid-skipped" data-rendered="skipped">${escapeText(t("markdown.mermaid.tooComplex"))}</div>`;
       }
       return `<div class="mermaid-block" data-mermaid="${encodeURIComponent(token.text)}"></div>`;
     }
@@ -438,9 +445,9 @@
         hoverAnchor = null;
         hoverIdent = null;
         openContextMenu(e.clientX, e.clientY, [
-          { label: "Open preview", icon: PanelRight, action: () => openPeek(ident) },
+          { label: t("markdown.identifier.openPreview"), icon: PanelRight, action: () => openPeek(ident) },
           {
-            label: "Open in new tab",
+            label: t("markdown.identifier.openNewTab"),
             icon: ExternalLink,
             action: () =>
               window.open(
@@ -480,7 +487,9 @@
         clear();
         if (result.status !== "ok") return;
         const { status } = result.issue;
-        const label = status[0].toUpperCase() + status.slice(1);
+        const label = STATUS_LABELS.has(status)
+          ? t(`common.status.${status}`)
+          : status[0].toUpperCase() + status.slice(1);
         link.dataset.issueStatus = status;
         const iconHost = document.createElement("span");
         iconHost.className = "identifier-status-icon";
@@ -490,7 +499,7 @@
           target: iconHost,
           props: { status, size: 14 },
         });
-        link.setAttribute("aria-label", `${link.textContent} (${label})`);
+        link.setAttribute("aria-label", t("markdown.identifier.withStatus", { identifier: link.textContent ?? "", status: label }));
       });
       cleanups.push(() => {
         unsubscribe();
@@ -571,7 +580,7 @@
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "code-copy-btn";
-      btn.setAttribute("aria-label", "Copy code");
+      btn.setAttribute("aria-label", t("markdown.code.copy"));
       btn.innerHTML = COPY_SVG;
       btn.addEventListener("click", async () => {
         const code = wrapper.querySelector("code")?.textContent ?? "";
@@ -659,7 +668,7 @@
       const href = chip.getAttribute("href") ?? "";
       const m = href.match(ATTACHMENT_SRC_RE);
       if (!m) continue;
-      const label = chip.textContent?.trim() || "file";
+      const label = chip.textContent?.trim() || t("markdown.attachment.fallbackName");
       const host = document.createElement("span");
       host.className = "attachment-view-host";
       // Swap the anchor for the host synchronously so there is no frame where
@@ -733,7 +742,7 @@
         const next = setTaskChecked(content, op.index, op.checked);
         if (next === null) {
           taskQueue = [];
-          toast("Couldn't find that checklist item in the text. Edit the body to change it.", {
+          toast(t("markdown.task.notFound"), {
             kind: "error",
           });
           break;
@@ -800,7 +809,7 @@
     onclick={() => (lightboxSrc = null)}
     role="dialog"
     aria-modal="true"
-    aria-label="Image preview"
+    aria-label={t("files.imagePreview")}
     tabindex="-1"
   >
     <img src={lightboxSrc} alt={lightboxAlt} class="attachment-lightbox__img" />

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { locale, t } from "../lib/i18n";
+  import { priorityLabel, priorityWord, statusLabel, statusWord } from "../lib/issues/grouping";
   import {
     resolveIssue,
     updateIssue,
@@ -93,7 +95,7 @@
       : `/${projectIdentifier}/issues`;
   }
   function backText(): string {
-    return loadLayout(projectIdentifier) === "board" ? "Board" : "Issues";
+    return loadLayout(projectIdentifier) === "board" ? t("issues.topbar.board") : t("issues.sidebar.issues");
   }
 
   let issue = $state<Issue | null>(null);
@@ -182,19 +184,19 @@
   let exporting = $state(false);
 
   const STATUSES = [
-    { value: "backlog", label: "Backlog" },
-    { value: "todo", label: "Todo" },
-    { value: "active", label: "Active" },
-    { value: "done", label: "Done" },
-    { value: "cancelled", label: "Cancelled" },
+    { value: "backlog", label: t("common.status.backlog") },
+    { value: "todo", label: t("common.status.todo") },
+    { value: "active", label: t("common.status.active") },
+    { value: "done", label: t("common.status.done") },
+    { value: "cancelled", label: t("common.status.cancelled") },
   ];
 
   const PRIORITIES = [
-    { value: "urgent", label: "Urgent" },
-    { value: "high", label: "High" },
-    { value: "medium", label: "Medium" },
-    { value: "low", label: "Low" },
-    { value: "none", label: "None" },
+    { value: "urgent", label: t("common.priority.urgent") },
+    { value: "high", label: t("common.priority.high") },
+    { value: "medium", label: t("common.priority.medium") },
+    { value: "low", label: t("common.priority.low") },
+    { value: "none", label: t("common.priority.none") },
   ];
 
   $effect(() => {
@@ -382,7 +384,7 @@
     if (!commentOpIsCurrent({ route: gen, op }, loadGen, commentOp)) return;
     loadingOlderComments = false;
     if (!res.ok) {
-      toast(`Couldn't load older comments: ${res.error}`, { kind: "error" });
+      toast(t("issueDetail.toast.olderCommentsFailed", { error: res.error }), { kind: "error" });
       return;
     }
     comments = prependOlderComments(comments, res.data.items);
@@ -426,7 +428,7 @@
     const res = await updateIssue(issue.id, { [field]: value });
     if (res.ok) {
       issue = res.data;
-      lastSaved = new Date().toLocaleTimeString([], {
+      lastSaved = new Date().toLocaleTimeString(locale(), {
         hour: "2-digit",
         minute: "2-digit",
       });
@@ -435,7 +437,7 @@
       // Error-only: title/description/labels are high-frequency inline edits
       // with optimistic UI, so no success toast — but a failed save must not
       // vanish silently (LIF-284).
-      toast(`Couldn't save ${issue.identifier}: ${res.error}`, { kind: "error" });
+      toast(t("issues.toast.saveFailed", { identifier: issue.identifier, error: res.error }), { kind: "error" });
     }
     saving = false;
   }
@@ -463,15 +465,15 @@
     if (issue?.id !== current.id) return false;
     if (res.ok) {
       issue = res.data;
-      lastSaved = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      lastSaved = new Date().toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit" });
       refreshActivity();
       return true;
     }
     if (res.status === 409) {
-      toast(`${current.identifier} changed since you opened it. Showing the latest version.`, { kind: "error" });
+      toast(t("issueDetail.toast.conflict", { identifier: current.identifier }), { kind: "error" });
       void loadIssue(issueIdentifier, true, loadGen);
     } else {
-      toast(`Couldn't save ${current.identifier}: ${res.error}`, { kind: "error" });
+      toast(t("issues.toast.saveFailed", { identifier: current.identifier, error: res.error }), { kind: "error" });
     }
     return false;
   }
@@ -519,7 +521,7 @@
                 }
               : { ...issue, ...(applied as Partial<Issue>) };
         }
-        lastSaved = new Date().toLocaleTimeString([], {
+        lastSaved = new Date().toLocaleTimeString(locale(), {
           hour: "2-digit",
           minute: "2-digit",
         });
@@ -576,7 +578,7 @@
     if (!issue) return false;
     const res = await createLabel({ project_id: issue.project_id, name, color });
     if (!res.ok) {
-      toast(`Couldn't create label: ${res.error}`, { kind: "error" });
+      toast(t("issueDetail.toast.labelFailed", { error: res.error }), { kind: "error" });
       return false;
     }
     labels = [...labels, res.data].sort((a, b) => a.name.localeCompare(b.name));
@@ -617,7 +619,7 @@
     const req = linkRequest(pending.kind, pending.source, other.identifier);
     const res = await linkIssues(req.source, req.target, req.relation_type);
     if (!res.ok) {
-      toast(`Couldn't link ${other.identifier}: ${res.error}`, { kind: "error" });
+      toast(t("issueDetail.toast.linkFailed", { identifier: other.identifier, error: res.error }), { kind: "error" });
       return;
     }
     await loadIssue(issueIdentifier, true, loadGen);
@@ -629,7 +631,7 @@
     if (!issue) return;
     const res = await unlinkIssues(issue.identifier, other);
     if (!res.ok) {
-      toast(`Couldn't unlink ${other}: ${res.error}`, { kind: "error" });
+      toast(t("issueDetail.toast.unlinkFailed", { identifier: other, error: res.error }), { kind: "error" });
       return;
     }
     await loadIssue(issueIdentifier, true, loadGen);
@@ -660,7 +662,7 @@
     if (parentId === undefined) return null;
     const res = await createComment(parentId, content);
     if (!res.ok) {
-      toast(`Couldn't add comment: ${res.error}`, { kind: "error" });
+      toast(t("issueDetail.toast.commentAddFailed", { error: res.error }), { kind: "error" });
       return null;
     }
     if (issue?.id === parentId) {
@@ -676,7 +678,7 @@
     if (parentId === undefined) return null;
     const res = await updateComment(id, content);
     if (!res.ok) {
-      toast(`Couldn't update comment: ${res.error}`, { kind: "error" });
+      toast(t("issueDetail.toast.commentUpdateFailed", { error: res.error }), { kind: "error" });
       return null;
     }
     if (issue?.id === parentId) {
@@ -692,7 +694,7 @@
     if (parentId === undefined) return false;
     const res = await deleteComment(id);
     if (!res.ok) {
-      toast(`Couldn't delete comment: ${res.error}`, { kind: "error" });
+      toast(t("issueDetail.toast.commentDeleteFailed", { error: res.error }), { kind: "error" });
       return false;
     }
     if (issue?.id === parentId) {
@@ -729,8 +731,8 @@
   }
 
   function moduleName(id: number | null): string {
-    if (!id) return "None";
-    return modules.find((m) => m.id === id)?.name ?? "Unknown";
+    if (!id) return t("common.none");
+    return modules.find((m) => m.id === id)?.name ?? t("issueNew.unknownModule");
   }
 
   // ── LIF-159: palette actions ─────────────────────────
@@ -742,25 +744,25 @@
     return [
       {
         id: "set-status",
-        title: "Set status…",
-        hint: i.status,
+        title: t("issueDetail.palette.setStatus"),
+        hint: statusWord(i.status),
         children: () =>
           STATUSES.map((s) => ({
             title: s.label,
             status: s.value,
-            hint: s.value === i.status ? "current" : undefined,
+            hint: s.value === i.status ? t("issueDetail.palette.current") : undefined,
             run: () => void setStatus(s.value),
           })),
       },
       {
         id: "set-priority",
-        title: "Set priority…",
-        hint: i.priority,
+        title: t("issueDetail.palette.setPriority"),
+        hint: priorityWord(i.priority),
         children: () =>
           PRIORITIES.map((p) => ({
             title: p.label,
             priority: p.value,
-            hint: p.value === i.priority ? "current" : undefined,
+            hint: p.value === i.priority ? t("issueDetail.palette.current") : undefined,
             run: () => void setPriority(p.value),
           })),
       },
@@ -768,17 +770,17 @@
         ? [
             {
               id: "set-module",
-              title: "Set module…",
+              title: t("issueDetail.palette.setModule"),
               hint: moduleName(i.module_id),
               children: () => [
                 {
-                  title: "None",
-                  hint: i.module_id === null ? "current" : undefined,
+                  title: t("common.none"),
+                  hint: i.module_id === null ? t("issueDetail.palette.current") : undefined,
                   run: () => void setModule(null),
                 },
                 ...modules.map((m) => ({
                   title: m.name,
-                  hint: m.id === i.module_id ? "current" : undefined,
+                  hint: m.id === i.module_id ? t("issueDetail.palette.current") : undefined,
                   run: () => void setModule(m.id),
                 })),
               ],
@@ -789,13 +791,13 @@
         ? [
             {
               id: "toggle-label",
-              title: "Add or remove label…",
+              title: t("issueDetail.palette.toggleLabel"),
               hint: i.labels.length > 0 ? i.labels.join(", ") : undefined,
               children: () =>
                 labels.map((l) => ({
                   title: l.name,
                   color: l.color,
-                  hint: i.labels.includes(l.name) ? "remove" : "add",
+                  hint: i.labels.includes(l.name) ? t("issueDetail.palette.remove") : t("issueDetail.palette.add"),
                   run: () => void toggleLabel(l.name),
                 })),
             },
@@ -822,6 +824,7 @@
   attachEntity={issue ? { entity_type: "issue", entity_id: issue.id } : null}
   backRoute={backHref()}
   backLabel={backText()}
+  backPhrase={loadLayout(projectIdentifier) === "board" ? t("issueDetail.backToBoard") : t("issueDetail.backToIssues")}
   breadcrumbSegments={[
     { label: projectIdentifier, href: `#/${projectIdentifier}/overview`, mono: true, hideBelowSm: true, copy: projectIdentifier },
     // Collapsed below sm: since LIF-349 the app header already reads
@@ -836,9 +839,9 @@
   titleSize="md"
   onSaveTitle={saveTitle}
   body={issue?.description ?? ""}
-  bodyPlaceholder="Add a description... (markdown supported)"
-  bodyEmptyEditCta="Click to add a description..."
-  bodyEmptyReadText="No description"
+  bodyPlaceholder={t("issueNew.descriptionPlaceholder")}
+  bodyEmptyEditCta={t("issueDetail.descriptionCta")}
+  bodyEmptyReadText={t("issues.noDescription")}
   bodyProseMinHeight="60px"
   onSaveBody={saveDescription}
   onToggleBodyTask={editable ? saveDescriptionTask : undefined}
@@ -879,7 +882,7 @@
                  {editable ? 'hover:bg-[var(--bg-subtle)] cursor-pointer' : 'cursor-default'}"
           aria-haspopup={editable ? "menu" : undefined}
           aria-expanded={editable ? headerStatusOpen : undefined}
-          title={editable ? "Change status" : `Status: ${issue.status}`}
+          title={editable ? t("issueDetail.changeStatus") : t("issues.row.statusAria", { status: statusWord(issue.status) })}
           onclick={(e) => {
             if (!editable) return;
             e.stopPropagation();
@@ -892,8 +895,8 @@
           }}
         >
           <StatusIcon status={issue.status} size={13} />
-          <span class="capitalize" style="color: {statusCssColor(issue.status)}">
-            {issue.status}
+          <span style="color: {statusCssColor(issue.status)}">
+            {statusLabel(issue.status)}
           </span>
           {#if editable}
             <ChevronDown size={11} class="text-[var(--text-faint)] shrink-0" />
@@ -916,9 +919,9 @@
         <!-- LIF-234: viewer read-only cue, in the topbar breadcrumb. -->
         <span class="text-micro font-medium px-1.5 py-0.5 rounded-full text-[var(--text-muted)] bg-[var(--bg-subtle)]"
               title={inPublicScope()
-                ? "Read-only. This is the public view of the project; sign in to edit or comment."
-                : "Read-only — you're a viewer on this project. You can still comment."}>
-          Read-only
+                ? t("issueDetail.readOnly.public")
+                : t("issueDetail.readOnly.viewer")}>
+          {t("issueDetail.readOnly.label")}
         </span>
       {/if}
     {/if}
@@ -928,7 +931,7 @@
     {#if issue}
       <div class="issue-meta-aside">
         <div class="issue-meta-field">
-          {@render sidebarField("Status")}
+          {@render sidebarField(t("issues.field.status"))}
           <div class="relative">
             <button
               class="flex items-center gap-2 text-body-sm rounded-md
@@ -945,7 +948,7 @@
               }}
             >
               <StatusIcon status={issue.status} size={14} />
-              <span class="capitalize text-[var(--text)]">{issue.status}</span>
+              <span class="text-[var(--text)]">{statusLabel(issue.status)}</span>
             </button>
             {#if statusOpen}
               <div
@@ -963,7 +966,7 @@
         </div>
 
         <div class="issue-meta-field">
-          {@render sidebarField("Priority")}
+          {@render sidebarField(t("issues.field.priority"))}
           <div class="relative">
             <button
               class="flex items-center gap-2 flex-nowrap text-body-sm rounded-md
@@ -981,7 +984,7 @@
             >
               <PriorityIcon priority={issue.priority} />
               <span class={priorityTextClass(issue.priority)}>
-                {issue.priority === "none" ? "No priority" : issue.priority.charAt(0).toUpperCase() + issue.priority.slice(1)}
+                {issue.priority === "none" ? t("issues.peek.noPriority") : priorityLabel(issue.priority)}
               </span>
             </button>
             {#if priorityOpen}
@@ -1012,7 +1015,7 @@
         </div>
 
         <div class="issue-meta-field">
-          {@render sidebarField("Module")}
+          {@render sidebarField(t("issues.field.module"))}
           <div class="relative">
             <!-- Trigger opens the assignment dropdown; the arrow jumps to
                  the module's detail page (LIF-121). -->
@@ -1048,7 +1051,7 @@
                     e.stopPropagation();
                     navigate(`/${projectIdentifier}/modules/${targetModuleId}`);
                   }}
-                  title="Open module"
+                  title={t("issueDetail.openModule")}
                 >
                   <ArrowUpRight size={13} />
                 </button>
@@ -1069,7 +1072,7 @@
                          transition-colors"
                   onclick={() => setModule(null)}
                 >
-                  None
+                  {t("common.none")}
                 </button>
                 {#each modules as mod}
                   <button
@@ -1092,7 +1095,7 @@
         </div>
 
         <div class="issue-meta-field">
-          {@render sidebarField("Labels")}
+          {@render sidebarField(t("issueNew.labels"))}
           <LabelEditor
             attached={issue.labels}
             all={labels}
@@ -1150,7 +1153,7 @@
                       >
                         <button
                           class="px-1.5 py-0.5 hover:underline"
-                          title="{rel}  ·  Shift-click to preview"
+                          title={t("issueDetail.relation.chipTitle", { identifier: rel })}
                           onclick={(e) => openRelation(e, rel)}
                         >
                           {rel}
@@ -1158,8 +1161,8 @@
                         {#if editable}
                           <button
                             class="pr-1 py-0.5 opacity-60 hover:opacity-100 transition-opacity"
-                            title="Remove every relation with {rel}"
-                            aria-label="Remove relation with {rel}"
+                            title={t("issueDetail.relation.removeTitle", { identifier: rel })}
+                            aria-label={t("issueDetail.relation.removeAria", { identifier: rel })}
                             onclick={() => removeRelation(rel)}
                           >
                             <X size={11} />
@@ -1187,7 +1190,7 @@
                   }}
                 >
                   <Plus size={13} />
-                  Add relation
+                  {t("issueDetail.relation.add")}
                 </button>
                 {#if relationMenuOpen}
                   <div
@@ -1218,13 +1221,13 @@
 
         <div class="issue-meta-dates">
           <div class="issue-meta-field">
-            {@render sidebarField("Created")}
+            {@render sidebarField(t("issueDetail.created"))}
             <p class="text-body-sm text-[var(--text-muted)] leading-snug m-0">
               {formatDate(issue.created_at)}
             </p>
           </div>
           <div class="issue-meta-field">
-            {@render sidebarField("Updated")}
+            {@render sidebarField(t("issues.sort.updated"))}
             <p class="text-body-sm text-[var(--text-muted)] leading-snug m-0">
               {formatDate(issue.updated_at)}
             </p>
@@ -1241,7 +1244,7 @@
     projectId={issue.project_id}
     {projectIdentifier}
     crossProject
-    title={addingRelation ? `Add “${addingRelation.kind.label}” relation` : "Link an issue"}
+    title={addingRelation ? t("issueDetail.relation.pickerTitle", { kind: addingRelation.kind.label }) : t("issues.picker.title")}
     onSelect={addRelation}
   />
 {/if}

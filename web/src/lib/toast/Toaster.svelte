@@ -5,6 +5,8 @@
   import { motionReduced } from "../theme";
   import { fly, fade } from "svelte/transition";
   import { CircleCheck, CircleAlert, Info, X } from "lucide-svelte";
+  // The loop variable below is `t` (a toast), so the translator is aliased.
+  import { t as translate } from "../i18n";
 
   function iconFor(kind: ToastItem["kind"]) {
     if (kind === "success") return CircleCheck;
@@ -89,8 +91,8 @@
         class="shrink-0 size-6 flex items-center justify-center rounded-md
                text-[var(--text-faint)] hover:text-[var(--text)]
                hover:bg-[var(--bg-subtle)] transition-colors"
-        title="Dismiss"
-        aria-label="Dismiss notification"
+        title={translate("toast.dismiss")}
+        aria-label={translate("toast.dismissLabel")}
         onclick={() => toastStore.dismiss(t.id)}
       >
         <X size={13} />

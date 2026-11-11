@@ -34,6 +34,7 @@
 
 import { getMyProjectRole, me, type ProjectRole } from "./api";
 import { inPublicScope, onPublicScopeChange } from "./publicScope";
+import { t } from "./i18n";
 
 /** The three inputs the pure derivation needs. Kept separate from the
  *  reactive store so the derivation can be unit-tested without runes. */
@@ -88,7 +89,7 @@ export function deriveCanComment(i: RoleInputs): boolean {
  *  detail toolbars so a viewer understands *why* the editors are gone. */
 export function readOnlyReason(i: RoleInputs): string | null {
   if (deriveCanEdit(i)) return null;
-  return "Read-only — you're a viewer on this project.";
+  return t("app.readOnlyViewer");
 }
 
 class ProjectRoleState {

@@ -16,6 +16,7 @@
   // is responsible for actually entering/leaving edit mode.
 
   import { Pencil, Eye } from "lucide-svelte";
+  import { t } from "./i18n";
 
   let {
     mode,
@@ -42,7 +43,7 @@
   class:mt--sm={size === "sm"}
   class:mt--compact={size === "compact"}
   role="radiogroup"
-  aria-label="Content view mode"
+  aria-label={t("app.modeToggle.label")}
 >
   <!--
     The indicator pill is absolutely positioned in the track. It slides
@@ -62,13 +63,13 @@
     data-active={mode === "edit"}
     role="radio"
     aria-checked={mode === "edit"}
-    aria-label="Edit"
-    title="Edit (E)"
+    aria-label={t("common.edit")}
+    title={t("app.modeToggle.editTitle")}
     {disabled}
     onclick={() => pick("edit")}
   >
     <Pencil size={14} />
-    <span class="mt__label">Edit</span>
+    <span class="mt__label">{t("common.edit")}</span>
   </button>
 
   <button
@@ -77,13 +78,13 @@
     data-active={mode === "read"}
     role="radio"
     aria-checked={mode === "read"}
-    aria-label="Preview"
-    title="Preview"
+    aria-label={t("app.modeToggle.preview")}
+    title={t("app.modeToggle.preview")}
     {disabled}
     onclick={() => pick("read")}
   >
     <Eye size={14} />
-    <span class="mt__label">Preview</span>
+    <span class="mt__label">{t("app.modeToggle.preview")}</span>
   </button>
 </div>
 

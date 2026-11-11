@@ -18,6 +18,7 @@
   import ProjectForm from "../lib/ProjectForm.svelte";
   import { ArrowLeft, Lock } from "lucide-svelte";
   import { getContext, onMount } from "svelte";
+  import { t } from "../lib/i18n";
 
   let { navigate }: { navigate: (path: string) => void } = $props();
 
@@ -99,7 +100,7 @@
       if (pending.groupId !== null) {
         const assigned = await assignProjectGroup(res.data.id, pending.groupId);
         if (!assigned.ok) {
-          toast(`Project created, but it wasn't added to the group: ${assigned.error}`, {
+          toast(t("projects.new.groupFailed", { error: assigned.error }), {
             kind: "error",
           });
         }
@@ -128,7 +129,7 @@
       if (user.ok) currentUserId = user.data.id;
     }
     if (currentUserId == null) {
-      error = "Couldn't verify the current user. Reload and try again.";
+      error = t("projects.new.noUser");
       saving = false;
       return;
     }
@@ -161,7 +162,7 @@
     saving = true;
     await attemptCreate(pending, false);
     if (pendingCreate && !error && !reauthError) {
-      reauthError = "That still was not accepted. Sign out and back in, then try again.";
+      reauthError = t("projects.new.reauthRejected");
     }
     reauthBusy = false;
   }
@@ -180,8 +181,8 @@
   <div class="flex-1 overflow-y-auto">
     {#if canImportArchive}
       <div class="mx-auto w-full max-w-[680px] px-6 pt-6 text-body-sm text-[var(--text-muted)]">
-        Moving a project from another Lific instance?
-        <button class="text-[var(--accent)] underline underline-offset-2" onclick={() => navigate("/projects/import")}>Import a project archive</button>
+        {t("projects.new.moving")}
+        <button class="text-[var(--accent)] underline underline-offset-2" onclick={() => navigate("/projects/import")}>{t("projects.new.importArchive")}</button>
       </div>
     {/if}
     <ProjectForm
@@ -199,8 +200,7 @@
           <div class="flex items-start gap-2 text-body-sm text-[var(--text)]">
             <Lock size={15} class="shrink-0 mt-0.5 text-[var(--text-muted)]" />
             <p>
-              Verify it's you to create this project with the selected lead. Granting another
-              person access requires a recent sign-in.
+              {t("projects.new.reauthBody")}
             </p>
           </div>
           {#if autoReauthNote}
@@ -210,7 +210,7 @@
             bind:value={reauthPassword}
             type="password"
             autocomplete="current-password"
-            placeholder="Current password"
+            placeholder={t("projects.new.currentPassword")}
             class="w-full px-3 py-2 text-body-sm rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
             onkeydown={(e) => { if (e.key === "Enter") submitReauth(); }}
           />
@@ -222,12 +222,12 @@
               class="text-body-sm font-medium text-[var(--accent-text)] bg-[var(--accent)] px-3 py-1.5 rounded-md disabled:opacity-40"
               disabled={reauthBusy || !reauthPassword}
               onclick={submitReauth}
-            >{reauthBusy ? "Verifying..." : "Verify and create"}</button>
+            >{reauthBusy ? t("projects.new.verifying") : t("projects.new.verifyAndCreate")}</button>
             <button
               class="text-body-sm text-[var(--text-muted)] px-3 py-1.5 rounded-md hover:bg-[var(--surface)]"
               disabled={reauthBusy}
               onclick={cancelReauth}
-            >Cancel</button>
+            >{t("common.cancel")}</button>
           </div>
         </div>
       </div>
@@ -245,10 +245,10 @@
         onclick={() => navigate("/settings")}
       >
         <ArrowLeft size={14} />
-        Back
+        {t("common.back")}
       </button>
       <span class="text-[var(--text-faint)]">/</span>
-      <span class="text-body-sm font-medium text-[var(--text)]">New project</span>
+      <span class="text-body-sm font-medium text-[var(--text)]">{t("projects.new.title")}</span>
     </div>
 
     <div class="ml-auto flex items-center gap-2 shrink-0">
@@ -262,7 +262,7 @@
                rounded-md hover:bg-[var(--bg-subtle)] transition-colors"
         onclick={() => navigate("/settings")}
       >
-        Cancel
+        {t("common.cancel")}
       </button>
       <button
         class="text-body-sm font-medium text-[var(--accent-text)]
@@ -272,7 +272,7 @@
         disabled={!canSave || saving || pendingCreate !== null}
         onclick={save}
       >
-        {saving ? "Creating..." : "Create project"}
+        {saving ? t("projects.new.creating") : t("projects.new.create")}
       </button>
     </div>
   </div>

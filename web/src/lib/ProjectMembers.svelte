@@ -33,6 +33,7 @@
   import Select from "./Select.svelte";
   import Skeleton from "./Skeleton.svelte";
   import { formatDate } from "./format";
+  import { t } from "./i18n";
 
   let { projectId }: { projectId: number } = $props();
 
@@ -83,9 +84,9 @@
   });
 
   const ROLE_LABEL: Record<ProjectRole, string> = {
-    lead: "Lead",
-    maintainer: "Maintainer",
-    viewer: "Viewer",
+    lead: t("members.role.lead"),
+    maintainer: t("members.role.maintainer"),
+    viewer: t("members.role.viewer"),
   };
   const ROLE_BADGE: Record<ProjectRole, string> = {
     lead: "text-[var(--success)] bg-[var(--success-bg)]",
@@ -93,9 +94,9 @@
     viewer: "text-[var(--text-muted)] bg-[var(--bg-subtle)]",
   };
   const ROLE_OPTIONS: { value: ProjectRole; label: string }[] = [
-    { value: "viewer", label: "Viewer" },
-    { value: "maintainer", label: "Maintainer" },
-    { value: "lead", label: "Lead" },
+    { value: "viewer", label: t("members.role.viewer") },
+    { value: "maintainer", label: t("members.role.maintainer") },
+    { value: "lead", label: t("members.role.lead") },
   ];
 
   function initials(name: string): string {
@@ -289,7 +290,7 @@
     if (target.projectId !== projectId) {
       // They navigated away while the prompt was up. Retrying would act on a
       // project that is no longer on screen, with no way to show the result.
-      grantError = "You moved to another project, so that change was not applied.";
+      grantError = t("members.grant.movedAway");
       pendingGrant = null;
       grantBusy = false;
       return;
@@ -300,7 +301,7 @@
         : await attemptSetRole(target, false);
     if (landed) pendingGrant = null;
     else if (!grantError) {
-      grantError = "That still was not accepted. Sign out and sign back in, then try again.";
+      grantError = t("members.grant.stillRejected");
     }
     grantBusy = false;
   }
@@ -338,7 +339,7 @@
 <section>
   <div class="flex items-center gap-1.5 mb-3">
     <UsersRound size={14} class="text-[var(--text-muted)]" />
-    <h2 class="text-body-sm font-semibold text-[var(--text)]">Members</h2>
+    <h2 class="text-body-sm font-semibold text-[var(--text)]">{t("members.title")}</h2>
     {#if members.length > 0}
       <span class="text-caption font-normal text-[var(--text-faint)] tabular-nums">{members.length}</span>
     {/if}
@@ -351,7 +352,7 @@
         <Select
           options={eligibleUsers}
           bind:value={addUserId}
-          placeholder={eligibleUsers.length === 0 && usersLoaded ? "No one left to add" : "Choose a person…"}
+          placeholder={eligibleUsers.length === 0 && usersLoaded ? t("members.add.noneLeft") : t("members.add.choose")}
           size="sm"
           class="min-w-[190px] flex-1"
           disabled={pendingGrant !== null || grantBusy || roleBusy !== null || adding}
@@ -378,7 +379,7 @@
           onclick={addMember}
         >
           <UserPlus size={14} />
-          {adding ? "Adding…" : "Add"}
+          {adding ? t("members.add.adding") : t("common.add")}
         </button>
       </div>
       <!-- Shared "verify it's you" prompt for the two granting actions. It
@@ -388,20 +389,18 @@
           <div class="flex items-start gap-2 text-caption text-[var(--text)]">
             <Lock size={13} class="shrink-0 mt-0.5 text-[var(--text-muted)]" />
             <p class="leading-relaxed">
-              Verify it's you to
               {#if pendingGrant.kind === "add"}
-                add this person as {ROLE_LABEL[pendingGrant.role].toLowerCase()}.
+                {t("members.grant.add", { role: t(`members.roleInline.${pendingGrant.role}`) })}
               {:else}
-                make <span class="font-mono">@{pendingGrant.username}</span>
-                {ROLE_LABEL[pendingGrant.role].toLowerCase()}.
+                {t("members.grant.role.before")} <span class="font-mono">@{pendingGrant.username}</span>
+                {t("members.grant.role.after", { role: t(`members.roleInline.${pendingGrant.role}`) })}
               {/if}
-              Granting project access needs a recent sign-in, and you have been signed in for a
-              while.
+              {t("members.grant.why")}
             </p>
           </div>
           {#if autoGrantNote}
             <p class="text-caption text-[var(--text-muted)]" role="status">
-              Signing you in automatically did not work ({autoGrantNote}).
+              {t("members.grant.autoFailed", { error: autoGrantNote })}
             </p>
           {/if}
           {#if grantError}
@@ -409,11 +408,11 @@
           {/if}
           <div class="flex items-center gap-2 flex-wrap">
             <label class="flex-1 min-w-[180px]">
-              <span class="sr-only">Your current password</span>
+              <span class="sr-only">{t("members.grant.passwordLabel")}</span>
               <input
                 bind:value={grantPassword}
                 type="password"
-                placeholder="your current password"
+                placeholder={t("members.grant.passwordPlaceholder")}
                 autocomplete="current-password"
                 disabled={grantBusy}
                 class="w-full px-3 py-1.5 text-body-sm rounded-md border border-[var(--border)]
@@ -429,14 +428,14 @@
               disabled={grantBusy || !grantPassword}
               onclick={submitGrantReauth}
             >
-              {grantBusy ? "Verifying…" : "Confirm and continue"}
+              {grantBusy ? t("members.grant.verifying") : t("members.grant.confirm")}
             </button>
             <button
               class="text-body-sm text-[var(--text-muted)] px-3 py-1.5 rounded-md hover:bg-[var(--surface)] transition-colors disabled:opacity-50 shrink-0"
               disabled={grantBusy}
               onclick={cancelGrantReauth}
             >
-              Cancel
+              {t("common.cancel")}
             </button>
           </div>
         </div>
@@ -467,7 +466,7 @@
     {:else if loadError}
       <div class="px-4 py-4 text-body-sm text-[var(--error)]">{loadError}</div>
     {:else if members.length === 0}
-      <div class="px-4 py-6 text-center text-body-sm text-[var(--text-faint)]">No members yet.</div>
+      <div class="px-4 py-6 text-center text-body-sm text-[var(--text-faint)]">{t("members.empty")}</div>
     {:else}
       {#each members as m, idx (m.user_id)}
         <div class="flex items-center gap-3 px-4 py-2.5 {idx > 0 ? 'border-t border-[var(--border)]' : ''}">
@@ -478,7 +477,7 @@
             <div class="text-body-sm text-[var(--text)] truncate leading-tight">
               {m.display_name || m.username}
               {#if m.user_id === currentUser?.id}
-                <span class="text-caption text-[var(--text-faint)]">(you)</span>
+                <span class="text-caption text-[var(--text-faint)]">{t("members.you")}</span>
               {/if}
             </div>
             <div class="text-caption font-mono text-[var(--text-faint)] truncate leading-tight mt-0.5">@{m.username}</div>
@@ -520,13 +519,13 @@
                   disabled={removeBusy === m.user_id}
                   onclick={() => removeMember(m)}
                 >
-                  {removeBusy === m.user_id ? "…" : "Remove"}
+                  {removeBusy === m.user_id ? "…" : t("common.remove")}
                 </button>
                 <button
                   class="text-caption text-[var(--text-muted)] px-2 py-1 rounded-md hover:bg-[var(--bg-subtle)] transition-colors"
                   onclick={() => { confirmingRemove = null; }}
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </button>
               </div>
             {:else}
@@ -534,7 +533,7 @@
                 class="size-7 grid place-items-center rounded-md text-[var(--text-muted)] shrink-0
                        hover:text-[var(--error)] hover:bg-[var(--error-bg)] transition-colors"
                 onclick={() => { confirmingRemove = m.user_id; }}
-                aria-label="Remove {m.display_name || m.username}"
+                aria-label={t("members.removeAria", { name: m.display_name || m.username })}
               >
                 <Trash2 size={14} />
               </button>
@@ -552,7 +551,7 @@
   </div>
   {#if !amLead && !loading && !loadError}
     <p class="text-caption text-[var(--text-faint)] mt-2">
-      Read-only — only a project lead can add, change, or remove members.
+      {t("members.readOnly")}
     </p>
   {/if}
 </section>

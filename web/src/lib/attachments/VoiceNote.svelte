@@ -21,6 +21,7 @@
     pickAudioMime,
     voiceNoteFilename,
   } from "./voiceNote";
+  import { t } from "../i18n";
 
   let {
     onFile,
@@ -116,7 +117,7 @@
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch {
       phase = "idle";
-      error = "Microphone unavailable. Check the browser's permission for this site.";
+      error = t("attachments.voice.micUnavailable");
       return;
     }
 
@@ -127,7 +128,7 @@
     } catch {
       teardown();
       phase = "idle";
-      error = "This browser could not start an audio recorder.";
+      error = t("attachments.voice.recorderFailed");
       return;
     }
 
@@ -157,7 +158,7 @@
     } catch {
       teardown();
       phase = "idle";
-      error = "This browser could not start an audio recorder.";
+      error = t("attachments.voice.recorderFailed");
       return;
     }
 
@@ -228,8 +229,8 @@
         type="button"
         class="vn__button"
         class:is-live={phase === "recording"}
-        title="Record a voice note"
-        aria-label="Record a voice note"
+        title={t("attachments.voice.record")}
+        aria-label={t("attachments.voice.record")}
         aria-pressed={phase === "recording"}
         disabled={disabled || phase === "requesting"}
         onclick={() => (phase === "recording" ? stop() : phase === "idle" ? start() : cancel())}
@@ -243,29 +244,29 @@
            is never focused, so this is a convenience listener, not the only
            route out (every action has a real button). -->
       <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-      <div class="vn__panel" role="group" aria-label="Voice note" onkeydown={onPanelKeydown}>
+      <div class="vn__panel" role="group" aria-label={t("attachments.voice.label")} onkeydown={onPanelKeydown}>
         {#if error}
           <p class="vn__error">{error}</p>
-          <button type="button" class="vn__ghost" onclick={() => (error = null)}>Dismiss</button>
+          <button type="button" class="vn__ghost" onclick={() => (error = null)}>{t("attachments.voice.dismiss")}</button>
         {:else if phase === "requesting"}
-          <span class="vn__status">Waiting for the microphone…</span>
+          <span class="vn__status">{t("attachments.voice.waiting")}</span>
         {:else if phase === "recording"}
           <span class="vn__dot" aria-hidden="true"></span>
           <span class="vn__time">{formatElapsed(elapsed)}</span>
           <span class="vn__meter" aria-hidden="true">
             <span class="vn__meter-fill" style:transform={`scaleX(${level})`}></span>
           </span>
-          <button type="button" class="vn__ghost" onclick={cancel}>Cancel</button>
+          <button type="button" class="vn__ghost" onclick={cancel}>{t("common.cancel")}</button>
           <button type="button" class="vn__primary" onclick={stop}>
-            <Square size={11} /> Stop
+            <Square size={11} /> {t("attachments.voice.stop")}
           </button>
         {:else if phase === "preview" && previewUrl}
           <audio class="vn__audio" src={previewUrl} controls preload="metadata"></audio>
-          <button type="button" class="vn__ghost" title="Discard" aria-label="Discard" onclick={cancel}>
+          <button type="button" class="vn__ghost" title={t("attachments.voice.discard")} aria-label={t("attachments.voice.discard")} onclick={cancel}>
             <Trash2 size={13} />
           </button>
           <button type="button" class="vn__primary" onclick={attach}>
-            <Check size={11} /> Attach
+            <Check size={11} /> {t("attachments.voice.attach")}
           </button>
         {/if}
       </div>

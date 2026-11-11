@@ -41,6 +41,8 @@ import {
   type IssueFilters,
 } from "./filters";
 import { toast } from "../toast/toast.svelte";
+import { t } from "../i18n";
+import { PRIORITIES, STATUSES } from "./grouping";
 
 // LIF-308: issue-list content slices are deliberately separate from the
 // persisted filter/sort/group state below. A tab narrows the current result;
@@ -85,21 +87,30 @@ export function describeIssueChange(
   people: Person[] = [],
 ): string {
   if ("status" in patch && patch.status !== prevPatch.status) {
-    return `→ ${capitalize(String(patch.status))}`;
+    const status = String(patch.status);
+    return t("issues.change.status", {
+      status: STATUSES.includes(status) ? t(`common.status.${status}`) : capitalize(status),
+    });
   }
   if ("module_id" in patch && patch.module_id !== prevPatch.module_id) {
     const id = patch.module_id as number | null;
-    const name = id == null ? "No module" : modules.find((m) => m.id === id)?.name ?? "a module";
-    return `→ ${name}`;
+    const name =
+      id == null
+        ? t("issues.group.noModule")
+        : modules.find((m) => m.id === id)?.name ?? t("issues.change.someModule");
+    return t("issues.change.module", { name });
   }
   if ("priority" in patch && patch.priority !== prevPatch.priority) {
-    return `→ ${capitalize(String(patch.priority))} priority`;
+    const priority = String(patch.priority);
+    return t("issues.change.priority", {
+      priority: PRIORITIES.includes(priority) ? t(`common.priority.${priority}`) : capitalize(priority),
+    });
   }
   // LIF-147: assignment, as the names a person reads.
   if ("assignees" in patch && Array.isArray(patch.assignees)) {
-    return `→ ${describeNames(patch.assignees as string[], people)}`;
+    return t("issues.change.assignees", { names: describeNames(patch.assignees as string[], people) });
   }
-  return "updated";
+  return t("issues.change.updated");
 }
 
 /** Build the inverse of `patch` from an issue's current field values —
@@ -135,21 +146,21 @@ export async function updateIssueWithUndo(opts: {
 }): Promise<boolean> {
   const res = await updateIssue(opts.id, opts.patch);
   if (!res.ok) {
-    toast(`Couldn't update ${opts.identifier}: ${res.error}`, { kind: "error" });
+    toast(t("issues.toast.updateFailed", { identifier: opts.identifier, error: res.error }), { kind: "error" });
     return false;
   }
   opts.onApplied?.(opts.patch, res.data);
-  toast(`${opts.identifier} ${describeIssueChange(opts.patch, opts.prevPatch, opts.modules, opts.people)}`, {
+  toast(t("issues.toast.changed", { subject: opts.identifier, change: describeIssueChange(opts.patch, opts.prevPatch, opts.modules, opts.people) }), {
     kind: "success",
     action: {
-      label: "Undo",
+      label: t("common.undo"),
       fn: async () => {
         const undoRes = await updateIssue(opts.id, opts.prevPatch);
         if (undoRes.ok) {
           opts.onApplied?.(opts.prevPatch, undoRes.data);
-          toast(`Restored ${opts.identifier}`, { kind: "info", duration: 3000 });
+          toast(t("issues.delete.restoredOne", { identifier: opts.identifier }), { kind: "info", duration: 3000 });
         } else {
-          toast(`Couldn't undo ${opts.identifier}: ${undoRes.error}`, { kind: "error" });
+          toast(t("issues.toast.undoFailed", { identifier: opts.identifier, error: undoRes.error }), { kind: "error" });
         }
       },
     },
@@ -198,22 +209,23 @@ export async function bulkUpdateIssuesWithUndo(opts: {
   if (failedIds.size > 0) {
     toast(
       okIds.size > 0
-        ? `Updated ${okIds.size} of ${opts.targets.length} issues`
-        : `Couldn't update ${opts.targets.length} issue${opts.targets.length === 1 ? "" : "s"}`,
+        ? t("issues.toast.bulkPartial", { ok: okIds.size, count: opts.targets.length })
+        : t("issues.toast.bulkFailed", { count: opts.targets.length }),
       { kind: "error" },
     );
   }
 
   if (okIds.size > 0) {
     const okTargets = opts.targets.filter((t) => okIds.has(t.id));
-    const label =
+    const change = describeIssueChange(opts.patch, okTargets[0].prevPatch, opts.modules, opts.people);
+    toast(
       okTargets.length === 1
-        ? okTargets[0].identifier
-        : `${okTargets.length} issue${okTargets.length === 1 ? "" : "s"}`;
-    toast(`${label} ${describeIssueChange(opts.patch, okTargets[0].prevPatch, opts.modules, opts.people)}`, {
+        ? t("issues.toast.changed", { subject: okTargets[0].identifier, change })
+        : t("issues.toast.changedMany", { count: okTargets.length, change }),
+      {
       kind: "success",
       action: {
-        label: "Undo",
+        label: t("common.undo"),
         fn: async () => {
           const undoResults = await Promise.allSettled(
             okTargets.map((t) => updateIssue(t.id, t.prevPatch)),
@@ -231,9 +243,9 @@ export async function bulkUpdateIssuesWithUndo(opts: {
           });
           if (restored.size > 0) opts.onApplied?.(restored, restoredIssues);
           if (failCount > 0) {
-            toast(`Restored ${restored.size} of ${okTargets.length}`, { kind: "error" });
+            toast(t("issues.toast.restoredPartial", { restored: restored.size, total: okTargets.length }), { kind: "error" });
           } else {
-            toast(`Restored ${restored.size} issue${restored.size === 1 ? "" : "s"}`, {
+            toast(t("issues.delete.restored", { count: restored.size }), {
               kind: "info",
               duration: 3000,
             });

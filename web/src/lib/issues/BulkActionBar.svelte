@@ -18,6 +18,7 @@
   // `bulkMenu` is bindable because the parent also mutates it (Escape key,
   // outside-click on window), so the open menu must stay in sync both ways.
   // All the actual mutations live in the parent and arrive as callbacks.
+  import { t } from "../i18n";
   import type { Module, Label } from "../api";
   import { safeLabelColor } from "../labelColors";
   import { fly } from "svelte/transition";
@@ -87,17 +88,17 @@
     onclick={(e) => e.stopPropagation()}
   >
     <span class="text-body-sm font-medium text-[var(--text)] tabular-nums pr-1">
-      {selectedCount} selected
+      {t("issues.bulk.selected", { count: selectedCount })}
     </span>
     {#if bulkBusy}
       <span class="text-caption text-[var(--text-faint)] animate-pulse pr-1">
-        Working...
+        {t("issues.bulk.working")}
       </span>
     {/if}
     <div class="w-px h-4 bg-[var(--border)] mx-1"></div>
 
     <button class="text-body-sm px-2 py-1 rounded-md text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-subtle)] disabled:opacity-50"
-      disabled={bulkBusy} onclick={onExport}>Export</button>
+      disabled={bulkBusy} onclick={onExport}>{t("issues.bulk.export")}</button>
 
     {#snippet bulkTrigger(menu: "status" | "priority" | "module" | "label" | "assign", label: string)}
       <button
@@ -118,7 +119,7 @@
 
     <!-- Status -->
     <div class="relative">
-      {@render bulkTrigger("status", "Status")}
+      {@render bulkTrigger("status", t("issues.field.status"))}
       {#if bulkMenu === "status"}
         <div
           class="absolute bottom-full mb-1.5 left-0 w-[160px]
@@ -128,12 +129,12 @@
           {#each STATUSES as s}
             <button
               class="w-full flex items-center gap-2 px-3 py-1.5 text-left
-                     text-body-sm text-[var(--text)] capitalize
+                     text-body-sm text-[var(--text)]
                      hover:bg-[var(--bg-subtle)] transition-colors"
               onclick={() => onUpdate({ status: s })}
             >
               <StatusIcon status={s} size={14} />
-              {s}
+              {t(`common.status.${s}`)}
             </button>
           {/each}
         </div>
@@ -142,7 +143,7 @@
 
     <!-- Priority -->
     <div class="relative">
-      {@render bulkTrigger("priority", "Priority")}
+      {@render bulkTrigger("priority", t("issues.field.priority"))}
       {#if bulkMenu === "priority"}
         <div
           class="absolute bottom-full mb-1.5 left-0 w-[160px]
@@ -152,12 +153,12 @@
           {#each PRIORITIES as p}
             <button
               class="w-full flex items-center gap-2 px-3 py-1.5 text-left
-                     text-body-sm text-[var(--text)] capitalize
+                     text-body-sm text-[var(--text)]
                      hover:bg-[var(--bg-subtle)] transition-colors"
               onclick={() => onUpdate({ priority: p })}
             >
               <PriorityIcon priority={p} size={14} />
-              {p}
+              {t(`common.priority.${p}`)}
             </button>
           {/each}
         </div>
@@ -167,7 +168,7 @@
     <!-- Module (only when the project has modules) -->
     {#if modules.length > 0}
       <div class="relative">
-        {@render bulkTrigger("module", "Module")}
+        {@render bulkTrigger("module", t("issues.field.module"))}
         {#if bulkMenu === "module"}
           <div
             class="absolute bottom-full mb-1.5 left-0 w-[180px]
@@ -180,7 +181,7 @@
                      transition-colors"
               onclick={() => onUpdate({ module_id: null })}
             >
-              None
+              {t("common.none")}
             </button>
             {#each modules as mod (mod.id)}
               <button
@@ -200,7 +201,7 @@
     <!-- Add label (only when the project has labels) -->
     {#if labels.length > 0}
       <div class="relative">
-        {@render bulkTrigger("label", "Label")}
+        {@render bulkTrigger("label", t("issues.field.label"))}
         {#if bulkMenu === "label"}
           <div
             class="absolute bottom-full mb-1.5 left-0 w-[180px]
@@ -228,7 +229,7 @@
 
     <!-- Assign (LIF-147). Opens the same picker as the issue view. -->
     {#if projectId !== null && onAssign}
-      {@render bulkTrigger("assign", "Assign")}
+      {@render bulkTrigger("assign", t("issues.assignee.assign"))}
     {/if}
 
     <div class="w-px h-4 bg-[var(--border)] mx-1"></div>
@@ -239,7 +240,7 @@
         class="size-7 flex items-center justify-center rounded-md
                text-[var(--error)] hover:bg-[var(--error-bg)]
                transition-colors disabled:opacity-50"
-        title="Delete selected"
+        title={t("issues.bulk.deleteSelected")}
         disabled={bulkBusy}
         onclick={(e) => {
           e.stopPropagation();
@@ -255,10 +256,10 @@
                  rounded-lg shadow-lg p-3"
         >
           <p class="text-body-sm font-medium text-[var(--text)] mb-1">
-            Delete {selectedCount} issue{selectedCount === 1 ? "" : "s"}?
+            {t("issues.bulk.deleteConfirm", { count: selectedCount })}
           </p>
           <p class="text-caption text-[var(--text-muted)] mb-3">
-            This can't be undone.
+            {t("issues.bulk.cantUndo")}
           </p>
           <div class="flex items-center gap-2">
             <button
@@ -269,14 +270,14 @@
               disabled={bulkBusy}
               onclick={onDelete}
             >
-              {bulkBusy ? "Deleting..." : "Delete"}
+              {bulkBusy ? t("issues.bulk.deleting") : t("common.delete")}
             </button>
             <button
               class="text-body-sm text-[var(--text-muted)] px-3 py-1.5
                      rounded-md hover:bg-[var(--bg-subtle)] transition-colors"
               onclick={() => { bulkMenu = null; }}
             >
-              Cancel
+              {t("common.cancel")}
             </button>
           </div>
         </div>
@@ -288,7 +289,7 @@
       class="size-7 flex items-center justify-center rounded-md
              text-[var(--text-muted)] hover:text-[var(--text)]
              hover:bg-[var(--bg-subtle)] transition-colors"
-      title="Clear selection  ·  Esc"
+      title={t("issues.bulk.clear")}
       disabled={bulkBusy}
       onclick={onClear}
     >
@@ -304,7 +305,7 @@
   <AssigneePicker
     bind:open={() => bulkMenu === "assign", (next) => (bulkMenu = next ? "assign" : null)}
     {projectId}
-    subject="{selectedCount} issue{selectedCount === 1 ? '' : 's'}"
+    subject={t("issues.count", { count: selectedCount })}
     current={selectedAssignment}
     onApply={onAssign}
   />

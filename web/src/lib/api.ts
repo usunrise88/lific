@@ -1,5 +1,6 @@
 import type { ChangesPage, IndexSnapshot } from "./sync/types";
 import { inPublicScope, publicMirror, publicSynthetic } from "./publicScope";
+import { t } from "./i18n";
 
 const BASE = "/api";
 
@@ -38,11 +39,11 @@ function resolveUrl(path: string): string {
   return "/public/api/refused";
 }
 
-const REFUSED: { ok: false; error: string; status: number } = {
-  ok: false,
-  error: "This isn't available in the public view.",
-  status: 403,
-};
+/** Built per call (not a module constant) so the message follows the
+ *  active locale. */
+function refused(): { ok: false; error: string; status: number } {
+  return { ok: false, error: t("errors.publicRefused"), status: 403 };
+}
 
 export interface AuthUser {
   id: number;
@@ -77,7 +78,7 @@ async function requestWithHeaders<T>(
   options: RequestInit = {}
 ): Promise<HeadedResult<T>> {
   const resolved = resolveRequest(path);
-  if (resolved.kind === "refused") return REFUSED;
+  if (resolved.kind === "refused") return refused();
   if (resolved.kind === "synthetic") {
     if (resolved.status >= 400) {
       const body = resolved.body as { error?: string };
@@ -115,7 +116,7 @@ async function requestWithHeaders<T>(
   } catch (e) {
     return {
       ok: false,
-      error: "Couldn't reach the server. Check your connection and try again.",
+      error: t("errors.network"),
       status: null,
     };
   }
@@ -132,7 +133,7 @@ async function request<T>(
 export async function download(path: string, filename?: string) {
   const resolved = resolveRequest(path);
   if (resolved.kind !== "private" && resolved.kind !== "public") {
-    return { ok: false as const, error: REFUSED.error };
+    return { ok: false as const, error: refused().error };
   }
   const headers: Record<string, string> = {};
   if (resolved.kind === "private") {
@@ -209,7 +210,7 @@ export async function downloadProjectArchive(identifier: string, signal: AbortSi
     }
     return { ok: true as const, blob: await response.blob(), filename: `${identifier}.lific.tar.gz` };
   } catch {
-    return { ok: false as const, error: "The archive download stopped. Check your connection and download it again." };
+    return { ok: false as const, error: t("errors.archiveDownloadStopped") };
   }
 }
 
@@ -222,7 +223,10 @@ export function saveArchiveDownload(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-export const ARCHIVE_UNKNOWN = "The import may have completed. Check the project list before uploading this archive again.";
+/** Called per use so the message follows the active locale. */
+export function archiveUnknown(): string {
+  return t("errors.archiveImportUnknown");
+}
 
 // No retry or cancellation: a disconnected request can still commit.
 export function importProjectArchive(
@@ -238,7 +242,7 @@ export function importProjectArchive(
     xhr.upload.onprogress = (event) => onProgress(event.lengthComputable
       ? Math.min(100, Math.round(event.loaded / event.total * 100)) : null);
     xhr.upload.onload = onProcessing;
-    const unknown = () => resolve({ ok: false, error: ARCHIVE_UNKNOWN, status: null });
+    const unknown = () => resolve({ ok: false, error: archiveUnknown(), status: null });
     xhr.onerror = unknown;
     xhr.ontimeout = unknown;
     xhr.onabort = unknown;
@@ -1650,7 +1654,7 @@ export async function uploadAttachment(
   file: File,
   link?: { entity_type: AttachmentEntity; entity_id: number },
 ): Promise<{ ok: true; data: UploadResponse } | { ok: false; error: string }> {
-  if (inPublicScope()) return { ok: false, error: REFUSED.error };
+  if (inPublicScope()) return { ok: false, error: refused().error };
   const token = localStorage.getItem("lific_token");
   const form = new FormData();
   form.append("file", file, file.name);
@@ -1674,7 +1678,7 @@ export async function uploadAttachment(
   } catch {
     return {
       ok: false,
-      error: "Couldn't reach the server. Check your connection and try again.",
+      error: t("errors.network"),
     };
   }
 }
@@ -1715,7 +1719,7 @@ export function uploadAttachmentWithProgress(
   // even the session cookie travels.
   if (inPublicScope()) {
     return {
-      result: Promise.resolve({ ok: false, error: REFUSED.error, status: 403, canceled: false }),
+      result: Promise.resolve({ ok: false, error: refused().error, status: 403, canceled: false }),
       abort: () => {},
     };
   }
@@ -1777,14 +1781,14 @@ export function uploadAttachmentWithProgress(
     xhr.onerror = () =>
       finish({
         ok: false,
-        error: "Couldn't reach the server. Check your connection and try again.",
+        error: t("errors.network"),
         status: null,
         canceled: false,
       });
     xhr.ontimeout = () =>
-      finish({ ok: false, error: "Upload timed out.", status: null, canceled: false });
+      finish({ ok: false, error: t("errors.uploadTimedOut"), status: null, canceled: false });
     xhr.onabort = () =>
-      finish({ ok: false, error: "Upload canceled.", status: null, canceled: true });
+      finish({ ok: false, error: t("errors.uploadCanceled"), status: null, canceled: true });
 
     xhr.send(form);
   });
@@ -1992,7 +1996,7 @@ export async function fetchAttachmentText(
 ): Promise<{ ok: true; text: string } | { ok: false; error: string }> {
   const resolved = resolveRequest(`/attachments/${id}`);
   if (resolved.kind !== "private" && resolved.kind !== "public") {
-    return { ok: false, error: REFUSED.error };
+    return { ok: false, error: refused().error };
   }
   const headers: Record<string, string> = {};
   if (resolved.kind === "private") {
@@ -2009,7 +2013,7 @@ export async function fetchAttachmentText(
   } catch {
     return {
       ok: false,
-      error: "Couldn't reach the server. Check your connection and try again.",
+      error: t("errors.network"),
     };
   }
 }

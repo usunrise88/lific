@@ -11,6 +11,7 @@
   import FileChip from "./FileChip.svelte";
   import { whenVisible } from "./visible";
   import { formatBytes, getAttachmentPreview, type ZipPreviewEntry } from "../../api";
+  import { t } from "../../i18n";
 
   let {
     id,
@@ -48,13 +49,13 @@
 {:else}
   <div use:whenVisible={{ onVisible: () => void load(), enabled: entries === null }}>
     {#if entries === null}
-      <FileChip {id} {filename} {sizeBytes} note="Reading archive..." />
+      <FileChip {id} {filename} {sizeBytes} note={t("viewers.zip.reading")} />
     {:else}
       <ViewerFrame
         {id}
         {filename}
         {sizeBytes}
-        meta={`${totalEntries} ${totalEntries === 1 ? "entry" : "entries"}`}
+        meta={t("viewers.zip.entries", { count: totalEntries })}
         tone="flush"
       >
         {#snippet icon()}<FileArchive size={14} />{/snippet}
@@ -63,9 +64,9 @@
           <table class="zv__table">
             <thead>
               <tr>
-                <th scope="col">Name</th>
-                <th scope="col" class="zv__num-col">Size</th>
-                <th scope="col" class="zv__num-col">Compressed</th>
+                <th scope="col">{t("viewers.zip.name")}</th>
+                <th scope="col" class="zv__num-col">{t("viewers.zip.size")}</th>
+                <th scope="col" class="zv__num-col">{t("viewers.zip.compressed")}</th>
               </tr>
             </thead>
             <tbody>
@@ -83,8 +84,7 @@
         </div>
         {#if truncated}
           <p class="zv__foot">
-            Showing the first {entries.length} of {totalEntries} entries. Download the archive for the
-            rest.
+            {t("viewers.zip.truncated", { shown: entries.length, count: totalEntries })}
           </p>
         {/if}
       </ViewerFrame>

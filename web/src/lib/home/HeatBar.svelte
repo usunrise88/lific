@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from "../i18n";
   // LIF-507: how pressing a queued issue is, 0..1. The ramp spans the whole
   // track and the unfilled part is covered, so a short bar stays green and
   // only a long one reaches the red end.
@@ -13,7 +14,7 @@
   aria-valuemin={0}
   aria-valuemax={100}
   aria-valuenow={pct}
-  aria-label={label ?? "Urgency"}
+  aria-label={label ?? t("home.urgency")}
 >
   <span class="absolute inset-y-0 right-0 bg-[var(--bg-subtle)]" style="width: {100 - pct}%"></span>
 </span>

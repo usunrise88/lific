@@ -9,6 +9,7 @@
   // later refactor (LIF-99 Phase 3b) collapses these props into a shared
   // state instance; keeping them explicit here first makes the seam
   // reviewable and build-verifiable.
+  import { t } from "../i18n";
   import type { Issue, Label, Module } from "../api";
   import { safeLabelColor } from "../labelColors";
   import { Check, Signal, Layers, PanelRight, ExternalLink, Copy } from "lucide-svelte";
@@ -18,7 +19,7 @@
   import ProjectIcon from "../ProjectIcon.svelte";
   import Tooltip from "../Tooltip.svelte";
   import TimeAgo from "../TimeAgo.svelte";
-  import { STATUSES, PRIORITIES, descriptionPreview } from "./grouping";
+  import { STATUSES, PRIORITIES, descriptionPreview, priorityLabel, statusLabel } from "./grouping";
   import { openContextMenu } from "../contextMenuState.svelte"; // LIF-248
   import { copyToClipboard } from "../clipboard";
   import { projectCodeOf } from "../references"; // LIF-248
@@ -132,9 +133,9 @@
     e.preventDefault();
     e.stopPropagation();
     openContextMenu(e.clientX, e.clientY, [
-      { label: "Open preview", icon: PanelRight, action: () => onPeek(issue) },
+      { label: t("issues.menu.openPreview"), icon: PanelRight, action: () => onPeek(issue) },
       {
-        label: "Open in new tab",
+        label: t("issues.menu.openNewTab"),
         icon: ExternalLink,
         action: () =>
           window.open(
@@ -149,7 +150,7 @@
         // shove the other on every row the pointer crosses. The menu that
         // already exists costs no pixels. Toasts rather than flipping a
         // checkmark: the menu closes on action.
-        label: "Copy identifier",
+        label: t("issues.menu.copyIdentifier"),
         icon: Copy,
         action: () => copyToClipboard(issue.identifier),
       },
@@ -204,10 +205,10 @@
       ? 'bg-[var(--accent)] border-[var(--accent)] text-[var(--accent-text)]'
       : 'border-[var(--text-muted)] text-transparent hover:border-[var(--text)]'}
            cursor-pointer"
-    title={isSelected ? "Deselect" : "Select  ·  X"}
+    title={isSelected ? t("issues.row.deselect") : t("issues.row.selectHint")}
     role="checkbox"
     aria-checked={isSelected}
-    aria-label={`Select ${issue.identifier}`}
+    aria-label={t("issues.row.select", { identifier: issue.identifier })}
     onclick={(e) => {
       e.stopPropagation();
       if (e.shiftKey) onRangeSelect(idx);
@@ -228,12 +229,12 @@
     <Tooltip
       content={statusOpen
         ? null
-        : issue.status[0].toUpperCase() + issue.status.slice(1)}
+        : statusLabel(issue.status)}
     >
       <button
         class="size-4 flex items-center justify-center transition-colors
                {editable ? 'hover:text-[var(--accent)]' : 'cursor-default'}"
-        aria-label={`Status: ${issue.status}`}
+        aria-label={t("issues.row.statusAria", { status: STATUSES.includes(issue.status) ? t(`issues.statusValue.${issue.status}`) : issue.status })}
         onclick={(e) => {
           e.stopPropagation();
           if (!editable) return;
@@ -262,7 +263,7 @@
             onmouseenter={() => onHoverStatusOption(si)}
           >
             <StatusIcon status={s} size={14} />
-            {s}
+            {t(`issues.statusValue.${s}`)}
           </button>
         {/each}
       </div>
@@ -283,13 +284,13 @@
   <div class="flex items-center gap-1 sm:gap-1.5 shrink-0">
     <span class="w-1.5 shrink-0 flex items-center justify-center">
       {#if isChanged}
-        <Tooltip content="Updated since you last looked">
+        <Tooltip content={t("issues.row.changed")}>
           <span class="block size-1.5 rounded-full bg-[var(--accent)]"></span>
         </Tooltip>
         <!-- The tooltip is hover/focus-only and this row isn't focusable,
              so the dot needs its own text for a screen reader. `sr-only`
              is absolutely positioned, so it costs no width. -->
-        <span class="sr-only">Updated since you last looked</span>
+        <span class="sr-only">{t("issues.row.changed")}</span>
       {/if}
     </span>
     <button class="text-body-sm text-left text-[var(--text-faint)] hover:text-[var(--accent)] cursor-pointer font-mono w-[52px] sm:w-[72px] truncate"
@@ -385,7 +386,7 @@
         </span>
       {/if}
     {:else}
-    <Tooltip content={moduleOpen ? null : mod ? mod.name : "Set module"}>
+    <Tooltip content={moduleOpen ? null : mod ? mod.name : t("issues.row.setModule")}>
       <button
         class="max-w-[130px] flex items-center gap-1 text-micro
                text-[var(--text-muted)] transition-opacity hover:text-[var(--text)]
@@ -400,7 +401,7 @@
         {:else}
           <Layers size={11} class="text-[var(--text-faint)]" />
         {/if}
-        <span class="truncate">{mod ? mod.name : "Module"}</span>
+        <span class="truncate">{mod ? mod.name : t("issues.field.module")}</span>
       </button>
     </Tooltip>
     {#if moduleOpen}
@@ -421,7 +422,7 @@
           onmouseenter={() => onHoverModuleOption(0)}
         >
           <Layers size={13} class="text-[var(--text-faint)]" />
-          No module
+          {t("issues.group.noModule")}
         </button>
         {#each modules as m, mi}
           <button
@@ -462,8 +463,8 @@
       content={priorityOpen
         ? null
         : issue.priority === "none"
-          ? "Set priority"
-          : issue.priority[0].toUpperCase() + issue.priority.slice(1)}
+          ? t("issues.row.setPriority")
+          : priorityLabel(issue.priority)}
     >
       <button
         class="size-6 flex items-center justify-end transition-opacity hover:opacity-100
@@ -499,7 +500,7 @@
             onmouseenter={() => onHoverPriorityOption(pi)}
           >
             <span class="w-4 flex justify-center"><PriorityIcon priority={p} size={15} /></span>
-            {p}
+            {t(`issues.priorityValue.${p}`)}
           </button>
         {/each}
       </div>
@@ -511,7 +512,7 @@
        (LIF-275) it's ALWAYS visible instead of removed — the peek panel is
        the mobile bottom sheet with full status/priority/module editing, so
        hiding its only trigger made that whole surface unreachable. -->
-  <Tooltip content="Peek">
+  <Tooltip content={t("issues.peekTooltip")}>
     <button
       class="hidden shrink-0 size-6 items-center justify-center rounded
              text-[var(--text-faint)] hover:text-[var(--accent)]

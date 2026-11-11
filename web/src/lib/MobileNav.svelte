@@ -60,6 +60,7 @@
   import type { AuthUser, Project, ProjectGroup } from "./api";
   import { NEW_GROUP } from "./projectGroups";
   import type { ThemePreference } from "./theme";
+  import { t } from "./i18n";
 
   let {
     open = $bindable(false),
@@ -179,7 +180,7 @@
       // A restored drawer has no click trigger. Return to the existing
       // mobile header control rather than attempting to focus <body>.
       restoreFocusTo = active instanceof HTMLElement && active !== document.body && active !== document.documentElement
-        ? active : document.querySelector<HTMLElement>('button[aria-label="Open navigation"]');
+        ? active : document.querySelector<HTMLElement>("button[data-mobile-nav-trigger]");
       paneSnap = true;
     }
     if (entry?.project) {
@@ -491,17 +492,17 @@
   }
   async function saveEdit() {
     if (editBusy) return;
-    if (!draftGroupName?.trim()) { editError = "Enter a group name."; editInput?.focus(); return; }
+    if (!draftGroupName?.trim()) { editError = t("layout.group.nameRequired"); editInput?.focus(); return; }
     editBusy = true;
     editError = "";
     try {
       const result = await onCommitGroupName();
       if (result === false || editingGroupId != null) {
-        editError = groupEditError || "Couldn't save the group. Try again.";
+        editError = groupEditError || t("layout.group.saveFailed");
         void tick().then(() => editInput?.focus());
       } else restoreEditFocus();
     } catch (error) {
-      editError = error instanceof Error ? error.message : "Couldn't save the group. Try again.";
+      editError = error instanceof Error ? error.message : t("layout.group.saveFailed");
       void tick().then(() => editInput?.focus());
     } finally { editBusy = false; }
   }
@@ -515,9 +516,9 @@
     if (onMoveProject) {
       const group = groups.find((g) => g.project_ids.includes(project.id));
       const ordered = group ? projectsIn(group) : ungrouped;
-      contextMenuState.items = [...contextMenuState.items.filter((item) => item.label !== "Move up" && item.label !== "Move down"),
-        { label: "Move up", icon: ArrowUp, disabled: ordered[0]?.id === project.id, action: () => void onMoveProject?.(project, "up") },
-        { label: "Move down", icon: ArrowDown, disabled: ordered.at(-1)?.id === project.id, action: () => void onMoveProject?.(project, "down") },
+      contextMenuState.items = [...contextMenuState.items.filter((item) => item.label !== t("layout.menu.moveUp") && item.label !== t("layout.menu.moveDown")),
+        { label: t("layout.menu.moveUp"), icon: ArrowUp, disabled: ordered[0]?.id === project.id, action: () => void onMoveProject?.(project, "up") },
+        { label: t("layout.menu.moveDown"), icon: ArrowDown, disabled: ordered.at(-1)?.id === project.id, action: () => void onMoveProject?.(project, "down") },
       ];
     }
   }
@@ -528,9 +529,9 @@
     onGroupMenu(e, group);
     anchorMenu(e);
     if (onMoveGroup) {
-      contextMenuState.items = [...contextMenuState.items.filter((item) => item.label !== "Move up" && item.label !== "Move down"),
-        { label: "Move up", icon: ArrowUp, disabled: groups[0]?.id === group.id, action: () => void onMoveGroup?.(group, "up") },
-        { label: "Move down", icon: ArrowDown, disabled: groups.at(-1)?.id === group.id, action: () => void onMoveGroup?.(group, "down") },
+      contextMenuState.items = [...contextMenuState.items.filter((item) => item.label !== t("layout.menu.moveUp") && item.label !== t("layout.menu.moveDown")),
+        { label: t("layout.menu.moveUp"), icon: ArrowUp, disabled: groups[0]?.id === group.id, action: () => void onMoveGroup?.(group, "up") },
+        { label: t("layout.menu.moveDown"), icon: ArrowDown, disabled: groups.at(-1)?.id === group.id, action: () => void onMoveGroup?.(group, "down") },
       ];
     }
   }
@@ -560,16 +561,16 @@
   // Destination rows for a project's pane, in the same order the docked
   // sidebar lists them so muscle memory survives the switch between devices.
   const destinations: { slug: string; label: string; icon: typeof List }[] = [
-    { slug: "overview", label: "Overview", icon: LayoutDashboard },
-    { slug: "issues", label: "Issues", icon: List },
-    { slug: "board", label: "Board", icon: LayoutGrid },
-    { slug: "graph", label: "Graph", icon: Waypoints },
-    { slug: "modules", label: "Modules", icon: Layers },
-    { slug: "pages", label: "Pages", icon: FileText },
-    { slug: "files", label: "Files", icon: Paperclip },
-    { slug: "plans", label: "Plans", icon: ListChecks },
-    { slug: "activity", label: "Activity", icon: History },
-    { slug: "insights", label: "Insights", icon: TrendingUp },
+    { slug: "overview", label: t("nav.overview"), icon: LayoutDashboard },
+    { slug: "issues", label: t("nav.issues"), icon: List },
+    { slug: "board", label: t("nav.board"), icon: LayoutGrid },
+    { slug: "graph", label: t("nav.graph"), icon: Waypoints },
+    { slug: "modules", label: t("nav.modules"), icon: Layers },
+    { slug: "pages", label: t("nav.pages"), icon: FileText },
+    { slug: "files", label: t("nav.files"), icon: Paperclip },
+    { slug: "plans", label: t("nav.plans"), icon: ListChecks },
+    { slug: "activity", label: t("nav.activity"), icon: History },
+    { slug: "insights", label: t("nav.insights"), icon: TrendingUp },
   ];
 </script>
 
@@ -588,7 +589,7 @@
     style={panelStyle}
     role="dialog"
     aria-modal={!contextMenuState.open}
-    aria-label="Navigation"
+    aria-label={t("nav.navigation")}
     aria-hidden={!open}
     inert={!open}
     tabindex="-1"
@@ -624,7 +625,7 @@
         <button
           class="size-11 -mr-2 shrink-0 grid place-items-center rounded-lg
                  text-[var(--text-muted)] active:bg-[var(--bg-subtle)] transition-colors"
-          aria-label="Close navigation"
+          aria-label={t("nav.close")}
           onclick={close}
         >
           <X size={20} />
@@ -639,7 +640,7 @@
           }}
         >
           <Search size={16} class="shrink-0" />
-          <span class="flex-1 text-left text-body-lg">Search issues, pages, projects…</span>
+          <span class="flex-1 text-left text-body-lg">{t("nav.mobileSearch")}</span>
         </button>
       </div>
 
@@ -651,7 +652,7 @@
           onclick={(e) => go(e, "/")}
         >
           <Home size={18} class="shrink-0" />
-          Home
+          {t("nav.home")}
         </a>
         <a
           class="sidebar-destination mobile-main-row w-full min-h-12 flex items-center gap-3 px-3 rounded-lg text-left text-body-lg transition-colors"
@@ -660,7 +661,7 @@
           onclick={(e) => go(e, "/feed")}
         >
           <Activity size={18} class="shrink-0" />
-          Feed
+          {t("nav.feed")}
         </a>
         <a
           class="sidebar-destination mobile-main-row w-full min-h-12 flex items-center gap-3 px-3 rounded-lg text-left text-body-lg transition-colors"
@@ -669,17 +670,17 @@
           onclick={(e) => go(e, "/for-me")}
         >
           <Inbox size={18} class="shrink-0" />
-          For me
+          {t("nav.forMe")}
         </a>
 
         <div class="flex items-center justify-between pl-3 pr-1 pt-2 pb-1">
           <span class="sidebar-section-label text-micro font-semibold uppercase text-[var(--text-faint)]">
-            Projects
+            {t("layout.projects")}
           </span>
           <button
             class="size-11 -mr-1 grid place-items-center rounded-lg
                    text-[var(--text-faint)] active:bg-[var(--bg-subtle)] transition-colors"
-            aria-label="New project or group"
+            aria-label={t("layout.newProjectOrGroup")}
             onclick={createMenu}
           >
             <Plus size={18} />
@@ -700,7 +701,7 @@
             data-current-project={project.identifier.toLowerCase() === activeIdentifier || undefined}
             onclick={() => push(project)}
             data-mobile-project-trigger={project.identifier}
-            aria-label="Open {project.name} navigation"
+            aria-label={t("nav.openProject", { name: project.name })}
             oncontextmenu={(e) => projectMenu(e, project)}
           >
             {#if project.emoji}
@@ -723,7 +724,7 @@
             </span>
             <ChevronRight size={17} class="mobile-project-chevron shrink-0 text-[var(--text-faint)]" />
           </button>
-          <button class="size-11 shrink-0 grid place-items-center rounded-lg text-[var(--text-muted)] active:bg-[var(--bg-subtle)]" aria-label="Actions for {project.name}" aria-haspopup="menu" onclick={(e) => projectMenu(e, project)}><Ellipsis size={18} /></button>
+          <button class="size-11 shrink-0 grid place-items-center rounded-lg text-[var(--text-muted)] active:bg-[var(--bg-subtle)]" aria-label={t("layout.project.actions", { name: project.name })} aria-haspopup="menu" onclick={(e) => projectMenu(e, project)}><Ellipsis size={18} /></button>
           </div>
         {/snippet}
 
@@ -734,8 +735,8 @@
             bind:this={editInput}
             class="w-full h-11 px-3 my-1 rounded-lg text-[16px] bg-[var(--bg)]
                    border border-[var(--border)] text-[var(--text)]"
-            placeholder="Group name"
-            aria-label="Group name"
+            placeholder={t("layout.group.name")}
+            aria-label={t("layout.group.name")}
             aria-invalid={!!(editError || groupEditError)}
             aria-describedby={editError || groupEditError ? "mobile-group-error" : undefined}
             disabled={editBusy}
@@ -750,8 +751,8 @@
           />
           {#if editError || groupEditError}<p id="mobile-group-error" role="alert" class="px-3 text-body-sm text-[var(--error)]">{editError || groupEditError}</p>{/if}
           <div class="flex gap-2 px-3 pb-2">
-            <button class="min-h-11 px-3 rounded-lg bg-[var(--accent)] text-[var(--accent-text)]" disabled={editBusy} onclick={saveEdit}>{editBusy ? "Saving…" : "Save"}</button>
-            <button class="min-h-11 px-3 rounded-lg active:bg-[var(--bg-subtle)]" disabled={editBusy} onclick={cancelEdit}>Cancel</button>
+            <button class="min-h-11 px-3 rounded-lg bg-[var(--accent)] text-[var(--accent-text)]" disabled={editBusy} onclick={saveEdit}>{editBusy ? t("common.saving") : t("common.save")}</button>
+            <button class="min-h-11 px-3 rounded-lg active:bg-[var(--bg-subtle)]" disabled={editBusy} onclick={cancelEdit}>{t("common.cancel")}</button>
           </div>
         {/snippet}
 
@@ -780,7 +781,7 @@
               />
               <span class="truncate flex-1">{group.name}</span>
             </button>
-            <button data-mobile-group-actions={group.id} class="size-11 shrink-0 grid place-items-center rounded-lg text-[var(--text-muted)] active:bg-[var(--bg-subtle)]" aria-label="Actions for {group.name}" aria-haspopup="menu" onclick={(e) => groupMenu(e, group)}><Ellipsis size={18} /></button>
+            <button data-mobile-group-actions={group.id} class="size-11 shrink-0 grid place-items-center rounded-lg text-[var(--text-muted)] active:bg-[var(--bg-subtle)]" aria-label={t("layout.project.actions", { name: group.name })} aria-haspopup="menu" onclick={(e) => groupMenu(e, group)}><Ellipsis size={18} /></button>
             </div>
           {/if}
           {#if !collapsed}
@@ -800,13 +801,13 @@
 
         {#if projects.length === 0 && groups.length === 0 && editingGroupId !== NEW_GROUP}
           <div class="px-3 py-8">
-            <p class="text-body text-[var(--text-faint)] mb-3">No projects yet.</p>
+            <p class="text-body text-[var(--text-faint)] mb-3">{t("layout.empty.noProjects")}</p>
             <a
               class="inline-flex items-center min-h-11 px-4 rounded-lg bg-[var(--accent)] text-[var(--accent-text)] text-body-lg font-medium"
               href="#/projects/new"
               onclick={(e) => go(e, "/projects/new")}
             >
-              Create a project
+              {t("layout.empty.createProject")}
             </a>
           </div>
         {/if}
@@ -833,7 +834,7 @@
               {user.display_name || user.username}
             </div>
             <div class="text-micro text-[var(--text-faint)] flex items-center gap-1 leading-tight mt-0.5">
-              <Settings size={10} /> Settings
+              <Settings size={10} /> {t("nav.settings")}
             </div>
           </div>
         </a>
@@ -841,8 +842,8 @@
           class="size-11 shrink-0 grid place-items-center rounded-lg
                  text-[var(--text-muted)] active:bg-[var(--bg-subtle)] transition-colors"
           onclick={onCycleTheme}
-          aria-label="Choose theme, current: {themePref}"
-          title="Choose theme, current: {themePref}"
+          aria-label={t("layout.theme.choose", { theme: t(`layout.theme.current.${themePref}`) })}
+          title={t("layout.theme.choose", { theme: t(`layout.theme.current.${themePref}`) })}
           aria-haspopup="menu"
         >
           {#if themePref === "system"}
@@ -880,13 +881,13 @@
               onclick={pop}
             >
               <ChevronLeft size={20} class="shrink-0" />
-              Projects
+              {t("layout.projects")}
             </button>
             <div class="flex-1"></div>
             <button
               class="size-11 shrink-0 grid place-items-center rounded-lg
                      text-[var(--text-muted)] active:bg-[var(--bg-subtle)] transition-colors"
-              aria-label="Close navigation"
+              aria-label={t("nav.close")}
               onclick={close}
             >
               <X size={20} />
@@ -937,13 +938,13 @@
       {:else if level === 1}
         <div class="shrink-0 flex items-center justify-between px-2 pt-[max(0.5rem,env(safe-area-inset-top))] border-b border-[var(--border)]">
           <button class="min-h-11 flex items-center gap-0.5 px-2 rounded-lg text-body text-[var(--accent)] active:bg-[var(--bg-subtle)]" onclick={pop}>
-            <ChevronLeft size={20} /> Projects
+            <ChevronLeft size={20} /> {t("layout.projects")}
           </button>
-          <button class="size-11 grid place-items-center rounded-lg text-[var(--text-muted)] active:bg-[var(--bg-subtle)]" aria-label="Close navigation" onclick={close}><X size={20} /></button>
+          <button class="size-11 grid place-items-center rounded-lg text-[var(--text-muted)] active:bg-[var(--bg-subtle)]" aria-label={t("nav.close")} onclick={close}><X size={20} /></button>
         </div>
         <div class="p-4">
-          <h2 class="font-display text-title text-[var(--text)]">Project unavailable</h2>
-          <p class="mt-2 text-body text-[var(--text-muted)]">This project is no longer in your project list.</p>
+          <h2 class="font-display text-title text-[var(--text)]">{t("nav.projectUnavailable.title")}</h2>
+          <p class="mt-2 text-body text-[var(--text-muted)]">{t("nav.projectUnavailable.body")}</p>
         </div>
       {/if}
     </div>

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from "../i18n";
   // LIF-240 — one reusable horizontal-bar distribution list. Backs the
   // status/priority/module cards on the Insights tab: same row shape
   // (icon + label + proportional bar + count) so the three cards read as
@@ -7,7 +8,7 @@
   let {
     items,
     icon,
-    emptyLabel = "Nothing yet",
+    emptyLabel = t("insights.distribution.empty"),
   }: {
     items: { key: string; label: string; count: number }[];
     /** Per-row leading icon, keyed by item.key. Omit for icon-less rows

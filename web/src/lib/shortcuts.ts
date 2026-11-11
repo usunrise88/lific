@@ -1,7 +1,7 @@
 // LIF-245 — single source of truth for every keyboard shortcut in the app.
 //
 // Two jobs:
-//   1. `SHORTCUTS` is the data the Shortcut Help overlay (ShortcutHelp.svelte)
+//   1. `shortcuts()` is the data the Shortcut Help overlay (ShortcutHelp.svelte)
 //      renders from, grouped by `scope`. Keeping the list here — rather than
 //      hand-rolled markup duplicated inside a popover — means the overlay
 //      can't silently drift from what the handlers actually bind. When you
@@ -20,6 +20,7 @@ import { commandPaletteState } from "./commandPaletteState.svelte";
 import { shortcutHelpState } from "./shortcutHelpState.svelte";
 import { contextMenuState } from "./contextMenuState.svelte"; // LIF-248
 import { mobileNavState } from "./mobileNavState.svelte";
+import { t } from "./i18n";
 
 export type ShortcutScope = "global" | "list" | "board" | "peek" | "palette" | "editor";
 
@@ -33,65 +34,76 @@ export interface ShortcutEntry {
 
 export const SCOPE_ORDER: ShortcutScope[] = ["global", "list", "board", "peek", "palette", "editor"];
 
-export const SCOPE_LABEL: Record<ShortcutScope, string> = {
-  global: "Global",
-  list: "Issue list",
-  board: "Board",
-  peek: "Peek panel",
-  palette: "Command palette",
-  editor: "Markdown editor",
-};
+/** Display name of a shortcut group. A function, not a constant, so the
+ *  active locale applies at render time. */
+export function scopeLabel(scope: ShortcutScope): string {
+  return t(`shortcuts.scope.${scope}`);
+}
 
-export const SHORTCUTS: ShortcutEntry[] = [
+// [keys, label key under `shortcuts.`, scope]. Labels are resolved by
+// `shortcuts()` at call time so the active locale applies.
+const SHORTCUT_DEFS: [string, string, ShortcutScope][] = [
   // ── Global (Layout.svelte) ───────────────────────────────
-  { keys: "⌘ K", label: "Open command palette", scope: "global" },
-  { keys: "⌘ P", label: "Open command palette", scope: "global" },
-  { keys: "⌘ \\", label: "Collapse or expand the sidebar", scope: "global" },
-  { keys: "?", label: "Show this shortcut list", scope: "global" },
-  { keys: "Esc", label: "Close the open dialog", scope: "global" },
+  ["⌘ K", "openPalette", "global"],
+  ["⌘ P", "openPalette", "global"],
+  ["⌘ \\", "toggleSidebar", "global"],
+  ["?", "showHelp", "global"],
+  ["Esc", "closeDialog", "global"],
 
   // ── Issue list (IssueList.svelte handleKeydown) ──────────
-  { keys: "J ↓", label: "Move focus down", scope: "list" },
-  { keys: "K ↑", label: "Move focus up", scope: "list" },
-  { keys: "Home", label: "Focus the first row", scope: "list" },
-  { keys: "End", label: "Focus the last row", scope: "list" },
-  { keys: "Enter", label: "Open the focused issue", scope: "list" },
-  { keys: "Space", label: "Peek the focused issue", scope: "list" },
-  { keys: "X", label: "Toggle selection on the focused row", scope: "list" },
-  { keys: "Ctrl/⌘ A", label: "Select all visible issues", scope: "list" },
-  { keys: "⇧ J/K", label: "Extend selection", scope: "list" },
-  { keys: "S", label: "Open the status picker", scope: "list" },
-  { keys: "⇧ S", label: "Cycle status", scope: "list" },
-  { keys: "P", label: "Open the priority picker", scope: "list" },
-  { keys: "⇧ P", label: "Cycle priority", scope: "list" },
-  { keys: "M", label: "Open the module picker", scope: "list" },
-  { keys: "C", label: "New issue", scope: "list" },
-  { keys: "/", label: "Focus search", scope: "list" },
-  { keys: "Esc", label: "Clear focus / selection / close a popover", scope: "list" },
+  ["J ↓", "focusDown", "list"],
+  ["K ↑", "focusUp", "list"],
+  ["Home", "focusFirst", "list"],
+  ["End", "focusLast", "list"],
+  ["Enter", "openFocused", "list"],
+  ["Space", "peekFocused", "list"],
+  ["X", "toggleSelection", "list"],
+  ["Ctrl/⌘ A", "selectAll", "list"],
+  ["⇧ J/K", "extendSelection", "list"],
+  ["S", "statusPicker", "list"],
+  ["⇧ S", "cycleStatus", "list"],
+  ["P", "priorityPicker", "list"],
+  ["⇧ P", "cyclePriority", "list"],
+  ["M", "modulePicker", "list"],
+  ["C", "newIssue", "list"],
+  ["/", "focusSearch", "list"],
+  ["Esc", "clearFocus", "list"],
 
   // ── Board (IssueList.svelte, layout="board") ─────────────
-  { keys: "Click", label: "Open card", scope: "board" },
-  { keys: "⌘/Ctrl Click", label: "Peek card", scope: "board" },
-  { keys: "Drag", label: "Move between columns and lanes", scope: "board" },
-  { keys: "C", label: "New issue", scope: "board" },
-  { keys: "/", label: "Focus search", scope: "board" },
+  ["{click}", "openCard", "board"],
+  ["⌘/Ctrl {click}", "peekCard", "board"],
+  ["{drag}", "moveCard", "board"],
+  ["C", "newIssue", "board"],
+  ["/", "focusSearch", "board"],
 
   // ── Peek panel (PeekPanel.svelte) ─────────────────────────
-  { keys: "Esc", label: "Close preview", scope: "peek" },
+  ["Esc", "closePreview", "peek"],
 
   // ── Command palette (CommandPalette.svelte) ──────────────
-  { keys: "↓ ↑", label: "Move selection", scope: "palette" },
-  { keys: "Enter", label: "Open / run", scope: "palette" },
-  { keys: "⌘ Enter", label: "Open in a new tab", scope: "palette" },
-  { keys: "⌫", label: "Step back out of a submenu", scope: "palette" },
-  { keys: "Esc", label: "Close", scope: "palette" },
+  ["↓ ↑", "moveSelection", "palette"],
+  ["Enter", "openRun", "palette"],
+  ["⌘ Enter", "openNewTab", "palette"],
+  ["⌫", "stepBack", "palette"],
+  ["Esc", "close", "palette"],
 
   // ── Markdown editor (EditableMarkdown.svelte, edit mode) ──
-  { keys: "⌘ B", label: "Bold", scope: "editor" },
-  { keys: "⌘ I", label: "Italic", scope: "editor" },
-  { keys: "⌘ ⇧ K", label: "Insert link", scope: "editor" },
-  { keys: "⌘ S", label: "Save", scope: "editor" },
+  ["⌘ B", "bold", "editor"],
+  ["⌘ I", "italic", "editor"],
+  ["⌘ ⇧ K", "insertLink", "editor"],
+  ["⌘ S", "save", "editor"],
 ];
+
+/** Every shortcut with its label in the active locale. Mouse gestures
+ *  (Click, Drag) are words, not key names, so they are translated too. */
+export function shortcuts(): ShortcutEntry[] {
+  return SHORTCUT_DEFS.map(([keys, label, scope]) => ({
+    keys: keys
+      .replace("{click}", t("shortcuts.gesture.click"))
+      .replace("{drag}", t("shortcuts.gesture.drag")),
+    label: t(`shortcuts.${label}`),
+    scope,
+  }));
+}
 
 /** True when focus is in something that owns its own text input — a
  *  shortcut must not hijack a keystroke meant for the field. Shared by

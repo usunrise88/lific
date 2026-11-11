@@ -16,6 +16,7 @@
   // Pages sidebar. Breakdowns come from the parent's unfiltered allIssues,
   // and every row is a one-click filter shortcut back into the parent's
   // filter state (via the toggle callbacks).
+  import { t } from "../i18n";
   import type { Module } from "../api";
   import { Layers, PanelRightClose, PanelRightOpen } from "lucide-svelte";
   import PriorityIcon from "../PriorityIcon.svelte";
@@ -64,15 +65,15 @@
            text-[var(--text-faint)] hover:text-[var(--text)]
            hover:bg-[var(--surface)] transition-colors"
     onclick={toggleCollapsed}
-    title="Expand issues sidebar"
-    aria-label="Expand issues sidebar"
+    title={t("issues.sidebar.expand")}
+    aria-label={t("issues.sidebar.expand")}
   >
     <PanelRightOpen size={15} />
     <span
       class="text-micro font-semibold uppercase tracking-widest
              [writing-mode:vertical-rl]"
     >
-      Stats
+      {t("issues.sidebar.stats")}
     </span>
   </button>
 {:else}
@@ -89,8 +90,8 @@
              text-[var(--text-faint)] hover:text-[var(--text)]
              hover:bg-[var(--surface)] transition-colors"
       onclick={toggleCollapsed}
-      title="Collapse sidebar"
-      aria-label="Collapse sidebar"
+      title={t("issues.sidebar.collapse")}
+      aria-label={t("issues.sidebar.collapse")}
     >
       <PanelRightClose size={15} />
     </button>
@@ -103,7 +104,7 @@
         {stats.total}
       </p>
       <p class="text-micro font-semibold uppercase tracking-widest text-[var(--text-faint)] mt-1">
-        Issues
+        {t("issues.sidebar.issues")}
       </p>
     </div>
     <div>
@@ -111,7 +112,7 @@
         {stats.active}
       </p>
       <p class="text-micro font-semibold uppercase tracking-widest text-[var(--text-faint)] mt-1">
-        Active
+        {t("common.status.active")}
       </p>
     </div>
   </div>
@@ -119,7 +120,7 @@
   <!-- Priority breakdown — not surfaced anywhere else in the view; each row
        toggles the Priority filter. -->
   <p class="text-micro font-semibold uppercase tracking-widest text-[var(--text-faint)] mb-2 px-1">
-    Priority
+    {t("issues.field.priority")}
   </p>
   <div class="flex flex-col gap-0.5 mb-5">
     {#each PRIORITIES as p}
@@ -133,7 +134,7 @@
           onclick={() => onTogglePriority(p)}
         >
           <PriorityIcon priority={p} size={14} />
-          <span class="flex-1 capitalize">{p}</span>
+          <span class="flex-1">{t(`common.priority.${p}`)}</span>
           <span class="tabular-nums text-micro text-[var(--text-faint)]">
             {stats.prio[p]}
           </span>
@@ -147,7 +148,7 @@
     <!-- Module navigator — parallel to the Pages folder navigator; click to
          focus a module's issues. -->
     <p class="text-micro font-semibold uppercase tracking-widest text-[var(--text-faint)] mb-2 px-1">
-      Modules
+      {t("issues.sidebar.modules")}
     </p>
     <div class="flex flex-col gap-0.5">
       {#each modules as m (m.id)}

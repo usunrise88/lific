@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from "../lib/i18n";
   import {
     listProjects,
     listModules,
@@ -38,7 +39,7 @@
   import { compareIssues as compareIssuesPure } from "../lib/issues/sort";
   import { computeSearchResult, RESULT_CAP } from "../lib/issues/search";
   import {
-    STATUSES, PRIORITIES, buildGroups,
+    STATUSES, PRIORITIES, buildGroups, statusLabel, statusWord,
     buildLanes, laneKeyForIssue,
   } from "../lib/issues/grouping";
   import { applyIssueFilters, statusFilterSet } from "../lib/issues/filters";
@@ -368,7 +369,7 @@
         (p: Project) => p.identifier.toLowerCase() === identifier.toLowerCase()
       );
       if (!found) {
-        error = `Project ${identifier} not found`;
+        error = t("issueNew.projectNotFound", { project: identifier });
         projectLoading = false;
         return;
       }
@@ -591,7 +592,7 @@
       !!view.searchQuery.trim() ||
       (layout === "list" && view.issueSubTab !== "all");
     return narrowed && shown !== total
-      ? `${shown} of ${total}`
+      ? t("issueList.countOf", { shown, total })
       : String(total);
   });
 
@@ -815,7 +816,7 @@
       link.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (e) {
-      bulkError = e instanceof Error ? e.message : "Could not export selected issues. Try again.";
+      bulkError = e instanceof Error ? e.message : t("issueList.exportFailed");
     } finally {
       bulkBusy = false;
     }
@@ -1731,7 +1732,7 @@
         class="text-micro font-semibold uppercase tracking-widest
                text-[var(--text-faint)]"
       >
-        Columns
+        {t("issueList.board.columns")}
       </span>
       <div
         class="flex items-center gap-0.5 p-0.5 rounded-md
@@ -1741,7 +1742,7 @@
           {@const visible = !view.hiddenStatuses.has(status)}
           {@const count = sortedIssues.filter((i) => i.status === status).length}
           <Tooltip
-            content={`${visible ? "Hide" : "Show"} ${status[0].toUpperCase() + status.slice(1)}`}
+            content={visible ? t("issueList.board.hideColumn", { status: statusLabel(status) }) : t("issueList.board.showColumn", { status: statusLabel(status) })}
             placement="bottom"
           >
             <button
@@ -1754,7 +1755,7 @@
               onclick={() => view.toggleStatusVisibility(projectIdentifier, status)}
             >
               <StatusIcon status={status} size={12} />
-              <span class="capitalize">{status}</span>
+              <span>{statusLabel(status)}</span>
               <span
                 class="tabular-nums text-micro
                        {visible
@@ -1821,18 +1822,18 @@
       </div>
     {:else if error}
       <div class="flex-1 flex items-center justify-center">
-        <ErrorState title="Couldn't load this board" message={error}>
+        <ErrorState title={t("issueList.board.loadFailed")} message={error}>
           <button
             class="text-body-sm font-medium text-[var(--btn-success-text)] bg-[var(--btn-success)] px-3 py-1.5 rounded-md hover:bg-[var(--btn-success-hover)] transition-colors"
             onclick={() => loadProject(projectIdentifier)}
           >
-            Try again
+            {t("common.retry")}
           </button>
           <button
             class="text-body-sm text-[var(--text-muted)] border border-[var(--border)] px-3 py-1.5 rounded-md hover:bg-[var(--bg-subtle)] transition-colors"
             onclick={() => navigate(`/${projectIdentifier}/overview`)}
           >
-            Project overview
+            {t("issueList.projectOverview")}
           </button>
         </ErrorState>
       </div>
@@ -1881,7 +1882,7 @@
               {/each}
             </div>
             <div class="pointer-events-none absolute inset-0 flex flex-col items-center pt-2.5 pb-3 gap-2">
-              <Tooltip content="Expand {status} column" placement="right">
+              <Tooltip content={t("issueList.board.expandColumn", { status: statusWord(status) })} placement="right">
                 <button
                   class="pointer-events-auto size-5 flex items-center justify-center rounded
                          text-[var(--text-faint)] hover:text-[var(--text)]
@@ -1896,7 +1897,7 @@
                 class="flex-1 text-caption font-semibold uppercase tracking-widest text-[var(--text-muted)]"
                 style="writing-mode: vertical-rl; transform: rotate(180deg);"
               >
-                {status}
+                {statusLabel(status)}
               </span>
               <span class="text-micro text-[var(--text-faint)] tabular-nums">{colIssues.length}</span>
             </div>
@@ -1911,13 +1912,13 @@
                 class="text-caption font-semibold uppercase tracking-widest
                        text-[var(--text-muted)]"
               >
-                {status}
+                {statusLabel(status)}
               </span>
               <span class="text-caption text-[var(--text-faint)] tabular-nums">
                 {colIssues.length}
               </span>
               <div class="flex-1"></div>
-              <Tooltip content="Collapse column" placement="bottom">
+              <Tooltip content={t("issueList.board.collapseColumn")} placement="bottom">
                 <button
                   class="size-5 flex items-center justify-center rounded
                          text-[var(--text-faint)] hover:text-[var(--text)]
@@ -1928,7 +1929,7 @@
                 </button>
               </Tooltip>
               {#if canEdit}
-                <Tooltip content="New {status} issue" placement="bottom">
+                <Tooltip content={t("issueList.board.newInColumn", { status: statusWord(status) })} placement="bottom">
                   <button
                     class="touch-target size-5 flex items-center justify-center rounded
                            text-[var(--text-faint)] hover:text-[var(--accent)]
@@ -1959,7 +1960,7 @@
                 >
                   <Mascot src="/LizzySleep2.png" nativeW={1000} nativeH={420} scale={0.1} />
                   <span class="text-caption text-[var(--text-faint)]">
-                    All quiet
+                    {t("issueList.board.emptyColumn")}
                   </span>
                 </div>
               {/if}
@@ -2085,7 +2086,7 @@
           <button
             class="size-4 flex items-center justify-center transition-colors
                    hover:text-[var(--accent)]"
-            title="Set status"
+            title={t("issueList.inline.setStatus")}
             onclick={(e) => { e.stopPropagation(); inlineCreateStatusOpen = !inlineCreateStatusOpen; }}
           >
             <StatusIcon status={inlineCreateStatus} size={16} />
@@ -2113,7 +2114,7 @@
                   onmouseenter={() => { view.inlineCreateStatusIdx = si; }}
                 >
                   <StatusIcon status={s} size={14} />
-                  {s}
+                  {statusWord(s)}
                 </button>
               {/each}
             </div>
@@ -2130,7 +2131,7 @@
           bind:value={inlineCreateTitle}
           class="flex-1 text-body bg-transparent text-[var(--text)]
                  placeholder:text-[var(--text-faint)] outline-none border-none"
-          placeholder="Issue title..."
+          placeholder={t("issueList.inline.titlePlaceholder")}
           autofocus={!inlineCreateStatusOpen}
           disabled={inlineCreateSaving}
           onkeydown={(e) => {
@@ -2157,7 +2158,7 @@
           }}
         />
         {#if inlineCreateSaving}
-          <span class="text-caption text-[var(--text-faint)]">Creating...</span>
+          <span class="text-caption text-[var(--text-faint)]">{t("issueNew.creating")}</span>
         {/if}
       </div>
   {/if}
@@ -2217,18 +2218,18 @@
         {/each}
       </div>
     {:else if error}
-      <ErrorState title="Couldn't load issues" message={error}>
+      <ErrorState title={t("issueList.loadFailed")} message={error}>
         <button
           class="text-body-sm font-medium text-[var(--btn-success-text)] bg-[var(--btn-success)] px-3 py-1.5 rounded-md hover:bg-[var(--btn-success-hover)] transition-colors"
           onclick={() => loadProject(projectIdentifier)}
         >
-          Try again
+          {t("common.retry")}
         </button>
         <button
           class="text-body-sm text-[var(--text-muted)] border border-[var(--border)] px-3 py-1.5 rounded-md hover:bg-[var(--bg-subtle)] transition-colors"
           onclick={() => navigate(`/${projectIdentifier}/overview`)}
         >
-          Project overview
+          {t("issueList.projectOverview")}
         </button>
       </ErrorState>
     {:else if subTabIssues.length === 0}
@@ -2238,14 +2239,14 @@
         <div class="flex flex-col items-center justify-center py-20 gap-3">
           <Mascot src="/LizzySleep2.png" nativeW={1000} nativeH={420} scale={0.16} />
           <p class="text-[var(--text-muted)] text-body-lg">
-            No issues match your filters
+            {t("issueList.empty.filtered")}
           </p>
           <button
             class="text-body-sm text-[var(--accent)]
                    hover:underline transition-colors"
           onclick={() => view.clearFilters()}
           >
-            Clear filters
+            {t("issueList.empty.clearFilters")}
           </button>
         </div>
       {:else if !inlineCreateActive}
@@ -2255,10 +2256,10 @@
           <Mascot src="/LizzySleep2.png" nativeW={1000} nativeH={420} scale={0.25} />
           <div class="flex flex-col items-center gap-1.5 text-center">
             <p class="text-[var(--text)] text-heading font-medium">
-              All quiet here
+              {t("issueList.empty.title")}
             </p>
             <p class="text-[var(--text-muted)] text-body">
-              No work on the board. Time for a nap… or a fresh idea.
+              {t("issueList.empty.body")}
             </p>
           </div>
           {#if canEdit}
@@ -2270,7 +2271,7 @@
               onclick={startInlineCreateFromEmpty}
             >
               <Plus size={15} />
-              Create an issue
+              {t("issueList.empty.create")}
             </button>
           {/if}
         </div>
@@ -2280,7 +2281,7 @@
            orders by relevance; Recent orders by most recently updated. -->
       {#if view.searchQuery.trim() && view.issueSubTab === "all" && subTabIssues.length === RESULT_CAP}
         <div class="text-micro text-[var(--text-faint)] uppercase tracking-widest font-semibold px-6 py-2 border-b border-[var(--border)] bg-[var(--surface)]">
-          Top {RESULT_CAP} matches — narrow the query for fewer results
+          {t("issueList.search.capped", { count: RESULT_CAP })}
         </div>
       {/if}
       {#each subTabIssues as issue, i (issue.id)}

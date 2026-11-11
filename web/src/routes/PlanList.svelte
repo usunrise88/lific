@@ -19,6 +19,7 @@
   import SubTabs from "../lib/SubTabs.svelte";
   import { loadSubTab, saveSubTab } from "../lib/subtab";
   import { getContext } from "svelte";
+  import { t } from "../lib/i18n";
   import { projectRole, loadProjectRole } from "../lib/projectRole.svelte"; // LIF-234
 
   // LIF-234: plans are content — creation is maintainer-gated.
@@ -54,11 +55,9 @@
 
   const STATUS_ORDER = ["active", "done", "archived"];
   const PLAN_PAGE_SIZE = 500;
-  const STATUS_LABEL: Record<string, string> = {
-    active: "Active",
-    done: "Done",
-    archived: "Archived",
-  };
+  function statusLabel(s: string): string {
+    return STATUS_ORDER.includes(s) ? t(`plans.status.${s}`) : s;
+  }
   const TAB_IDS = ["active", "done", "archived", "all"] as const;
   type PlanTab = (typeof TAB_IDS)[number];
 
@@ -88,7 +87,7 @@
     if (!isCurrentProjectRequest(request, ident)) return;
     if (!projRes.ok) { error = projRes.error; loading = false; return; }
     const found = projRes.data.find((p) => p.identifier === ident);
-    if (!found) { error = `Project ${ident} not found`; loading = false; return; }
+    if (!found) { error = t("plans.notFound", { identifier: ident }); loading = false; return; }
     project = found;
     loadProjectRole(found.id); // LIF-234
     const savedTab = loadSubTab("plans", String(found.id), TAB_IDS);
@@ -164,10 +163,10 @@
       : plans,
   );
   let tabs = $derived([
-    { id: "active", label: "Active", count: activePlans.length },
-    { id: "done", label: "Done", count: donePlans.length },
-    { id: "archived", label: "Archived", count: archivedPlans.length },
-    { id: "all", label: "All", count: plans.length },
+    { id: "active", label: t("plans.status.active"), count: activePlans.length },
+    { id: "done", label: t("plans.status.done"), count: donePlans.length },
+    { id: "archived", label: t("plans.status.archived"), count: archivedPlans.length },
+    { id: "all", label: t("common.all"), count: plans.length },
   ]);
   const canCreateInTab = $derived(activeTab === "active" || activeTab === "all");
 
@@ -212,7 +211,7 @@
         {projectIdentifier}
       </button>
       <ChevronRight size={12} class="text-[var(--text-faint)]" />
-      <span class="text-body-sm font-medium text-[var(--text)]">Plans</span>
+      <span class="text-body-sm font-medium text-[var(--text)]">{t("plans.title")}</span>
       {#if !loading}
         <span class="ml-1 text-micro text-[var(--text-faint)] font-medium tabular-nums">
           {plans.length}
@@ -230,7 +229,7 @@
           onclick={startCreate}
         >
           <Plus size={14} />
-          Plan
+          {t("plans.new")}
         </button>
       {/if}
     </div>
@@ -260,7 +259,7 @@
     <div class="flex-1 min-w-0">
       <div class="text-body text-[var(--text)] truncate">{plan.title}</div>
       <div class="text-caption text-[var(--text-faint)] font-mono">
-        {plan.identifier}{plan.anchor_identifier ? ` · anchor ${plan.anchor_identifier}` : ""}
+        {plan.anchor_identifier ? t("plans.card.withAnchor", { plan: plan.identifier, anchor: plan.anchor_identifier }) : plan.identifier}
       </div>
     </div>
     <div class="text-caption text-[var(--text-muted)] tabular-nums shrink-0">
@@ -295,18 +294,18 @@
         </div>
       </div>
     {:else if error}
-      <ErrorState title="Couldn't load plans" message={error}>
+      <ErrorState title={t("plans.loadError")} message={error}>
         <button
           class="text-body-sm font-medium text-[var(--btn-success-text)] bg-[var(--btn-success)] px-3 py-1.5 rounded-md hover:bg-[var(--btn-success-hover)] transition-colors"
           onclick={() => loadData(projectIdentifier)}
         >
-          Try again
+          {t("common.retry")}
         </button>
         <button
           class="text-body-sm text-[var(--text-muted)] border border-[var(--border)] px-3 py-1.5 rounded-md hover:bg-[var(--bg-subtle)] transition-colors"
           onclick={() => navigate(`/${projectIdentifier}/overview`)}
         >
-          Project overview
+          {t("plans.projectOverview")}
         </button>
       </ErrorState>
     {:else}
@@ -319,7 +318,7 @@
               <ListChecks size={16} class="text-[var(--btn-success)]" />
               <input
                 class="flex-1 bg-transparent outline-none text-body text-[var(--text)]"
-                placeholder="Plan title…"
+                placeholder={t("plans.create.placeholder")}
                 bind:value={createTitle}
                 autofocus
                 onkeydown={(e) => {
@@ -332,7 +331,7 @@
                 disabled={createSaving || !createTitle.trim()}
                 onclick={commitCreate}
               >
-                Create
+                {t("common.create")}
               </button>
             </div>
           {/if}
@@ -341,11 +340,9 @@
             <div class="flex flex-col items-center py-16 gap-4 px-6 max-w-[480px] mx-auto text-center">
               <Mascot src="/LizzyWriting.png" nativeW={567} nativeH={562} />
               <div class="flex flex-col items-center gap-1.5">
-                <p class="text-heading font-medium text-[var(--text)]">The drawing board's empty</p>
+                <p class="text-heading font-medium text-[var(--text)]">{t("plans.empty.title")}</p>
                 <p class="text-body-sm text-[var(--text-muted)] leading-relaxed">
-                  A plan breaks a goal into a tree of steps that survives across
-                  sessions. Steps can mirror issues, so closing an issue checks
-                  off its step.
+                  {t("plans.empty.body")}
                 </p>
               </div>
               {#if canEdit}
@@ -357,21 +354,21 @@
                   onclick={startCreate}
                 >
                   <Plus size={15} />
-                  Create a plan
+                  {t("plans.create.cta")}
                 </button>
               {/if}
             </div>
           {:else if activeTab !== "all" && selectedPlans.length === 0 && !creating}
             <div class="flex flex-col items-center py-16 gap-2 text-center">
               <p class="text-heading font-medium text-[var(--text)]">
-                {activeTab === "active" ? "No active plans" : activeTab === "done" ? "No completed plans" : "No archived plans"}
+                {activeTab === "active" ? t("plans.emptyTab.active") : activeTab === "done" ? t("plans.emptyTab.done") : t("plans.emptyTab.archived")}
               </p>
             </div>
           {:else if activeTab === "all"}
             {#each grouped as group (group.status)}
               <div class="mb-6">
                 <h2 class="text-micro font-semibold uppercase tracking-wide text-[var(--text-faint)] mb-2">
-                  {STATUS_LABEL[group.status] ?? group.status}
+                  {statusLabel(group.status)}
                   <span class="ml-1 tabular-nums">{group.items.length}</span>
                 </h2>
                 <div class="flex flex-col gap-2">

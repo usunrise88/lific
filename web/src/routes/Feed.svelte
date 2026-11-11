@@ -36,7 +36,7 @@
     activeFilterCount,
     selectedProjectIds,
     toggle,
-    VERB_OPTIONS,
+    verbOptions,
     EMPTY_FILTERS,
     type FeedCard,
     type FeedFilters,
@@ -46,6 +46,7 @@
     saveDensity,
     type Density,
   } from "../lib/feed";
+  import { t, formatNumber } from "../lib/i18n";
   import { startAutoRefresh } from "../lib/autoRefresh.svelte";
   import { loadScroll, clearScroll, scrollSaver } from "../lib/scrollMemory";
   import { openPeek, peekState, dockPeek } from "../lib/issues/peek.svelte";
@@ -410,12 +411,12 @@
       : await createPageComment(target.pageId!, body);
     sending = false;
     if (!res.ok) {
-      toast(`Couldn't post comment: ${res.error}`);
+      toast(t("feed.toast.postFailed", { error: res.error }));
       return;
     }
     draft = "";
     composerFor = null;
-    toast(`Comment posted on ${target.label ?? "page"}`);
+    toast(t("feed.toast.posted", { target: target.label ?? t("feed.toast.page") }));
     void refreshNew();
   }
 
@@ -462,7 +463,7 @@
   {:else if verb === "moved"}
     {@render subjectRef(s, false)} {joiner} {@render statusChip(card.lead.new_value)}
   {:else if verb === "assigned"}
-    {@render subjectRef(s, false)} to <span class="text-[var(--text)]">{assigneeLabel(card.lead.new_value ?? card.lead.old_value)}</span>
+    {@render subjectRef(s, false)} {t("feed.tail.assignedTo")} <span class="text-[var(--text)]">{assigneeLabel(card.lead.new_value ?? card.lead.old_value)}</span>
   {:else if card.kind === "structure"}
     <span class="font-medium text-[var(--text)]">{card.lead.entity_label ?? ""}</span>
   {:else}
@@ -538,9 +539,9 @@
     {#each edits as e (e.id)}
       <span class="text-[var(--text-faint)]"> · {humanField(e.field)}</span>
       {#if e.field !== "description" && e.field !== "content"}
-        <span class="text-[var(--text-faint)] line-through">{plainSnippet(e.old_value, 30) || "none"}</span>
+        <span class="text-[var(--text-faint)] line-through">{plainSnippet(e.old_value, 30) || t("feed.value.none")}</span>
         <span class="text-[var(--text-faint)]">→</span>
-        <span class="text-[var(--text-muted)]">{plainSnippet(e.new_value, 40) || "none"}</span>
+        <span class="text-[var(--text-muted)]">{plainSnippet(e.new_value, 40) || t("feed.value.none")}</span>
       {/if}
     {/each}
     {#each labels as l (l.id)}
@@ -557,7 +558,7 @@
       </span>
     {/each}
     {#if card.kind === "plan" && steps.length}
-      <span class="text-[var(--text-faint)]"> · {steps.length} step{steps.length === 1 ? "" : "s"}{card.lead.entity_type === "plan_step" ? `: ${steps.map((x) => plainSnippet(x.new_value, 40)).filter(Boolean).slice(0, 2).join(", ")}` : ""}</span>
+      <span class="text-[var(--text-faint)]"> · {t("feed.details.steps", { count: steps.length })}{card.lead.entity_type === "plan_step" ? `: ${steps.map((x) => plainSnippet(x.new_value, 40)).filter(Boolean).slice(0, 2).join(", ")}` : ""}</span>
     {/if}
   {/if}
 {/snippet}
@@ -568,13 +569,13 @@
     {#if expanded.has(key)}
       <div class="feed-comment mt-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-subtle)] px-3 py-2 text-body-sm">
         <Markdown content={c.new_value ?? ""} />
-        <button class="mt-1 text-micro text-[var(--text-faint)] hover:text-[var(--text)]" onclick={() => toggleExpanded(key)}>Collapse</button>
+        <button class="mt-1 text-micro text-[var(--text-faint)] hover:text-[var(--text)]" onclick={() => toggleExpanded(key)}>{t("feed.comment.collapse")}</button>
       </div>
     {:else}
       <button
         class="mt-1 w-full text-left border-l-2 border-[var(--border)] hover:border-[var(--accent)] pl-2
                text-caption leading-snug text-[var(--text-muted)] line-clamp-2 transition-colors"
-        title="Show the full comment"
+        title={t("feed.comment.showFullTitle")}
         onclick={() => toggleExpanded(key)}
       >{plainSnippet(c.new_value, 400)}</button>
     {/if}
@@ -600,7 +601,7 @@
     in:fly={{ y: -4, duration: 200 }}
   >
     <!-- Avatar with the event kind tucked into its corner. -->
-    <button class="relative shrink-0 self-start mt-0.5" title="Only {card.actorName}" onclick={() => onlyActor(card)}>
+    <button class="relative shrink-0 self-start mt-0.5" title={t("feed.onlyThis", { name: card.actorName })} onclick={() => onlyActor(card)}>
       <span
         class="size-6 rounded-full grid place-items-center text-[9px] font-bold select-none
                {card.isBot
@@ -621,7 +622,7 @@
              wider screens keep one truncated line. -->
         <p class="flex-1 min-w-0 m-0 line-clamp-2 sm:line-clamp-none sm:truncate text-body-sm leading-5 text-[var(--text-muted)]">
           <button class="font-medium text-[var(--text)] hover:underline" onclick={() => onlyActor(card)}>{card.actorName}</button>
-          {#if card.isBot}<span class="hidden sm:inline"><Bot size={11} class="inline -mt-0.5 text-[var(--accent)]" aria-label="agent" /></span>{/if}
+          {#if card.isBot}<span class="hidden sm:inline"><Bot size={11} class="inline -mt-0.5 text-[var(--accent)]" aria-label={t("feed.agent")} /></span>{/if}
           {@render phrase(card)}
           {@render subjectTail(card, "→")}
         </p>
@@ -631,14 +632,14 @@
               <button
                 class="size-6 grid place-items-center rounded-md transition-colors
                        {composerFor === card.key ? 'text-[var(--accent)] bg-[var(--accent-subtle)]' : 'text-[var(--text-faint)] hover:text-[var(--text)] hover:bg-[var(--surface)]'}"
-                title="Comment" aria-label="Comment"
+                title={t("feed.comment.action")} aria-label={t("feed.comment.action")}
                 onclick={() => openComposer(card)}
               ><MessageSquare size={13} /></button>
             {/if}
             {#if !card.batch && s.href}
               <button
                 class="hidden sm:grid size-6 place-items-center rounded-md text-[var(--text-faint)] hover:text-[var(--text)] hover:bg-[var(--surface)] transition-colors"
-                title="Open" aria-label="Open"
+                title={t("common.open")} aria-label={t("common.open")}
                 onclick={() => navigate(s.href!)}
               ><ArrowUpRight size={13} /></button>
             {/if}
@@ -646,7 +647,7 @@
           {#if card.project}
             <button
               class="hidden sm:inline text-micro font-mono text-[var(--text-faint)] hover:text-[var(--text)]"
-              title="Only {card.projectName ?? card.project}"
+              title={t("feed.onlyThis", { name: card.projectName ?? card.project })}
               onclick={() => onlyProject(card.project)}
             >{card.project}</button>
           {/if}
@@ -670,7 +671,7 @@
             data-composer={card.key}
             class="block w-full resize-none bg-transparent px-2.5 py-1.5 text-body-sm text-[var(--text)]
                    placeholder:text-[var(--text-faint)] outline-none min-h-[52px]"
-            placeholder="Comment on {target.label ?? 'this page'}… Markdown works"
+            placeholder={t("feed.composer.placeholder", { target: target.label ?? t("feed.composer.thisPage") })}
             bind:value={draft}
             use:autoGrow
             onkeydown={(e) => composerKey(e, card)}
@@ -681,14 +682,14 @@
             <button
               class="text-caption px-2 py-0.5 rounded-md text-[var(--text-muted)] hover:bg-[var(--bg-subtle)]"
               onclick={() => (composerFor = null)}
-            >Cancel</button>
+            >{t("common.cancel")}</button>
             <button
               class="inline-flex items-center gap-1 text-caption font-medium px-2 py-0.5 rounded-md
                      text-[var(--btn-success-text)] bg-[var(--btn-success)] hover:bg-[var(--btn-success-hover)]
                      disabled:opacity-50 transition-colors"
               disabled={!draft.trim() || sending}
               onclick={() => sendComment(card)}
-            ><SendHorizontal size={11} />{sending ? "Sending…" : "Send"}</button>
+            ><SendHorizontal size={11} />{sending ? t("common.sending") : t("common.send")}</button>
           </div>
         </div>
       {/if}
@@ -731,7 +732,7 @@
     </ul>
     {#if card.subjects.length > BATCH_PREVIEW}
       <button class="mt-1 text-caption text-[var(--text-faint)] hover:text-[var(--text)]" onclick={() => toggleExpanded(card.key)}>
-        {isOpen ? "Show less" : `Show all ${card.subjects.length}`}
+        {isOpen ? t("common.showLess") : t("feed.batch.showAll", { count: card.subjects.length })}
       </button>
     {/if}
   {/if}
@@ -741,14 +742,14 @@
       {#each edits as e (e.id)}
         {#if e.field === "description" || e.field === "content"}
           <p class="m-0 text-caption text-[var(--text-muted)] line-clamp-2">
-            <span class="text-[var(--text-faint)]">{humanField(e.field)}:</span> {plainSnippet(e.new_value, 220) || "(cleared)"}
+            <span class="text-[var(--text-faint)]">{humanField(e.field)}:</span> {plainSnippet(e.new_value, 220) || t("feed.value.cleared")}
           </p>
         {:else if e.field === "priority" || e.field === "title" || e.field === "module" || e.field?.endsWith("date")}
           <p class="m-0 text-caption text-[var(--text-muted)] break-words">
             <span class="text-[var(--text-faint)]">{humanField(e.field)}:</span>
-            <span class="line-through decoration-[var(--text-faint)]">{plainSnippet(e.old_value, 80) || "none"}</span>
+            <span class="line-through decoration-[var(--text-faint)]">{plainSnippet(e.old_value, 80) || t("feed.value.none")}</span>
             <span class="text-[var(--text-faint)]">→</span>
-            <span class="text-[var(--text)]">{plainSnippet(e.new_value, 80) || "none"}</span>
+            <span class="text-[var(--text)]">{plainSnippet(e.new_value, 80) || t("feed.value.none")}</span>
           </p>
         {/if}
       {/each}
@@ -779,7 +780,7 @@
 
   {#if steps.length && card.lead.entity_type === "plan"}
     <p class="mt-2 m-0 text-caption text-[var(--text-muted)]">
-      {steps.length} step{steps.length === 1 ? "" : "s"}
+      {t("feed.details.steps", { count: steps.length })}
       {#if steps.length}· {steps.slice(-3).reverse().map((s) => plainSnippet(s.new_value, 40)).join(" · ")}{steps.length > 3 ? " …" : ""}{/if}
     </p>
   {:else if card.kind === "plan" && card.lead.entity_type === "plan_step"}
@@ -809,7 +810,7 @@
     </div>
     {#if long}
       <button class="mt-1 text-caption text-[var(--text-faint)] hover:text-[var(--text)]" onclick={() => toggleExpanded(`${card.key}:${c.id}`)}>
-        {showAll ? "Show less" : "Show full comment"}
+        {showAll ? t("common.showLess") : t("feed.comment.showFull")}
       </button>
     {/if}
   {/each}
@@ -833,7 +834,7 @@
     in:fly={{ y: -6, duration: 220 }}
   >
     <!-- Avatar with the event kind tucked into its corner. -->
-    <button class="relative shrink-0 self-start" title="Only {card.actorName}" onclick={() => onlyActor(card)}>
+    <button class="relative shrink-0 self-start" title={t("feed.onlyThis", { name: card.actorName })} onclick={() => onlyActor(card)}>
       <span
         class="size-8 rounded-full grid place-items-center text-micro font-bold select-none
                {card.isBot
@@ -853,15 +854,15 @@
           {card.actorName}
         </button>
         {#if card.isBot}
-          <span class="shrink-0 text-micro font-semibold uppercase tracking-wider px-1 py-px rounded bg-[var(--accent-subtle)] text-[var(--accent)]">agent</span>
+          <span class="shrink-0 text-micro font-semibold uppercase tracking-wider px-1 py-px rounded bg-[var(--accent-subtle)] text-[var(--accent)]">{t("feed.agent")}</span>
         {/if}
-        <span class="hidden sm:inline shrink-0 text-micro text-[var(--text-faint)]">via {card.transport}</span>
+        <span class="hidden sm:inline shrink-0 text-micro text-[var(--text-faint)]">{t("feed.via", { transport: card.transport })}</span>
         <span class="ml-auto shrink-0 flex items-center gap-2">
           {#if card.project}
             <button
               class="text-micro font-mono font-medium text-[var(--text-muted)] px-1.5 py-0.5 rounded
                      bg-[var(--bg-subtle)] hover:text-[var(--text)]"
-              title="Only {card.projectName ?? card.project}"
+              title={t("feed.onlyThis", { name: card.projectName ?? card.project })}
               onclick={() => onlyProject(card.project)}
             >{card.project}</button>
           {/if}
@@ -871,9 +872,9 @@
 
       <p class="mt-1 m-0 text-body-sm leading-relaxed text-[var(--text-muted)] break-words">
         {@render phrase(card)}
-        {@render subjectTail(card, "to")}
+        {@render subjectTail(card, t("feed.tail.movedTo"))}
         {#if card.lead.field === "status" && !card.batch && card.lead.old_value}
-          <span class="text-micro text-[var(--text-faint)]">from {statusLabel(card.lead.old_value)}</span>
+          <span class="text-micro text-[var(--text-faint)]">{t("feed.fromStatus", { status: statusLabel(card.lead.old_value) })}</span>
         {/if}
       </p>
 
@@ -894,14 +895,14 @@
             class="inline-flex items-center gap-1.5 text-caption px-1.5 py-1 rounded-md transition-colors
                    {composerFor === card.key ? 'text-[var(--text)] bg-[var(--bg-subtle)]' : 'text-[var(--text-faint)] hover:text-[var(--text)] hover:bg-[var(--bg-subtle)]'}"
             onclick={() => openComposer(card)}
-          ><MessageSquare size={13} />Comment</button>
+          ><MessageSquare size={13} />{t("feed.comment.action")}</button>
         {/if}
         {#if !card.batch && s.href}
           <button
             class="inline-flex items-center gap-1 text-caption px-1.5 py-1 rounded-md text-[var(--text-faint)]
                    hover:text-[var(--text)] hover:bg-[var(--bg-subtle)] transition-colors"
             onclick={() => navigate(s.href!)}
-          >Open<ArrowUpRight size={12} /></button>
+          >{t("common.open")}<ArrowUpRight size={12} /></button>
         {/if}
       </footer>
 
@@ -911,25 +912,25 @@
             data-composer={card.key}
             class="block w-full resize-none bg-transparent px-3 py-2 text-body-sm text-[var(--text)]
                    placeholder:text-[var(--text-faint)] outline-none min-h-[64px]"
-            placeholder="Comment on {target.label ?? 'this page'}… Markdown works"
+            placeholder={t("feed.composer.placeholder", { target: target.label ?? t("feed.composer.thisPage") })}
             bind:value={draft}
             use:autoGrow
             onkeydown={(e) => composerKey(e, card)}
             disabled={sending}
           ></textarea>
           <div class="flex items-center justify-end gap-2 px-2 pb-2">
-            <span class="hidden sm:inline mr-auto pl-1 text-micro text-[var(--text-faint)]">⌘/Ctrl + Enter to send · Esc to close</span>
+            <span class="hidden sm:inline mr-auto pl-1 text-micro text-[var(--text-faint)]">{t("feed.composer.hint")}</span>
             <button
               class="text-caption px-2.5 py-1 rounded-md text-[var(--text-muted)] hover:bg-[var(--bg-subtle)]"
               onclick={() => (composerFor = null)}
-            >Cancel</button>
+            >{t("common.cancel")}</button>
             <button
               class="inline-flex items-center gap-1.5 text-caption font-medium px-2.5 py-1 rounded-md
                      text-[var(--btn-success-text)] bg-[var(--btn-success)] hover:bg-[var(--btn-success-hover)]
                      disabled:opacity-50 transition-colors"
               disabled={!draft.trim() || sending}
               onclick={() => sendComment(card)}
-            ><SendHorizontal size={12} />{sending ? "Sending…" : "Send"}</button>
+            ><SendHorizontal size={12} />{sending ? t("common.sending") : t("common.send")}</button>
           </div>
         </div>
       {/if}
@@ -949,9 +950,9 @@
   <div class="flex flex-col gap-6">
     <!-- Who -->
     <section>
-      {@render sectionLabel("Who")}
+      {@render sectionLabel(t("feed.filter.who"))}
       <div class="grid grid-cols-3 p-0.5 rounded-lg bg-[var(--bg-subtle)] border border-[var(--border)] text-caption">
-        {#each [["all", "Everyone"], ["only", "Agents"], ["exclude", "People"]] as [mode, label] (mode)}
+        {#each [["all", t("feed.filter.everyone")], ["only", t("feed.filter.agents")], ["exclude", t("feed.filter.people")]] as [mode, label] (mode)}
           <button
             class="py-1 rounded-md transition-colors inline-flex items-center justify-center gap-1
                    {filters.agents === mode ? 'bg-[var(--surface)] text-[var(--text)] shadow-sm font-medium' : 'text-[var(--text-muted)] hover:text-[var(--text)]'}"
@@ -966,7 +967,7 @@
           {#each actors as a (a.actor_user_id ?? "system")}
             {@const key = a.actor_user_id ?? "system"}
             {@const on = filters.actors.includes(key)}
-            {@const name = a.display_name || a.username || "System"}
+            {@const name = a.display_name || a.username || t("feed.system")}
             <button
               class="flex items-center gap-2 px-2 py-1.5 rounded-md text-left transition-colors
                      {on ? 'bg-[var(--accent-subtle)]' : 'hover:bg-[var(--bg-subtle)]'}"
@@ -977,7 +978,7 @@
                        {a.is_bot ? 'bg-[var(--accent-subtle)] text-[var(--accent)] border border-[var(--accent)]' : 'bg-[var(--accent)] text-[var(--accent-text)]'}"
               >{initials(name)}</span>
               <span class="flex-1 min-w-0 truncate text-body-sm {on ? 'text-[var(--accent)] font-medium' : 'text-[var(--text)]'}">{name}</span>
-              <span class="text-micro text-[var(--text-faint)] tabular-nums">{a.actions.toLocaleString()}</span>
+              <span class="text-micro text-[var(--text-faint)] tabular-nums">{formatNumber(a.actions)}</span>
             </button>
           {/each}
         </div>
@@ -986,9 +987,9 @@
 
     <!-- Actions, in their badge colors. -->
     <section>
-      {@render sectionLabel("Actions")}
+      {@render sectionLabel(t("feed.filter.actions"))}
       <div class="flex flex-wrap gap-1.5">
-        {#each VERB_OPTIONS as o (o.verb)}
+        {#each verbOptions() as o (o.verb)}
           {@const on = filters.verbs.includes(o.verb)}
           <button
             class="feed-verb-chip verb-{o.verb} inline-flex items-center gap-1.5 text-caption px-2 py-1 rounded-full border transition-colors"
@@ -1004,7 +1005,7 @@
 
     {#if groups.length}
       <section>
-        {@render sectionLabel("Groups")}
+        {@render sectionLabel(t("feed.filter.groups"))}
         <div class="flex flex-wrap gap-1.5">
           {#each groups as g (g.id)}
             {@const on = filters.groups.includes(g.id)}
@@ -1019,11 +1020,11 @@
     {/if}
 
     <section>
-      {@render sectionLabel("Projects", filters.projects.length ? `${filters.projects.length} selected` : undefined)}
+      {@render sectionLabel(t("feed.filter.projects"), filters.projects.length ? t("feed.filter.selected", { count: filters.projects.length }) : undefined)}
       {#if projects.length > 8}
         <label class="mb-1.5 flex items-center gap-2 px-2 py-1 rounded-md border border-[var(--border)] focus-within:border-[var(--accent)]">
           <Search size={12} class="text-[var(--text-faint)]" />
-          <input class="flex-1 min-w-0 bg-transparent outline-none text-body-sm" placeholder="Find project" bind:value={projectQuery} />
+          <input class="flex-1 min-w-0 bg-transparent outline-none text-body-sm" placeholder={t("feed.filter.findProject")} bind:value={projectQuery} />
         </label>
       {/if}
       <div class="flex flex-col gap-0.5">
@@ -1044,7 +1045,7 @@
 
     {#if filterCount}
       <button class="self-start text-caption text-[var(--text-muted)] hover:text-[var(--text)] inline-flex items-center gap-1" onclick={resetFilters}>
-        <X size={12} />Reset filters
+        <X size={12} />{t("feed.filter.reset")}
       </button>
     {/if}
   </div>
@@ -1053,21 +1054,21 @@
 {#snippet topbarContent()}
   <div class="flex items-center gap-3 px-4 sm:px-6 py-2 w-full">
     <!-- The phone header already names the page. -->
-    <span class="hidden sm:inline text-body-sm font-medium text-[var(--text)]">Feed</span>
-    <span class="inline-flex items-center gap-1.5 text-micro text-[var(--text-faint)]" title="Updates arrive as they happen">
+    <span class="hidden sm:inline text-body-sm font-medium text-[var(--text)]">{t("feed.title")}</span>
+    <span class="inline-flex items-center gap-1.5 text-micro text-[var(--text-faint)]" title={t("feed.live.title")}>
       <span class="relative flex size-2">
         <span class="absolute inline-flex size-full rounded-full bg-[var(--success)] opacity-60 animate-ping"></span>
         <span class="relative inline-flex size-2 rounded-full bg-[var(--success)]"></span>
       </span>
-      Live
+      {t("feed.live.label")}
     </span>
     <div class="ml-auto flex items-center gap-2">
-      <div class="flex p-0.5 rounded-md bg-[var(--bg-subtle)] border border-[var(--border)]" role="group" aria-label="Density">
-        {#each [["compact", "Compact"], ["full", "Full"]] as [d, label] (d)}
+      <div class="flex p-0.5 rounded-md bg-[var(--bg-subtle)] border border-[var(--border)]" role="group" aria-label={t("feed.density.label")}>
+        {#each [["compact", t("feed.density.compact"), t("feed.density.compactTitle")], ["full", t("feed.density.full"), t("feed.density.fullTitle")]] as [d, label, hint] (d)}
           <button
             class="inline-flex items-center gap-1 text-caption px-1.5 sm:px-2 py-0.5 rounded transition-colors
                    {density === d ? 'bg-[var(--surface)] text-[var(--text)] shadow-sm font-medium' : 'text-[var(--text-muted)] hover:text-[var(--text)]'}"
-            title="{label} view"
+            title={hint}
             aria-pressed={density === d}
             onclick={() => setDensity(d as Density)}
           >{#if d === "compact"}<Rows3 size={12} />{:else}<Rows2 size={12} />{/if}<span class="hidden sm:inline">{label}</span></button>
@@ -1075,14 +1076,14 @@
       </div>
       {#if filterCount}
         <button class="hidden lg:inline-flex items-center gap-1 text-caption text-[var(--text-muted)] hover:text-[var(--text)]" onclick={resetFilters}>
-          <X size={12} />Reset
+          <X size={12} />{t("common.reset")}
         </button>
       {/if}
       <button
         class="lg:hidden inline-flex items-center gap-1.5 text-caption px-2 py-1 rounded-md border transition-colors
                {filtersOpen || filterCount ? 'border-[var(--accent)] text-[var(--accent)]' : 'border-[var(--border)] text-[var(--text-muted)]'}"
         onclick={() => (filtersOpen = !filtersOpen)}
-      ><SlidersHorizontal size={12} />Filters{filterCount ? ` · ${filterCount}` : ""}</button>
+      ><SlidersHorizontal size={12} />{t("feed.filter.button")}{filterCount ? ` · ${filterCount}` : ""}</button>
     </div>
   </div>
 {/snippet}
@@ -1096,7 +1097,7 @@
                  bg-[var(--accent)] text-[var(--accent-text)] shadow-lg"
           onclick={revealPending}
           transition:fly={{ y: -8, duration: 180 }}
-        ><ArrowUp size={12} />{pending.length} new</button>
+        ><ArrowUp size={12} />{t("feed.newRows", { count: pending.length })}</button>
       </div>
     {/if}
 
@@ -1121,21 +1122,21 @@
             {/each}
           </div>
         {:else if error}
-          <ErrorState title="Couldn't load the feed" message={error}>
+          <ErrorState title={t("feed.error.title")} message={error}>
             <button
               class="text-body-sm font-medium text-[var(--btn-success-text)] bg-[var(--btn-success)] px-3 py-1.5 rounded-md hover:bg-[var(--btn-success-hover)] transition-colors"
               onclick={load}
-            >Try again</button>
+            >{t("common.retry")}</button>
           </ErrorState>
         {:else if cards.length === 0}
           <div class="flex flex-col items-center py-20 gap-3 px-6 max-w-[440px] mx-auto text-center">
             <ActivityIcon size={32} class="text-[var(--text-faint)]" />
             {#if filterCount}
-              <p class="text-body-lg text-[var(--text-muted)] m-0">Nothing matches these filters</p>
-              <button class="text-caption text-[var(--accent)] hover:underline" onclick={resetFilters}>Reset filters</button>
+              <p class="text-body-lg text-[var(--text-muted)] m-0">{t("feed.empty.filtered")}</p>
+              <button class="text-caption text-[var(--accent)] hover:underline" onclick={resetFilters}>{t("feed.filter.reset")}</button>
             {:else}
-              <p class="text-body-lg text-[var(--text-muted)] m-0">No activity yet</p>
-              <p class="text-body-sm text-[var(--text-faint)] m-0">New issues, status changes and comments from people and agents show up here as they happen.</p>
+              <p class="text-body-lg text-[var(--text-muted)] m-0">{t("feed.empty.title")}</p>
+              <p class="text-body-sm text-[var(--text-faint)] m-0">{t("feed.empty.body")}</p>
             {/if}
           </div>
         {:else}
@@ -1163,9 +1164,9 @@
           {/each}
           <div bind:this={sentinel} class="h-px"></div>
           {#if loadingMore}
-            <p class="text-center text-caption text-[var(--text-faint)] py-4 m-0">Loading…</p>
+            <p class="text-center text-caption text-[var(--text-faint)] py-4 m-0">{t("common.loading")}</p>
           {:else if !hasMore}
-            <p class="text-center text-caption text-[var(--text-faint)] py-6 m-0">That's everything</p>
+            <p class="text-center text-caption text-[var(--text-faint)] py-6 m-0">{t("feed.end")}</p>
           {/if}
         {/if}
       </div>

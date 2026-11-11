@@ -12,6 +12,7 @@
 // Everything here is pure so it can be tested without a browser.
 
 import type { FeedItem, FeedKind, FeedVerb } from "./api";
+import { locale, t } from "./i18n";
 
 /** Rows further apart than this never share a card. */
 const SAME_ACTION_SECONDS = 10;
@@ -33,18 +34,31 @@ const KIND_RANK: FeedKind[] = [
 /** The action filter, in the server's order. Each verb has its own color
  *  (see `--verb-*` in Feed.svelte); the order keeps neighbouring chips, and
  *  the verbs that usually sit side by side in the feed, far apart in hue. */
-export const VERB_OPTIONS: { verb: FeedVerb; label: string }[] = [
-  { verb: "created", label: "Created" },
-  { verb: "commented", label: "Commented" },
-  { verb: "moved", label: "Moved" },
-  { verb: "completed", label: "Completed" },
-  { verb: "cancelled", label: "Cancelled" },
-  { verb: "assigned", label: "Assigned" },
-  { verb: "edited", label: "Edited" },
-  { verb: "labeled", label: "Labeled" },
-  { verb: "deleted", label: "Deleted" },
-  { verb: "linked", label: "Linked" },
+export const VERBS: FeedVerb[] = [
+  "created",
+  "commented",
+  "moved",
+  "completed",
+  "cancelled",
+  "assigned",
+  "edited",
+  "labeled",
+  "deleted",
+  "linked",
 ];
+
+/** The action filter's chips with their labels, built at call time so they
+ *  follow the interface language. */
+export function verbOptions(): { verb: FeedVerb; label: string }[] {
+  return VERBS.map((verb) => ({ verb, label: t(`feed.filter.verb.${verb}`) }));
+}
+
+/** A translated name for a server value, or `fallback` when the catalog has
+ *  no entry for it (t() returns the key itself then). */
+function known(key: string, fallback: string): string {
+  const v = t(key);
+  return v === key ? fallback : v;
+}
 
 export interface FeedSubject {
   key: string;
@@ -77,7 +91,7 @@ export interface FeedCard {
 }
 
 export function actorName(a: FeedItem): string {
-  return a.actor_display_name || a.actor_username || "System";
+  return a.actor_display_name || a.actor_username || t("feed.system");
 }
 
 function seconds(ts: string): number {
@@ -248,41 +262,34 @@ export function buildCards(items: FeedItem[]): FeedCard[] {
 
 // ── Wording ──────────────────────────────────────────────
 
-export const STATUS_LABELS: Record<string, string> = {
-  backlog: "Backlog",
-  todo: "Todo",
-  active: "In progress",
-  done: "Done",
-  cancelled: "Cancelled",
-};
+const STATUSES = ["backlog", "todo", "active", "done", "cancelled"];
 
 export function statusLabel(s: string | null): string {
-  return (s && STATUS_LABELS[s]) || s || "none";
+  if (s && STATUSES.includes(s)) return t(`feed.status.${s}`);
+  return s || t("feed.status.none");
 }
 
 export function humanField(field: string | null): string {
-  switch (field) {
-    case "target_date":
-      return "due date";
-    case "start_date":
-      return "start date";
-    case null:
-      return "details";
-    default:
-      return field.replace(/_/g, " ");
-  }
+  if (field === null) return t("feed.field.details");
+  return known(`feed.field.${field}`, field.replace(/_/g, " "));
 }
 
 /** "blocks", "relates to", "waits on" from an audit field. */
 export function relationLabel(field: string | null): string {
-  return (field ?? "relates_to").replace(/_/g, " ");
+  const f = field ?? "relates_to";
+  return known(`feed.relation.${f}`, f.replace(/_/g, " "));
 }
 
 /** Assignment values are "@username" or "human". */
 export function assigneeLabel(v: string | null): string {
-  if (!v) return "nobody";
-  if (v === "human") return "a person";
+  if (!v) return t("feed.assignee.nobody");
+  if (v === "human") return t("feed.assignee.human");
   return v;
+}
+
+/** An entity type as a noun ("issue", "page", "step"). */
+function entityWord(type: string): string {
+  return known(`feed.entity.${type}`, type);
 }
 
 /** How a card reads: `word` goes in the colored badge (its color comes
@@ -298,26 +305,29 @@ export function verbFor(card: FeedCard): Phrase {
   const a = card.lead;
   const n = card.subjects.length;
   const verb = a.verb;
-  const p = (word: string, rest = ""): Phrase => ({ verb, word, rest });
-  const what = a.entity_type === "plan_step" ? "step" : a.entity_type;
+  // `word` is the verb alone (feed.word.*); `rest` is the text between it
+  // and the subject (feed.rest.*), possibly empty.
+  const p = (word: string, rest = ""): Phrase => ({ verb, word: t(`feed.word.${word}`), rest });
+  const what = entityWord(a.entity_type === "plan_step" ? "step" : a.entity_type);
+  const issues = () => t("feed.rest.issues", { count: n });
   switch (verb) {
     case "created":
-      if (a.entity_type === "issue") return card.batch ? p("created", `${n} issues`) : p("created");
+      if (a.entity_type === "issue") return card.batch ? p("created", issues()) : p("created");
       if (a.entity_type === "plan_step") {
         const steps = card.rows.filter((r) => r.entity_type === "plan_step").length;
-        return p("added", steps === 1 ? "a step to" : `${steps} steps to`);
+        return p("added", t("feed.rest.stepsTo", { count: steps }));
       }
-      if (a.entity_type === "member") return p("added", "member");
+      if (a.entity_type === "member") return p("added", t("feed.rest.member"));
       return p("created", what);
     case "commented":
-      return p("commented", "on");
+      return p("commented", t("feed.rest.on"));
     case "moved":
-      return card.batch ? p("moved", `${n} issues to`) : p("moved");
+      return card.batch ? p("moved", t("feed.rest.issuesTo", { count: n })) : p("moved");
     case "completed":
-      if (a.entity_type === "plan_step") return p("completed", "a step in");
-      return card.batch ? p("completed", `${n} issues`) : p("completed");
+      if (a.entity_type === "plan_step") return p("completed", t("feed.rest.stepIn"));
+      return card.batch ? p("completed", issues()) : p("completed");
     case "cancelled":
-      return card.batch ? p("cancelled", `${n} issues`) : p("cancelled");
+      return card.batch ? p("cancelled", issues()) : p("cancelled");
     case "assigned":
       return p(a.action === "unassign" ? "unassigned" : "assigned");
     case "labeled":
@@ -325,14 +335,16 @@ export function verbFor(card: FeedCard): Phrase {
     case "linked":
       return p(a.action === "unlink" ? "unlinked" : "linked");
     case "deleted":
-      return p("deleted", a.entity_type === "comment" ? "a comment on" : what);
+      return p("deleted", a.entity_type === "comment" ? t("feed.rest.commentOn") : what);
     default: {
-      if (a.entity_type === "comment") return p("edited", "a comment on");
+      if (a.entity_type === "comment") return p("edited", t("feed.rest.commentOn"));
       if (a.entity_type === "issue") {
         const fields = [...new Set(card.rows.filter((r) => r.kind === "edit").map((r) => humanField(r.field)))];
-        return fields.length && fields.length <= 2 ? p("edited", `${fields.join(" and ")} of`) : p("edited");
+        if (fields.length === 1) return p("edited", t("feed.rest.fieldOf", { field: fields[0] }));
+        if (fields.length === 2) return p("edited", t("feed.rest.fieldsOf", { first: fields[0], second: fields[1] }));
+        return p("edited");
       }
-      return p("edited", a.entity_type === "plan_step" ? "steps in" : what);
+      return p("edited", a.entity_type === "plan_step" ? t("feed.rest.stepsIn") : what);
     }
   }
 }
@@ -352,10 +364,10 @@ export function plainSnippet(v: string | null, max = 140): string {
 
 export function dayLabel(ts: string, now = new Date()): string {
   const d = new Date(ts.replace(" ", "T") + "Z");
-  if (d.toDateString() === now.toDateString()) return "Today";
+  if (d.toDateString() === now.toDateString()) return t("common.today");
   const yesterday = new Date(now.getTime() - 86_400_000);
-  if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
-  return d.toLocaleDateString(undefined, {
+  if (d.toDateString() === yesterday.toDateString()) return t("common.yesterday");
+  return d.toLocaleDateString(locale(), {
     weekday: "short",
     month: "short",
     day: "numeric",
@@ -401,7 +413,7 @@ export function loadFilters(): FeedFilters {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const v = JSON.parse(raw) as Partial<FeedFilters>;
-      const verbs = VERB_OPTIONS.map((o) => o.verb);
+      const verbs = VERBS;
       return {
         groups: Array.isArray(v.groups) ? v.groups.filter((x) => typeof x === "number") : [],
         projects: Array.isArray(v.projects) ? v.projects.filter((x) => typeof x === "number") : [],

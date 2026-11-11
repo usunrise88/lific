@@ -15,6 +15,7 @@
 //   overdue  after `latest`
 
 import type { IssueWait, WaitState } from "../api";
+import { locale, t } from "../i18n";
 
 /** `YYYY-MM-DD` of a `Date` built from local fields. Date arithmetic only;
  *  never "today" for a wait, which is `dayAtOffset` at the server's offset. */
@@ -64,7 +65,7 @@ export function dayAfter(day: string): string {
 export function formatDay(day: string, thisYear: number = new Date().getFullYear()): string {
   const date = parseDay(day);
   if (!date) return day;
-  return date.toLocaleDateString(undefined, {
+  return date.toLocaleDateString(locale(), {
     month: "short",
     day: "numeric",
     ...(date.getFullYear() === thisYear ? {} : { year: "numeric" }),
@@ -81,14 +82,14 @@ export function formatWindow(
   const a = parseDay(earliest);
   const b = parseDay(latest);
   if (a && b && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth()) {
-    return `${formatDay(earliest, thisYear)} to ${b.getDate()}`;
+    return t("issues.wait.windowSameMonth", { from: formatDay(earliest, thisYear), to: b.getDate() });
   }
-  return `${formatDay(earliest, thisYear)} to ${formatDay(latest, thisYear)}`;
+  return t("issues.wait.window", { from: formatDay(earliest, thisYear), to: formatDay(latest, thisYear) });
 }
 
 /** Who a user wait names: `@blake`. */
 export function waitHandle(wait: IssueWait): string {
-  return `@${wait.username ?? "deleted user"}`;
+  return `@${wait.username ?? t("issues.wait.deletedUser")}`;
 }
 
 /** One wait in words, for the detail view and tooltips. */
@@ -101,24 +102,24 @@ export function describeWait(
     const name = wait.display_name && wait.display_name !== wait.username
       ? `${wait.display_name} (${waitHandle(wait)})`
       : waitHandle(wait);
-    return { state, headline: `Waiting on ${name}` };
+    return { state, headline: t("issues.wait.on", { name }) };
   }
   const earliest = wait.earliest ?? "";
   const latest = wait.latest ?? earliest;
   const span = formatWindow(earliest, latest);
   switch (state) {
     case "holding":
-      return { state, headline: `Waiting until ${span}` };
+      return { state, headline: t("issues.wait.until", { span }) };
     case "due":
       return {
         state,
         headline:
           earliest === latest
-            ? `Due to check since ${formatDay(earliest)}`
-            : `Due to check since ${formatDay(earliest)}, expected by ${formatDay(latest)}`,
+            ? t("issues.wait.due", { day: formatDay(earliest) })
+            : t("issues.wait.dueExpected", { day: formatDay(earliest), latest: formatDay(latest) }),
       };
     case "overdue":
-      return { state, headline: `Overdue since ${formatDay(dayAfter(latest))}, expected ${span}` };
+      return { state, headline: t("issues.wait.overdue", { day: formatDay(dayAfter(latest)), span }) };
   }
 }
 
@@ -150,13 +151,13 @@ export function summarizeWaits(
   const { wait, state } = ranked[0];
   let label: string;
   if (wait.kind === "user") label = waitHandle(wait);
-  else if (state === "holding") label = `until ${formatDay(wait.earliest ?? "")}`;
-  else if (state === "due") label = `due ${formatDay(wait.earliest ?? "")}`;
-  else label = `overdue ${formatDay(dayAfter(wait.latest ?? ""))}`;
+  else if (state === "holding") label = t("issues.wait.chip.until", { day: formatDay(wait.earliest ?? "") });
+  else if (state === "due") label = t("issues.wait.chip.due", { day: formatDay(wait.earliest ?? "") });
+  else label = t("issues.wait.chip.overdue", { day: formatDay(dayAfter(wait.latest ?? "")) });
   const title = ranked
     .map(({ wait: w }) => {
       const { headline } = describeWait(w, today);
-      return w.note ? `${headline} (${w.note})` : headline;
+      return w.note ? t("issues.wait.withNote", { headline, note: w.note }) : headline;
     })
     .join("\n");
   return { wait, state, label, title, more: waits.length - 1 };

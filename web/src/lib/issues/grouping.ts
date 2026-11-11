@@ -7,6 +7,7 @@
 // of truth and are imported back into the component.
 
 import type { Issue, Module } from "../api";
+import { t } from "../i18n";
 
 /** Canonical status order (backlog → cancelled). */
 export const STATUSES = ["backlog", "todo", "active", "done", "cancelled"];
@@ -26,28 +27,42 @@ export function isUnresolved(status: string): boolean {
   return !TERMINAL_STATUSES.includes(status);
 }
 
-/** One-line descriptions of each status, surfaced in the filter modal so the
- *  vocabulary is self-documenting. Single source of truth. */
-export const STATUS_DESCRIPTIONS: Record<string, string> = {
-  backlog: "Captured, not yet planned.",
-  todo: "Planned and ready to start.",
-  active: "In progress right now.",
-  done: "Completed and shipped.",
-  cancelled: "Abandoned — won't be done.",
-};
+/** Display label of a status ("Active"); an unknown value is shown as is. */
+export function statusLabel(status: string): string {
+  return STATUSES.includes(status) ? t(`common.status.${status}`) : status;
+}
+
+/** Display label of a priority ("High"); an unknown value is shown as is. */
+export function priorityLabel(priority: string): string {
+  return PRIORITIES.includes(priority) ? t(`common.priority.${priority}`) : priority;
+}
+
+/** A status as a lowercase word for running text and hints ("active"). */
+export function statusWord(status: string): string {
+  return STATUSES.includes(status) ? t(`issues.statusValue.${status}`) : status;
+}
+
+/** A priority as a lowercase word for running text and hints ("high"). */
+export function priorityWord(priority: string): string {
+  return PRIORITIES.includes(priority) ? t(`issues.priorityValue.${priority}`) : priority;
+}
+
+/** One-line description of a status, surfaced in the filter modal so the
+ *  vocabulary is self-documenting. Single source of truth. Empty for an
+ *  unknown status. */
+export function statusDescription(status: string): string {
+  return STATUSES.includes(status) ? t(`issues.statusDescription.${status}`) : "";
+}
 
 /** Description of the "Unresolved" status-group filter. */
-export const UNRESOLVED_DESCRIPTION =
-  "All open work — backlog, todo, and active.";
+export function unresolvedDescription(): string {
+  return t("issues.unresolvedDescription");
+}
 
-/** One-line descriptions of each priority level. */
-export const PRIORITY_DESCRIPTIONS: Record<string, string> = {
-  urgent: "Drop everything.",
-  high: "Important — do soon.",
-  medium: "Normal priority.",
-  low: "Nice to have, no rush.",
-  none: "No priority set.",
-};
+/** One-line description of a priority level. Empty for an unknown one. */
+export function priorityDescription(priority: string): string {
+  return PRIORITIES.includes(priority) ? t(`issues.priorityDescription.${priority}`) : "";
+}
 
 export type GroupBy = "status" | "priority" | "module" | "none";
 export type Density = "compact" | "comfortable";
@@ -97,12 +112,12 @@ export function buildGroups(opts: {
   if (groupBy === "status") {
     for (const s of STATUSES) {
       const items = sortedIssues.filter((i) => i.status === s);
-      if (items.length) out.push({ key: s, label: s, kind: "status", issues: items });
+      if (items.length) out.push({ key: s, label: t(`common.status.${s}`), kind: "status", issues: items });
     }
   } else if (groupBy === "priority") {
     for (const p of PRIORITIES) {
       const items = sortedIssues.filter((i) => i.priority === p);
-      if (items.length) out.push({ key: p, label: p, kind: "priority", issues: items });
+      if (items.length) out.push({ key: p, label: t(`common.priority.${p}`), kind: "priority", issues: items });
     }
   } else if (groupBy === "module") {
     for (const m of modules) {
@@ -111,7 +126,7 @@ export function buildGroups(opts: {
         out.push({ key: String(m.id), label: m.name, kind: "module", module: m, issues: items });
     }
     const none = sortedIssues.filter((i) => i.module_id == null);
-    if (none.length) out.push({ key: "none", label: "No module", kind: "module", issues: none });
+    if (none.length) out.push({ key: "none", label: t("issues.group.noModule"), kind: "module", issues: none });
   }
   return out;
 }
@@ -149,7 +164,7 @@ export function buildLanes(opts: {
   if (laneBy === "priority") {
     return PRIORITIES.map((p) => ({
       key: p,
-      label: p,
+      label: t(`common.priority.${p}`),
       kind: "priority" as const,
       priority: p,
       issues: sortedIssues.filter((i) => i.priority === p),
@@ -166,7 +181,7 @@ export function buildLanes(opts: {
   }));
   lanes.push({
     key: "none",
-    label: "No module",
+    label: t("issues.group.noModule"),
     kind: "module",
     issues: sortedIssues.filter((i) => i.module_id == null),
   });

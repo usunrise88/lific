@@ -28,6 +28,7 @@
   import {
     selectActivityRate,
     type ActivityCountsReader,
+    type ActivityRate,
   } from "../lib/activityRate";
   import StatusIcon from "../lib/StatusIcon.svelte";
   import PriorityIcon from "../lib/PriorityIcon.svelte";
@@ -59,6 +60,7 @@
   import { projectCodeOf } from "../lib/references";
   import { getContext } from "svelte";
   import { startAutoRefresh } from "../lib/autoRefresh.svelte";
+  import { t, locale } from "../lib/i18n";
 
   const topbarCtx = getContext<{
     set: (s: import("svelte").Snippet | undefined) => void;
@@ -216,9 +218,9 @@
   let attentionGroups = $derived.by(() => {
     if (!attention) return [];
     return [
-      { key: "assigned", label: "Assigned to you", icon: UserCheck, items: attention.assigned },
-      { key: "human", label: "Marked for a person", icon: User, items: attention.human },
-      { key: "waiting", label: "Waiting on you", icon: Hourglass, items: attention.waiting },
+      { key: "assigned", label: t("home.attention.assigned"), icon: UserCheck, items: attention.assigned },
+      { key: "human", label: t("home.attention.human"), icon: User, items: attention.human },
+      { key: "waiting", label: t("home.attention.waiting"), icon: Hourglass, items: attention.waiting },
     ].filter((g) => g.items.length > 0);
   });
   let attentionIssues = $derived(attentionGroups.flatMap((g) => g.items));
@@ -244,33 +246,33 @@
       attentionIssues.filter((i) => serverTime(i.updated_at) > visitSince).map((i) => i.id),
     ).size;
     const parts: string[] = [];
-    const did = [
-      s.agents_closed ? `closed ${s.agents_closed}` : "",
-      s.agents_opened ? `opened ${s.agents_opened}` : "",
-    ].filter(Boolean);
-    if (did.length > 0) parts.push(`agents ${did.join(" and ")}.`);
-    if (fresh > 0) {
-      parts.push(fresh === 1 ? "1 new thing needs you." : `${fresh} new things need you.`);
+    if (s.agents_closed && s.agents_opened) {
+      parts.push(t("home.since.agentsBoth", { closed: s.agents_closed, opened: s.agents_opened }));
+    } else if (s.agents_closed) {
+      parts.push(t("home.since.agentsClosed", { count: s.agents_closed }));
+    } else if (s.agents_opened) {
+      parts.push(t("home.since.agentsOpened", { count: s.agents_opened }));
     }
+    if (fresh > 0) parts.push(t("home.since.fresh", { count: fresh }));
     const when = relative(visitSince);
-    if (parts.length === 0) return `Quiet since you were last here (${when}).`;
-    return `Since you were last here (${when}): ${parts.join(" ")}`;
+    if (parts.length === 0) return t("home.since.quiet", { when });
+    return t("home.since.summary", { when, details: parts.join(" ") });
   });
 
   function relative(ts: number): string {
     const mins = Math.floor((Date.now() - ts) / 60000);
-    if (mins < 60) return `${Math.max(1, mins)}m ago`;
+    if (mins < 60) return t("common.time.minutesAgo", { count: Math.max(1, mins) });
     const hrs = Math.floor(mins / 60);
-    if (hrs < 24) return `${hrs}h ago`;
+    if (hrs < 24) return t("common.time.hoursAgo", { count: hrs });
     const days = Math.floor(hrs / 24);
-    return days === 1 ? "yesterday" : `${days} days ago`;
+    return days === 1 ? t("home.since.yesterday") : t("home.since.daysAgo", { count: days });
   }
 
   /** Net change in open issues over the last week of the trend. */
   let weekDelta = $derived.by(() => {
-    const t = overview?.open_trend ?? [];
-    if (t.length < 8) return 0;
-    return t[t.length - 1].count - t[t.length - 8].count;
+    const trend = overview?.open_trend ?? [];
+    if (trend.length < 8) return 0;
+    return trend[trend.length - 1].count - trend[trend.length - 8].count;
   });
 
   // ── Pinned pages ──────────────────────────────────────────────
@@ -290,38 +292,59 @@
   function activityVerb(a: Activity): string {
     switch (a.action) {
       case "create":
-        return a.entity_type === "comment" ? "commented on" : `created ${a.entity_type}`;
+        return a.entity_type === "comment"
+          ? t("home.activity.commented")
+          : t("home.activity.created", { entity: entityName(a.entity_type) });
       case "delete":
-        return a.entity_type === "comment" ? "deleted a comment on" : `deleted ${a.entity_type}`;
+        return a.entity_type === "comment"
+          ? t("home.activity.commentDeleted")
+          : t("home.activity.deleted", { entity: entityName(a.entity_type) });
       case "update":
         return a.entity_type === "comment"
-          ? "edited a comment on"
+          ? t("home.activity.commentEdited")
           : a.field
-            ? `changed ${a.field} on`
-            : "updated";
+            ? t("home.activity.changedField", { field: a.field })
+            : t("home.activity.updated");
       case "attach":
-        return "labeled";
+        return t("home.activity.labeled");
       case "detach":
-        return "unlabeled";
+        return t("home.activity.unlabeled");
       case "link":
-        return "linked";
+        return t("home.activity.linked");
       case "unlink":
-        return "unlinked";
+        return t("home.activity.unlinked");
       case "assign":
-        return "assigned";
+        return t("home.activity.assigned");
       case "unassign":
-        return "unassigned";
+        return t("home.activity.unassigned");
       case "wait":
-        return "set a wait on";
+        return t("home.activity.waitSet");
       case "unwait":
-        return "cleared a wait on";
+        return t("home.activity.waitCleared");
       default:
         return a.action;
     }
   }
 
+  /** The entity type's display name; unknown types stay as sent. */
+  function entityName(type: string): string {
+    const key = `home.activity.entity.${type}`;
+    const name = t(key);
+    return name === key ? type : name;
+  }
+
   function activityActor(a: Activity): string {
-    return a.actor_display_name || a.actor_username || "system";
+    return a.actor_display_name || a.actor_username || t("home.activity.system");
+  }
+
+  function rateLabel(rate: ActivityRate): string {
+    const key = {
+      "updates/s": "home.rate.perSecond",
+      "updates/min": "home.rate.perMinute",
+      "updates/hr": "home.rate.perHour",
+      "updates/day": "home.rate.perDay",
+    }[rate.unit];
+    return t(key, { count: rate.value });
   }
 
   let activityRate = $derived.by(() => {
@@ -349,11 +372,11 @@
   // ── Greeting + quick actions ────────────────────────────────────
 
   function greetingText(h: number): string {
-    if (h < 5) return "Good night";
-    if (h < 12) return "Good morning";
-    if (h < 17) return "Good afternoon";
-    if (h < 21) return "Good evening";
-    return "Good night";
+    if (h < 5) return t("home.greeting.night");
+    if (h < 12) return t("home.greeting.morning");
+    if (h < 17) return t("home.greeting.afternoon");
+    if (h < 21) return t("home.greeting.evening");
+    return t("home.greeting.night");
   }
 
   function greetingIcon(h: number) {
@@ -367,7 +390,7 @@
   const nowHour = new Date().getHours();
   const greeting = greetingText(nowHour);
   const GreetIcon = greetingIcon(nowHour);
-  const todayLabel = new Date().toLocaleDateString("en-US", {
+  const todayLabel = new Date().toLocaleDateString(locale(), {
     weekday: "long",
     month: "long",
     day: "numeric",
@@ -386,7 +409,7 @@
 
 {#snippet topbarContent()}
   <div class="flex items-center gap-3 px-6 py-2 w-full">
-    <span class="text-body-sm font-medium text-[var(--text)]">Home</span>
+    <span class="text-body-sm font-medium text-[var(--text)]">{t("home.title")}</span>
   </div>
 {/snippet}
 
@@ -464,12 +487,12 @@
         </div>
       </div>
     {:else if error}
-      <ErrorState title="Couldn't load your dashboard" message={error}>
+      <ErrorState title={t("home.error.title")} message={error}>
         <button
           class="text-body-sm font-medium text-[var(--btn-success-text)] bg-[var(--btn-success)] px-3 py-1.5 rounded-md hover:bg-[var(--btn-success-hover)] transition-colors"
           onclick={() => loadData()}
         >
-          Try again
+          {t("common.retry")}
         </button>
       </ErrorState>
     {:else}
@@ -485,7 +508,7 @@
             </span>
             <div class="min-w-0">
               <h1 class="font-display text-title tracking-tight text-[var(--text)] leading-none">
-                {greeting}{user ? `, ${user.display_name || user.username}` : ""}
+                {user ? t("home.greeting.named", { greeting, name: user.display_name || user.username }) : greeting}
               </h1>
               <p class="text-body-sm text-[var(--text-muted)] mt-1">{todayLabel}</p>
             </div>
@@ -499,7 +522,7 @@
                        px-3 py-1.5 rounded-md hover:bg-[var(--btn-success-hover)] transition-colors"
                 onclick={() => navigate(`/${quickIssueProject}/issues/new`)}
               >
-                <Plus size={14} /> New issue
+                <Plus size={14} /> {t("home.newIssue")}
               </button>
             {/if}
             <button
@@ -507,10 +530,10 @@
                      hover:text-[var(--text)] border border-[var(--border)]
                      px-3 py-1.5 rounded-md hover:bg-[var(--bg-subtle)] transition-colors"
               onclick={openPalette}
-              title="Open command palette"
+              title={t("home.palette.title")}
             >
               <Command size={13} />
-              Jump to…
+              {t("home.palette.jump")}
               <kbd class="font-mono text-micro leading-none text-[var(--text-faint)]
                           border border-[var(--border)] rounded px-1 py-0.5 ml-0.5">⌘K</kbd>
             </button>
@@ -529,11 +552,13 @@
                    grid grid-cols-1 lg:grid-cols-[1fr_340px]"
           >
             <div class="p-5 min-w-0">
-              <h2 class="text-body-sm font-semibold text-[var(--text)]">Open work by age</h2>
+              <h2 class="text-body-sm font-semibold text-[var(--text)]">{t("home.age.title")}</h2>
               <p class="text-caption text-[var(--text-faint)] mt-0.5">
-                {overview.open_total} open across {overview.projects.filter((p) => p.open > 0).length}
-                {overview.projects.filter((p) => p.open > 0).length === 1 ? "project" : "projects"},
-                {weekDelta > 0 ? `+${weekDelta}` : weekDelta === 0 ? "no change" : weekDelta} this week
+                {t("home.age.summary", {
+                  open: overview.open_total,
+                  count: overview.projects.filter((p) => p.open > 0).length,
+                  delta: weekDelta > 0 ? `+${weekDelta}` : weekDelta === 0 ? t("home.age.noChange") : weekDelta,
+                })}
               </p>
               <AgeChart buckets={overview.age_buckets} />
             </div>
@@ -542,15 +567,15 @@
             >
               <div>
                 <div class="flex items-baseline justify-between mb-2">
-                  <h2 class="text-body-sm font-semibold text-[var(--text)]">Open over 90 days</h2>
+                  <h2 class="text-body-sm font-semibold text-[var(--text)]">{t("home.trend.title")}</h2>
                   <span class="text-micro text-[var(--text-faint)] tabular-nums">
-                    {overview.open_trend[overview.open_trend.length - 1]?.count ?? 0} now
+                    {t("home.trend.now", { count: overview.open_trend[overview.open_trend.length - 1]?.count ?? 0 })}
                   </span>
                 </div>
                 <OpenTrend points={overview.open_trend} />
               </div>
               <div>
-                <h2 class="text-body-sm font-semibold text-[var(--text)] mb-1.5">Project freshness</h2>
+                <h2 class="text-body-sm font-semibold text-[var(--text)] mb-1.5">{t("home.freshness.title")}</h2>
                 <ProjectFreshness pulses={overview.projects} {projects} {navigate} />
               </div>
             </div>
@@ -565,14 +590,14 @@
           >
             {@render cardHeader(
               Bot,
-              "Agent queue",
-              "Unassigned and unblocked, ranked by priority, age and idle time.",
+              t("home.queue.title"),
+              t("home.queue.subtitle"),
               agentQueue.length,
             )}
             {#if agentQueue.length === 0}
               <div class="flex flex-col items-center justify-center py-12 gap-3">
                 <Mascot src="/LizzySleep2.png" nativeW={1000} nativeH={420} scale={0.16} />
-                <p class="text-body-sm text-[var(--text-muted)]">Nothing is waiting for an agent.</p>
+                <p class="text-body-sm text-[var(--text-muted)]">{t("home.queue.empty")}</p>
               </div>
             {:else}
               {#each agentQueue.slice(0, QUEUE_CAP) as { issue, score }, rank (issue.id)}
@@ -591,20 +616,20 @@
                   <span class="text-body-sm text-[var(--text)] truncate flex-1">{issue.title}</span>
                   <PriorityIcon priority={issue.priority} size={15} />
                   <span class="shrink-0 hidden md:flex items-center gap-1.5 text-micro tabular-nums">
-                    <span class="w-[52px] text-right text-[var(--text-faint)]">{ageLabel(daysSince(issue.created_at))} old</span>
+                    <span class="w-[52px] text-right text-[var(--text-faint)]">{t("home.queue.old", { age: ageLabel(daysSince(issue.created_at)) })}</span>
                     {#if idle >= 14}
                       <span class="px-1.5 py-0.5 rounded-full text-[var(--warn)] bg-[color-mix(in_oklab,var(--warn)_14%,transparent)]">
-                        idle {ageLabel(idle)}
+                        {t("home.queue.idle", { age: ageLabel(idle) })}
                       </span>
                     {:else}
-                      <span class="px-1.5 py-0.5 text-[var(--text-faint)]">idle {ageLabel(idle)}</span>
+                      <span class="px-1.5 py-0.5 text-[var(--text-faint)]">{t("home.queue.idle", { age: ageLabel(idle) })}</span>
                     {/if}
                   </span>
                 </button>
               {/each}
               {#if agentQueue.length > QUEUE_CAP}
                 <p class="px-4 py-2 text-caption text-[var(--text-faint)] border-t border-[var(--border)]">
-                  {agentQueue.length - QUEUE_CAP} more ready after these.
+                  {t("home.queue.more", { count: agentQueue.length - QUEUE_CAP })}
                 </p>
               {/if}
             {/if}
@@ -616,15 +641,15 @@
           >
             {@render cardHeader(
               User,
-              "Only you",
-              "Assigned to you, marked for a person, or waiting on you.",
+              t("home.attention.title"),
+              t("home.attention.subtitle"),
               attention ? attentionTotal : undefined,
             )}
             {#if !attention}
-              <p class="px-4 py-3 text-body-sm text-[var(--text-muted)]">Couldn't load what needs you.</p>
+              <p class="px-4 py-3 text-body-sm text-[var(--text-muted)]">{t("home.attention.error")}</p>
             {:else if attentionGroups.length === 0}
               <p class="px-4 py-3 text-body-sm text-[var(--text-muted)]">
-                Nothing is assigned to you or waiting on you.
+                {t("home.attention.empty")}
               </p>
             {:else}
               {#each attentionGroups as group (group.key)}
@@ -657,13 +682,13 @@
                              hover:bg-[var(--bg-subtle)] transition-colors"
                       onclick={() => toggleAttentionGroup(group.key)}
                     >
-                      {expanded ? "Show fewer" : `Show all ${group.items.length}`}
+                      {expanded ? t("home.showFewer") : t("home.showAll", { count: group.items.length })}
                     </button>
                   {/if}
                 </div>
               {/each}
             {/if}
-            {@render sectionLink("/for-me", "All work for people in For me")}
+            {@render sectionLink("/for-me", t("home.attention.link"))}
           </section>
         </div>
 
@@ -671,18 +696,18 @@
         <div class="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6 items-start">
           <section class="rounded-xl bg-[var(--surface)] border border-[var(--border)] p-4 min-w-0">
             <div class="flex items-center justify-between mb-2">
-              <h2 class="text-body-sm font-semibold text-[var(--text)]">Recent activity</h2>
+              <h2 class="text-body-sm font-semibold text-[var(--text)]">{t("home.activity.title")}</h2>
               {#if realtimeActivityReady}
                 <span
                   class="text-micro text-[var(--text-faint)] tabular-nums text-right"
-                  title="Websocket activity rate; the day fallback includes the last 24 hours"
+                  title={t("home.rate.title")}
                 >
-                  {activityRate.value} {activityRate.unit}
+                  {rateLabel(activityRate)}
                 </span>
               {/if}
             </div>
             {#if activityItems.length === 0}
-              <p class="text-body-sm text-[var(--text-muted)]">No recent activity.</p>
+              <p class="text-body-sm text-[var(--text-muted)]">{t("home.activity.empty")}</p>
             {:else}
               <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-0.5">
                 {#each activityItems as a (a.id)}
@@ -714,7 +739,7 @@
                 {/each}
               </div>
             {/if}
-            {@render sectionLink("/feed", "Everything, live, in the Feed", true)}
+            {@render sectionLink("/feed", t("home.activity.link"), true)}
           </section>
 
           <aside class="flex flex-col gap-6 min-w-0">
@@ -729,7 +754,7 @@
                 <div class="flex items-center gap-2 mb-2">
                   <Pin size={12} class="text-[var(--text-faint)]" />
                   <h2 class="text-micro font-semibold uppercase tracking-widest text-[var(--text-muted)]">
-                    Pinned pages
+                    {t("home.pinned")}
                   </h2>
                 </div>
                 <div class="flex flex-col gap-0.5">

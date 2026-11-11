@@ -9,6 +9,8 @@
 // Everything here is pure so the thresholds and the generated filename can be
 // unit tested; the toast lives in AttachComposer.svelte.
 
+import { t } from "../i18n";
+
 /** Line count above which we offer to attach instead of paste. */
 export const BIG_PASTE_LINE_LIMIT = 60;
 
@@ -53,6 +55,6 @@ export function pasteFileFrom(text: string, at: Date = new Date()): File {
 /** Short human summary for the offer toast ("412 lines", "8,204 characters"). */
 export function describePaste(text: string): string {
   const lines = countLines(text);
-  if (lines > BIG_PASTE_LINE_LIMIT) return `${lines.toLocaleString()} lines`;
-  return `${text.length.toLocaleString()} characters`;
+  if (lines > BIG_PASTE_LINE_LIMIT) return t("attachments.bigPaste.lines", { count: lines });
+  return t("attachments.bigPaste.characters", { count: text.length });
 }

@@ -4,6 +4,7 @@
   // "any person" shows a person icon. Unassigned issues, which any agent
   // may take, show nothing. Fixed small width so a row's title keeps its
   // room on a phone (LIF-229).
+  import { t } from "../i18n";
   import { User } from "lucide-svelte";
   import type { Issue } from "../api";
   import Tooltip from "../Tooltip.svelte";
@@ -15,7 +16,7 @@
   const kind = $derived(assignmentKind(issue));
   const people = $derived(issue.assignees ?? []);
   const title = $derived(
-    kind === "human" ? "For any person" : `Assigned to ${describeAssignment(issue)}`,
+    kind === "human" ? t("issues.assignee.forAnyPerson") : t("issues.assignee.assignedTo", { names: describeAssignment(issue) }),
   );
 </script>
 

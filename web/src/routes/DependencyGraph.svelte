@@ -19,6 +19,7 @@
    * project role (viewer = read-only, same as the rest of the UI; the
    * server enforces regardless).
    */
+  import { t } from "../lib/i18n";
   import { type Node, type Edge, MarkerType, Position, type Connection } from "@xyflow/svelte";
   import "@xyflow/svelte/dist/style.css";
   import {
@@ -94,7 +95,7 @@
     const projRes = await listProjects();
     if (!projRes.ok) { error = projRes.error; loading = false; return; }
     const found = projRes.data.find((p) => p.identifier === ident);
-    if (!found) { error = `Project ${ident} not found`; loading = false; return; }
+    if (!found) { error = t("graph.projectNotFound", { project: ident }); loading = false; return; }
     project = found;
     loadProjectRole(found.id); // role-gates editing affordances (LIF-234)
     const ok = await reloadData();
@@ -281,8 +282,8 @@
     revision++;
     toast(
       wasUnlinked
-        ? `Linked — ${source.identifier} and ${target.identifier} moved to the Linked view.`
-        : `Linked ${source.identifier} and ${target.identifier}.`,
+        ? t("graph.toast.linkedMoved", { source: source.identifier, target: target.identifier })
+        : t("graph.toast.linked", { source: source.identifier, target: target.identifier }),
       { kind: "success" },
     );
   }
@@ -298,7 +299,7 @@
     }
     await reloadData();
     revision++;
-    toast(`Removed the link between ${r.source_identifier} and ${r.target_identifier}.`, { kind: "success" });
+    toast(t("graph.toast.removed", { source: r.source_identifier, target: r.target_identifier }), { kind: "success" });
   }
 
   // LIF-413: one server-side call. This used to unlink and then link the
@@ -371,8 +372,13 @@
     hoverAnchor = null;
   }
 
-  function relationVerb(t: string): string {
-    return t === "blocks" ? "blocks" : t === "duplicate" ? "duplicates" : "relates to";
+  function relationSentence(r: ProjectRelation): string {
+    const params = { source: r.source_identifier, target: r.target_identifier };
+    return r.relation_type === "blocks"
+      ? t("graph.relation.blocks", params)
+      : r.relation_type === "duplicate"
+        ? t("graph.relation.duplicates", params)
+        : t("graph.relation.relatesTo", params);
   }
 
   function onKeydown(e: KeyboardEvent) {
@@ -398,7 +404,7 @@
         {projectIdentifier}
       </button>
       <ChevronRight size={12} class="text-[var(--text-faint)]" />
-      <span class="text-body-sm font-medium text-[var(--text)]">Graph</span>
+      <span class="text-body-sm font-medium text-[var(--text)]">{t("graph.title")}</span>
     </div>
   </div>
 {/snippet}
@@ -409,22 +415,21 @@
       <Skeleton variant="block" class="h-full w-full rounded-xl" />
     </div>
   {:else if error}
-    <ErrorState title="Couldn't load the graph" message={error}>
+    <ErrorState title={t("graph.loadFailed")} message={error}>
       <button
         class="text-body-sm font-medium text-[var(--btn-success-text)] bg-[var(--btn-success)] px-3 py-1.5 rounded-md hover:bg-[var(--btn-success-hover)] transition-colors"
         onclick={() => loadProject(projectIdentifier)}
       >
-        Try again
+        {t("common.retry")}
       </button>
     </ErrorState>
   {:else if !hasAnyIssues}
     <div class="flex flex-col items-center py-20 gap-4 px-6 max-w-[480px] mx-auto text-center">
       <Mascot src="/LizzySleep2.png" nativeW={1000} nativeH={420} scale={0.25} />
       <div class="flex flex-col items-center gap-1.5">
-        <p class="text-heading font-medium text-[var(--text)]">Nothing to graph yet</p>
+        <p class="text-heading font-medium text-[var(--text)]">{t("graph.empty.title")}</p>
         <p class="text-body-sm text-[var(--text-muted)] leading-relaxed">
-          The graph draws this project's blocking structure. Create some issues
-          first, then link them up right here.
+          {t("graph.empty.body")}
         </p>
       </div>
     </div>
@@ -443,25 +448,21 @@
             <div class="flex flex-col items-center gap-1.5 max-w-[440px]">
               {#if view === "linked"}
                 <p class="text-heading font-medium text-[var(--text)]">
-                  {showClosed ? "No links yet" : "No open links"}
+                  {showClosed ? t("graph.noLinks.title") : t("graph.noOpenLinks.title")}
                 </p>
                 <p class="text-body-sm text-[var(--text-muted)] leading-relaxed">
                   {#if unlinkedIssues.length > 0}
-                    Switch to Unlinked and drag between cards to start
-                    building chains — drag from a card's right dot onto
-                    another card.
+                    {t("graph.noLinks.hintUnlinked")}
                   {:else if !showClosed}
-                    Every linked chain is closed out. Toggle closed issues to
-                    see the history.
+                    {t("graph.noOpenLinks.body")}
                   {:else}
-                    No issues are linked to each other yet.
+                    {t("graph.noLinks.body")}
                   {/if}
                 </p>
               {:else}
-                <p class="text-heading font-medium text-[var(--text)]">Everything is linked</p>
+                <p class="text-heading font-medium text-[var(--text)]">{t("graph.allLinked.title")}</p>
                 <p class="text-body-sm text-[var(--text-muted)] leading-relaxed">
-                  No loose issues under the current filter — every visible
-                  issue is part of a chain.
+                  {t("graph.allLinked.body")}
                 </p>
               {/if}
             </div>
@@ -501,7 +502,7 @@
               view = "linked";
             }}
           >
-            Linked
+            {t("graph.view.linked")}
             <span class="text-[var(--text-faint)] tabular-nums ml-0.5">{linkedIssues.length}</span>
           </button>
           <button
@@ -514,7 +515,7 @@
               view = "unlinked";
             }}
           >
-            Unlinked
+            {t("graph.view.unlinked")}
             <span class="text-[var(--text-faint)] tabular-nums ml-0.5">{unlinkedIssues.length}</span>
           </button>
         </div>
@@ -532,7 +533,7 @@
           }}
         >
           <StatusIcon status="done" size={12} />
-          Closed issues
+          {t("graph.closedIssues")}
         </button>
 
         {#if view === "linked"}
@@ -540,14 +541,14 @@
             class="hidden sm:flex items-center gap-1.5 h-8 px-2.5 rounded-lg text-caption
                    bg-[var(--surface)] border border-[var(--border)] text-[var(--text-faint)]"
           >
-            blocker <MoveRight size={12} /> blocked
+            {t("graph.legend.blocker")} <MoveRight size={12} /> {t("graph.legend.blocked")}
           </span>
         {:else if editable}
           <span
             class="hidden sm:flex items-center h-8 px-2.5 rounded-lg text-caption
                    bg-[var(--surface)] border border-[var(--border)] text-[var(--text-faint)]"
           >
-            Drag between cards to link them
+            {t("graph.dragHint")}
           </span>
         {/if}
       </div>
@@ -564,12 +565,12 @@
             {@const m = menu}
             <div class="flex items-center gap-2 px-3 pb-1.5 border-b border-[var(--border)]">
               <span class="text-caption font-medium text-[var(--text-muted)]">
-                Link {m.source.identifier} and {m.target.identifier}
+                {t("graph.menu.title", { source: m.source.identifier, target: m.target.identifier })}
               </span>
               <button
                 class="ml-auto size-6 grid place-items-center rounded text-[var(--text-faint)]
                        hover:text-[var(--text)] hover:bg-[var(--bg-subtle)] transition-colors"
-                aria-label="Cancel"
+                aria-label={t("common.cancel")}
                 onclick={() => (menu = null)}
               >
                 <X size={13} />
@@ -584,7 +585,7 @@
               >
                 <span class="font-mono text-micro text-[var(--text-faint)]">{m.source.identifier}</span>
                 <MoveRight size={12} class="text-[var(--text-faint)]" />
-                blocks
+                {t("graph.menu.blocks")}
                 <span class="font-mono text-micro text-[var(--text-faint)]">{m.target.identifier}</span>
               </button>
               <button
@@ -595,7 +596,7 @@
               >
                 <span class="font-mono text-micro text-[var(--text-faint)]">{m.target.identifier}</span>
                 <MoveRight size={12} class="text-[var(--text-faint)]" />
-                blocks
+                {t("graph.menu.blocks")}
                 <span class="font-mono text-micro text-[var(--text-faint)]">{m.source.identifier}</span>
               </button>
               <button
@@ -605,7 +606,7 @@
                 onclick={() => createRelation(m.source, m.target, "relates_to")}
               >
                 <ArrowLeftRight size={12} class="text-[var(--text-faint)]" />
-                Relates to <span class="text-micro text-[var(--text-faint)]">(no direction)</span>
+                {t("graph.menu.relatesTo")} <span class="text-micro text-[var(--text-faint)]">{t("graph.menu.noDirection")}</span>
               </button>
               <button
                 class="w-full flex items-center gap-2 px-3 py-1.5 text-left text-body-sm text-[var(--text)]
@@ -614,7 +615,7 @@
                 onclick={() => createRelation(m.source, m.target, "duplicate")}
               >
                 <span class="font-mono text-micro text-[var(--text-faint)]">{m.source.identifier}</span>
-                duplicates
+                {t("graph.menu.duplicates")}
                 <span class="font-mono text-micro text-[var(--text-faint)]">{m.target.identifier}</span>
               </button>
             </div>
@@ -622,12 +623,12 @@
             {@const r = menu.relation}
             <div class="flex items-center gap-2 px-3 pb-1.5 border-b border-[var(--border)]">
               <span class="text-caption font-medium text-[var(--text-muted)]">
-                {r.source_identifier} {relationVerb(r.relation_type)} {r.target_identifier}
+                {relationSentence(r)}
               </span>
               <button
                 class="ml-auto size-6 grid place-items-center rounded text-[var(--text-faint)]
                        hover:text-[var(--text)] hover:bg-[var(--bg-subtle)] transition-colors"
-                aria-label="Close"
+                aria-label={t("common.close")}
                 onclick={() => (menu = null)}
               >
                 <X size={13} />
@@ -642,7 +643,7 @@
                   onclick={() => reverseRelation(r)}
                 >
                   <ArrowLeftRight size={13} class="text-[var(--text-faint)]" />
-                  Reverse direction
+                  {t("graph.menu.reverse")}
                 </button>
               {/if}
               <button
@@ -652,7 +653,7 @@
                 onclick={() => removeRelation(r)}
               >
                 <Unlink size={13} />
-                Remove link
+                {t("graph.menu.remove")}
               </button>
             </div>
           {/if}

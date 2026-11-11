@@ -35,6 +35,13 @@
   import { peekState } from "./issues/peek.svelte"; // LIF-248
   import { contextMenuState } from "./contextMenuState.svelte"; // LIF-248
   import type { PaletteAction, PaletteContext } from "./palette";
+  import { t } from "./i18n";
+
+  /** Catalog key suffix for the nouns routes pass (`deleteNoun`,
+   *  `deleteNounLabel`); anything else uses the generic `{noun}` wording. */
+  function nounKey(noun: string): string | null {
+    return noun === "issue" || noun === "page" || noun === "plan" || noun === "document" ? noun : null;
+  }
 
   let {
     navigate,
@@ -45,6 +52,7 @@
     identifier,
     backRoute,
     backLabel,
+    backPhrase,
     // LIF-286: the full breadcrumb trail (e.g. PROJ › Issues › LIF-42). When
     // provided it replaces the old back-arrow + identifier crumb: the trail's
     // parent segment links to the same list the back-arrow used to. `backRoute`
@@ -65,9 +73,9 @@
     onSaveTitle,
     // Body
     body,
-    bodyPlaceholder = "Start writing... (markdown supported)",
-    bodyEmptyEditCta = "Click to start writing...",
-    bodyEmptyReadText = "Nothing here yet",
+    bodyPlaceholder = t("docs.body.placeholder"),
+    bodyEmptyEditCta = t("docs.body.emptyEditCta"),
+    bodyEmptyReadText = t("docs.body.emptyRead"),
     bodyProseMinHeight = "120px",
     onSaveBody,
     // LIF-502: save a body rewritten by ticking one of its task checkboxes
@@ -145,6 +153,9 @@
     identifier: string;
     backRoute: string;
     backLabel: string;
+    /** The whole "Back to …" text for the error state. Callers pass it so the
+     *  noun can be inflected per language; without it the label is inserted. */
+    backPhrase?: string;
     breadcrumbSegments?: Crumb[];
     editable?: boolean;
     canComment?: boolean;
@@ -230,10 +241,12 @@
       ? [
           {
             id: "rename",
-            title: `Rename ${noun}…`,
+            title: nounKey(noun) ? t(`docs.rename.${nounKey(noun)}`) : t("docs.rename.other", { noun }),
             hint: title,
             prompt: {
-              placeholder: `New ${noun} title`,
+              placeholder: nounKey(noun)
+                ? t(`docs.newTitle.${nounKey(noun)}`)
+                : t("docs.newTitle.other", { noun }),
               initial: title,
               submit: (v) => void onSaveTitle(v),
             },
@@ -243,7 +256,7 @@
             : [
                 {
                   id: "edit-body",
-                  title: "Edit description",
+                  title: t("docs.palette.editDescription"),
                   run: () => bodyRef?.focus(),
                 },
               ]),
@@ -254,7 +267,7 @@
         ? [
             {
               id: "add-comment",
-              title: "Add comment",
+              title: t("docs.palette.addComment"),
               run: () => commentsRef?.focusComposer(),
             },
           ]
@@ -390,18 +403,23 @@
     </div>
   </div>
 {:else if error}
-  <ErrorState title={`Couldn't load this ${deleteNounLabel}`} message={error}>
+  <ErrorState
+    title={nounKey(deleteNounLabel)
+      ? t(`docs.loadError.${nounKey(deleteNounLabel)}`)
+      : t("docs.loadError.other", { noun: deleteNounLabel })}
+    message={error}
+  >
     <button
       class="text-body-sm font-medium text-[var(--btn-success-text)] bg-[var(--btn-success)] px-3 py-1.5 rounded-md hover:bg-[var(--btn-success-hover)] transition-colors"
       onclick={() => (onRetry ? onRetry() : location.reload())}
     >
-      Try again
+      {t("common.retry")}
     </button>
     <button
       class="text-body-sm text-[var(--text-muted)] border border-[var(--border)] px-3 py-1.5 rounded-md hover:bg-[var(--bg-subtle)] transition-colors"
       onclick={() => navigate(backRoute)}
     >
-      Back to {backLabel.toLowerCase()}
+      {backPhrase ?? t("docs.backTo", { label: backLabel })}
     </button>
   </ErrorState>
 {:else}
@@ -417,7 +435,7 @@
             {#if propsOpen}
               <button
                 class="md:hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-[1px]"
-                aria-label="Close details"
+                aria-label={t("docs.details.close")}
                 onclick={() => (propsOpen = false)}
               ></button>
             {/if}
@@ -435,7 +453,7 @@
                 <button
                   class="size-9 grid place-items-center rounded-md text-[var(--text-muted)]
                          hover:text-[var(--text)] hover:bg-[var(--bg-subtle)] transition-colors"
-                  aria-label="Close details"
+                  aria-label={t("docs.details.close")}
                   onclick={() => (propsOpen = false)}
                 >
                   <X size={18} />
@@ -457,7 +475,7 @@
     <QuoteSelectionToolbar
       container={contentEl}
       canQuote={commentsEnabled && !!onNewComment}
-      onQuote={(t) => commentsRef?.insertQuote(t)}
+      onQuote={(text) => commentsRef?.insertQuote(text)}
     />
   {/if}
 {/if}
@@ -568,9 +586,9 @@
 
         <span class="hidden sm:inline text-caption text-[var(--text-faint)] sm:min-w-[5rem] text-right">
           {#if saving}
-            <span class="animate-pulse">Saving...</span>
+            <span class="animate-pulse">{t("docs.saving")}</span>
           {:else if lastSaved}
-            Saved at {lastSaved}
+            {t("docs.savedAt", { time: lastSaved })}
           {/if}
         </span>
 
@@ -581,10 +599,10 @@
             class="toolbar-pill max-sm:px-2"
             onclick={onExport}
             disabled={exporting}
-            aria-label={exporting ? "Exporting" : "Export"}
+            aria-label={exporting ? t("docs.export.busyLabel") : t("docs.export.label")}
           >
             <Download size={14} />
-            <span class="hidden sm:inline">{exporting ? "Exporting..." : "Export"}</span>
+            <span class="hidden sm:inline">{exporting ? t("docs.export.busy") : t("docs.export.label")}</span>
           </button>
         {/if}
 
@@ -605,7 +623,7 @@
             class="md:hidden size-9 grid place-items-center rounded-md
                    text-[var(--text-muted)] hover:text-[var(--text)]
                    hover:bg-[var(--bg-subtle)] transition-colors"
-            aria-label="Show details"
+            aria-label={t("docs.details.show")}
             aria-expanded={propsOpen}
             onclick={() => (propsOpen = true)}
           >

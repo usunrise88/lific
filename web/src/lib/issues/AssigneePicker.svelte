@@ -11,6 +11,7 @@
   // keyboard does not cover the list unless someone asks for it. It is
   // portaled to <body> because the issue sidebar is a translated drawer
   // that would otherwise contain (and clip) a fixed overlay.
+  import { t } from "../i18n";
   import { tick, untrack } from "svelte";
   import { Bot, User, Check, X, Search } from "lucide-svelte";
   import { listMentionCandidates } from "../api";
@@ -101,7 +102,7 @@
     if (pid !== projectId) return;
     if (!res.ok) {
       candidates ??= [];
-      toast(`Couldn't load people: ${res.error}`, { kind: "error" });
+      toast(t("issues.assignee.loadFailed", { error: res.error }), { kind: "error" });
       return;
     }
     loadedFor = pid;
@@ -155,10 +156,10 @@
   }
 
   const applyLabel = $derived.by(() => {
-    if (selected.length === 0) return "Assign";
-    if (selected.length > 1) return `Assign ${selected.length} people`;
+    if (selected.length === 0) return t("issues.assignee.assign");
+    if (selected.length > 1) return t("issues.assignee.assignPeople", { count: selected.length });
     const person = people.find((p) => p.username.toLowerCase() === selected[0].toLowerCase());
-    return `Assign ${person ? personName(person) : `@${selected[0]}`}`;
+    return t("issues.assignee.assignName", { name: person ? personName(person) : `@${selected[0]}` });
   });
 </script>
 
@@ -183,7 +184,7 @@
              sm:shadow-[0_16px_48px_rgba(0,0,0,0.28)]"
       role="dialog"
       aria-modal="true"
-      aria-label="Assign {subject}"
+      aria-label={t("issues.assignee.assignName", { name: subject })}
       tabindex="-1"
       data-testid="assignee-picker"
       onclick={(e) => e.stopPropagation()}
@@ -193,14 +194,14 @@
       </div>
 
       <div class="shrink-0 flex items-center gap-2 px-5 py-3.5 border-b border-[var(--border)]">
-        <h2 class="text-body-lg font-semibold text-[var(--text)]">Assign</h2>
+        <h2 class="text-body-lg font-semibold text-[var(--text)]">{t("issues.assignee.assign")}</h2>
         <span class="text-body-sm text-[var(--text-muted)] truncate">{subject}</span>
         <button
           type="button"
           class="ml-auto size-11 sm:size-7 grid place-items-center rounded-md
                  text-[var(--text-muted)] hover:text-[var(--text)]
                  hover:bg-[var(--bg-subtle)] transition-colors"
-          aria-label="Close"
+          aria-label={t("common.close")}
           onclick={close}
         >
           <X size={15} />
@@ -209,8 +210,8 @@
 
       <div class="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 py-3 flex flex-col gap-0.5">
         {#each [
-          { kind: "agents" as const, names: [] as string[], label: "Any agent", hint: "Agents can pick it up. This is the default." },
-          { kind: "human" as const, names: [HUMAN], label: "Any person", hint: "A person has to do it, nobody in particular." },
+          { kind: "agents" as const, names: [] as string[], label: t("issues.assignee.anyAgent"), hint: t("issues.assignee.anyAgentHint") },
+          { kind: "human" as const, names: [HUMAN], label: t("issues.assignee.anyPerson"), hint: t("issues.assignee.anyPersonHint") },
         ] as option (option.kind)}
           {@const active = currentKind === option.kind}
           <button
@@ -233,18 +234,18 @@
         {/each}
 
         <div class="px-2.5 pt-4 pb-1.5 text-micro uppercase tracking-widest font-semibold text-[var(--text-faint)]">
-          Specific people
+          {t("issues.assignee.specificPeople")}
         </div>
 
         {#if people.length >= SEARCH_AT}
           <label class="relative mx-1 mb-1.5 block">
-            <span class="sr-only">Find a person</span>
+            <span class="sr-only">{t("issues.assignee.findPerson")}</span>
             <Search size={13} class="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-faint)] pointer-events-none" />
             <input
               bind:this={searchEl}
               bind:value={query}
               type="text"
-              placeholder="Find a person"
+              placeholder={t("issues.assignee.findPerson")}
               class="w-full pl-8 pr-2 py-1.5 text-body-sm rounded-md
                      border border-[var(--border)] bg-[var(--bg)]
                      text-[var(--text)] placeholder:text-[var(--text-faint)]
@@ -255,11 +256,11 @@
         {/if}
 
         {#if candidates === null}
-          <p class="px-2.5 py-2 text-body-sm text-[var(--text-faint)]">Loading people...</p>
+          <p class="px-2.5 py-2 text-body-sm text-[var(--text-faint)]">{t("issues.assignee.loadingPeople")}</p>
         {:else if people.length === 0}
-          <p class="px-2.5 py-2 text-body-sm text-[var(--text-faint)]">Nobody else can see this project.</p>
+          <p class="px-2.5 py-2 text-body-sm text-[var(--text-faint)]">{t("issues.assignee.nobody")}</p>
         {:else if visible.length === 0}
-          <p class="px-2.5 py-2 text-body-sm text-[var(--text-faint)]">No one matches "{query.trim()}".</p>
+          <p class="px-2.5 py-2 text-body-sm text-[var(--text-faint)]">{t("issues.assignee.noMatch", { query: query.trim() })}</p>
         {:else}
           {#each visible as person (person.user_id)}
             {@const on = isSelected(person.username)}
@@ -276,7 +277,7 @@
               <span class="flex-1 min-w-0 flex items-baseline gap-1.5">
                 <span class="text-body-sm font-medium text-[var(--text)] truncate">{personName(person)}</span>
                 {#if person.user_id === me?.user_id}
-                  <span class="text-caption text-[var(--text-faint)] shrink-0">you</span>
+                  <span class="text-caption text-[var(--text-faint)] shrink-0">{t("issues.assignee.you")}</span>
                 {:else if person.display_name && person.display_name !== person.username}
                   <span class="text-caption text-[var(--text-faint)] truncate">@{person.username}</span>
                 {/if}
@@ -303,7 +304,7 @@
           class="text-body-sm text-[var(--text-muted)] px-3 py-1.5 rounded-md hover:bg-[var(--bg-subtle)] transition-colors"
           onclick={close}
         >
-          Cancel
+          {t("common.cancel")}
         </button>
         <button
           type="button"

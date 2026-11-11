@@ -2,19 +2,24 @@
 // marker. Pure, so it can be tested without a browser.
 
 import type { ForMeItem, ForMeRequestedBy, ForMeScope, ForMeSort } from "./api";
+import { t } from "./i18n";
 
-export const SORT_OPTIONS: { value: ForMeSort; label: string }[] = [
-  { value: "newest", label: "Newest first" },
-  { value: "oldest", label: "Oldest first" },
-  { value: "updated", label: "Recently updated" },
-  { value: "priority", label: "Priority" },
-];
+export const SORTS: ForMeSort[] = ["newest", "oldest", "updated", "priority"];
+export const SCOPES: ForMeScope[] = ["me", "anyone", "others"];
 
-export const SCOPE_OPTIONS: { value: ForMeScope; label: string; hint: string }[] = [
-  { value: "me", label: "Me", hint: "Named for you, or waiting on you" },
-  { value: "anyone", label: "Any person", hint: "Marked for a person, nobody named" },
-  { value: "others", label: "Others", hint: "Named for someone else" },
-];
+/** Sort choices with labels, built at call time to follow the language. */
+export function sortOptions(): { value: ForMeSort; label: string }[] {
+  return SORTS.map((value) => ({ value, label: t(`forMe.sort.${value}`) }));
+}
+
+/** Scope choices with labels and hints, built at call time. */
+export function scopeOptions(): { value: ForMeScope; label: string; hint: string }[] {
+  return SCOPES.map((value) => ({
+    value,
+    label: t(`forMe.scope.${value}`),
+    hint: t(`forMe.scope.${value}.hint`),
+  }));
+}
 
 export const STATUS_OPTIONS = ["backlog", "todo", "active", "done", "cancelled"] as const;
 export const OPEN_STATUSES = ["backlog", "todo", "active"];
@@ -59,9 +64,9 @@ export function loadFilters(): ForMeFilters {
     if (raw) {
       const v = JSON.parse(raw) as Partial<ForMeFilters>;
       return {
-        sort: SORT_OPTIONS.some((o) => o.value === v.sort) ? (v.sort as ForMeSort) : DEFAULT_FILTERS.sort,
+        sort: SORTS.includes(v.sort as ForMeSort) ? (v.sort as ForMeSort) : DEFAULT_FILTERS.sort,
         mineFirst: typeof v.mineFirst === "boolean" ? v.mineFirst : DEFAULT_FILTERS.mineFirst,
-        scopes: pick(v.scopes, SCOPE_OPTIONS.map((o) => o.value)),
+        scopes: pick(v.scopes, SCOPES),
         statuses: pick(v.statuses, STATUS_OPTIONS),
         priorities: pick(v.priorities, PRIORITY_OPTIONS),
         requestedBy: v.requestedBy === "agents" || v.requestedBy === "people" ? v.requestedBy : "all",

@@ -9,6 +9,7 @@
   // entirely when `/api/me` fails (logged out, OAuth-token-only, or a
   // legacy API key with no resolved user — saved views are inherently
   // per-user, so there's no sensible anonymous fallback).
+  import { t } from "../i18n";
   import { Bookmark, Star, Pencil, Trash2, Check, Plus, ChevronDown } from "lucide-svelte";
   import { me, listProjects } from "../api";
   import type { IssueListState } from "./state.svelte";
@@ -178,7 +179,7 @@
     if (projectId == null || busy) return;
     const name = nameInput.trim();
     if (!name) {
-      formError = "Name is required.";
+      formError = t("issues.views.nameRequired");
       return;
     }
     busy = true;
@@ -206,7 +207,7 @@
     if (projectId == null || renameTargetId == null || busy) return;
     const name = nameInput.trim();
     if (!name) {
-      formError = "Name is required.";
+      formError = t("issues.views.nameRequired");
       return;
     }
     busy = true;
@@ -286,12 +287,12 @@
            are flex children of the button, so dropping the classes leaves
            the `sm` and up rendering exactly as it was. -->
       <span class="max-w-[120px] truncate">
-        {activeView?.name ?? "Default view"}
+        {activeView?.name ?? t("issues.views.default")}
       </span>
       {#if drifted}
         <span
           class="size-1.5 rounded-full bg-[var(--accent)] shrink-0"
-          title="Unsaved changes"
+          title={t("issues.views.unsaved")}
         ></span>
       {/if}
       <ChevronDown size={12} class="shrink-0" />
@@ -308,7 +309,7 @@
       >
         {#if mode === "menu"}
           <div class="px-3 pt-1 pb-1.5 text-[var(--text-faint)] text-micro uppercase tracking-widest font-semibold">
-            Views
+            {t("issues.views.title")}
           </div>
 
           <button
@@ -322,14 +323,14 @@
               closeMenu();
             }}
           >
-            <span>Default view</span>
+            <span>{t("issues.views.default")}</span>
             {#if activeViewId === null}<Check size={13} class="text-[var(--accent)]" />{/if}
           </button>
 
           {#if !viewsLoaded}
-            <div class="px-3 py-2 text-caption text-[var(--text-faint)]">Loading…</div>
+            <div class="px-3 py-2 text-caption text-[var(--text-faint)]">{t("common.loading")}</div>
           {:else if views.length === 0}
-            <div class="px-3 py-2 text-caption text-[var(--text-faint)]">No saved views yet.</div>
+            <div class="px-3 py-2 text-caption text-[var(--text-faint)]">{t("issues.views.empty")}</div>
           {:else}
             {#each views as v (v.id)}
               {@const active = activeViewId === v.id}
@@ -341,7 +342,7 @@
                   class="shrink-0 size-6 grid place-items-center rounded
                          text-[var(--text-faint)] hover:text-[var(--warn)] transition-colors
                          {v.is_default ? 'text-[var(--warn)]' : ''}"
-                  title={v.is_default ? "Unset as default" : "Set as default"}
+                  title={v.is_default ? t("issues.views.unsetDefault") : t("issues.views.setDefault")}
                   onclick={() => toggleDefault(v)}
                   disabled={busy}
                 >
@@ -362,7 +363,7 @@
                          text-[var(--text-faint)] opacity-0 group-hover:opacity-100
                          pointer-coarse:opacity-100
                          hover:text-[var(--text)] transition"
-                  title="Rename"
+                  title={t("issues.views.rename")}
                   onclick={() => startRename(v)}
                 >
                   <Pencil size={12} />
@@ -372,7 +373,7 @@
                          text-[var(--text-faint)] opacity-0 group-hover:opacity-100
                          pointer-coarse:opacity-100
                          hover:text-[var(--error)] transition"
-                  title="Delete"
+                  title={t("common.delete")}
                   onclick={() => deleteView(v)}
                 >
                   <Trash2 size={12} />
@@ -393,7 +394,7 @@
               <span
                 class="size-1.5 rounded-full bg-[var(--accent)] shrink-0 ml-[1px] mr-[1px]"
               ></span>
-              <span class="flex-1 truncate">Update "{activeView.name}"</span>
+              <span class="flex-1 truncate">{t("issues.views.update", { name: activeView.name })}</span>
             </button>
           {/if}
 
@@ -403,18 +404,18 @@
             onclick={startCreate}
           >
             <Plus size={14} class="text-[var(--text-muted)]" />
-            <span class="flex-1">Save current as new view</span>
+            <span class="flex-1">{t("issues.views.saveNew")}</span>
           </button>
         {:else if mode === "create"}
           <div class="px-3 pt-1 pb-1.5 text-[var(--text-faint)] text-micro uppercase tracking-widest font-semibold">
-            Save current view
+            {t("issues.views.saveCurrent")}
           </div>
           <div class="px-3 pb-2">
             <input
               type="text"
               bind:this={nameInputEl}
               bind:value={nameInput}
-              placeholder="View name"
+              placeholder={t("issues.views.namePlaceholder")}
               onkeydown={(e) => onFormKeydown(e, submitCreate)}
               class="w-full px-2 py-1.5 text-body-sm rounded-md
                      border border-[var(--border)] bg-[var(--bg)]
@@ -429,7 +430,7 @@
                 class="px-2.5 py-1 text-caption text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
                 onclick={() => { mode = "menu"; formError = ""; }}
               >
-                Cancel
+                {t("common.cancel")}
               </button>
               <button
                 class="px-2.5 py-1 rounded-md text-caption font-medium
@@ -438,20 +439,20 @@
                 onclick={submitCreate}
                 disabled={busy}
               >
-                Save
+                {t("common.save")}
               </button>
             </div>
           </div>
         {:else if mode === "rename"}
           <div class="px-3 pt-1 pb-1.5 text-[var(--text-faint)] text-micro uppercase tracking-widest font-semibold">
-            Rename view
+            {t("issues.views.renameTitle")}
           </div>
           <div class="px-3 pb-2">
             <input
               type="text"
               bind:this={nameInputEl}
               bind:value={nameInput}
-              placeholder="View name"
+              placeholder={t("issues.views.namePlaceholder")}
               onkeydown={(e) => onFormKeydown(e, submitRename)}
               class="w-full px-2 py-1.5 text-body-sm rounded-md
                      border border-[var(--border)] bg-[var(--bg)]
@@ -466,7 +467,7 @@
                 class="px-2.5 py-1 text-caption text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
                 onclick={() => { mode = "menu"; formError = ""; }}
               >
-                Cancel
+                {t("common.cancel")}
               </button>
               <button
                 class="px-2.5 py-1 rounded-md text-caption font-medium
@@ -475,7 +476,7 @@
                 onclick={submitRename}
                 disabled={busy}
               >
-                Rename
+                {t("issues.views.rename")}
               </button>
             </div>
           </div>

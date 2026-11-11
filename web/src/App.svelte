@@ -4,7 +4,7 @@
   import Home from "./routes/Home.svelte";
   import Feed from "./routes/Feed.svelte";
   import ForMe from "./routes/ForMe.svelte";
-  import { locale as currentLocale, onLocaleChange } from "./lib/i18n";
+  import { locale as currentLocale, onLocaleChange, t } from "./lib/i18n";
   import Settings from "./routes/Settings.svelte";
   import InstanceSettings from "./routes/InstanceSettings.svelte";
   import IssueList from "./routes/IssueList.svelte";
@@ -834,15 +834,15 @@
       {/key}
       {#snippet failed(_error: unknown, reset: () => void)}
         <ErrorState
-          title="Something went wrong"
-          message="An unexpected error interrupted this page. Trying again usually clears it."
+          title={t("errors.generic.title")}
+          message={t("errors.generic.message")}
         >
           <button
             class="text-body-sm font-medium text-[var(--btn-success-text)] bg-[var(--btn-success)]
                    px-3 py-1.5 rounded-md hover:bg-[var(--btn-success-hover)] transition-colors"
             onclick={reset}
           >
-            Try again
+            {t("common.retry")}
           </button>
         </ErrorState>
       {/snippet}
@@ -871,15 +871,15 @@
 {:else if parsed.type === "not-found"}
   <Layout {navigate} {route} bind:onProjectChange>
     <ErrorState
-      title="Page not found"
-      message="We couldn't find that page. The link may be wrong, or it has moved."
+      title={t("errors.notFound.title")}
+      message={t("errors.notFound.message")}
     >
       <button
         class="text-body-sm font-medium text-[var(--btn-success-text)] bg-[var(--btn-success)]
                px-3 py-1.5 rounded-md hover:bg-[var(--btn-success-hover)] transition-colors"
         onclick={() => navigate("/")}
       >
-        Back to home
+        {t("errors.notFound.backHome")}
       </button>
     </ErrorState>
   </Layout>
@@ -976,22 +976,22 @@
            can't leak internal state to the user. -->
       {#snippet failed(_error: unknown, reset: () => void)}
         <ErrorState
-          title="Something went wrong"
-          message="An unexpected error interrupted this page. Trying again usually clears it."
+          title={t("errors.generic.title")}
+          message={t("errors.generic.message")}
         >
           <button
             class="text-body-sm font-medium text-[var(--btn-success-text)] bg-[var(--btn-success)]
                    px-3 py-1.5 rounded-md hover:bg-[var(--btn-success-hover)] transition-colors"
             onclick={reset}
           >
-            Try again
+            {t("common.retry")}
           </button>
           <button
             class="text-body-sm text-[var(--text-muted)] border border-[var(--border)]
                    px-3 py-1.5 rounded-md hover:bg-[var(--bg-subtle)] transition-colors"
             onclick={() => location.reload()}
           >
-            Reload
+            {t("common.reload")}
           </button>
         </ErrorState>
       {/snippet}

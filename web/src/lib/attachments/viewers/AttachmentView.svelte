@@ -18,6 +18,7 @@
   import ZipViewer from "./ZipViewer.svelte";
   import SqliteViewer from "./SqliteViewer.svelte";
   import MediaViewer from "./MediaViewer.svelte";
+  import { t } from "../../i18n";
 
   let {
     id,
@@ -63,7 +64,7 @@
 </script>
 
 {#if tooBig}
-  <FileChip {id} {filename} {sizeBytes} note="Too large to preview inline" />
+  <FileChip {id} {filename} {sizeBytes} note={t("viewers.tooLarge")} />
 {:else if kind === "image"}
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
@@ -82,7 +83,7 @@
       class="av__lightbox"
       role="dialog"
       aria-modal="true"
-      aria-label="Image preview"
+      aria-label={t("viewers.imagePreview")}
       tabindex="-1"
       onclick={() => (lightboxOpen = false)}
     >

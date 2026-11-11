@@ -3,30 +3,31 @@
   // issues by priority; the slim green rail beside it is the share an agent
   // can pick up right now (unassigned, unblocked, not already active).
   import type { AgeBucket, AgeBucketKey } from "../api";
+  import { t } from "../i18n";
 
   let { buckets }: { buckets: AgeBucket[] } = $props();
 
   const LABEL: Record<AgeBucketKey, string> = {
-    week: "This week",
-    month: "1 to 4 weeks",
-    quarter: "1 to 3 months",
-    half: "3 to 6 months",
-    older: "6 months+",
+    week: t("home.age.week"),
+    month: t("home.age.month"),
+    quarter: t("home.age.quarter"),
+    half: t("home.age.half"),
+    older: t("home.age.older"),
   };
   const SHORT: Record<AgeBucketKey, string> = {
-    week: "< 1 wk",
-    month: "1-4 wk",
-    quarter: "1-3 mo",
-    half: "3-6 mo",
-    older: "6 mo+",
+    week: t("home.age.short.week"),
+    month: t("home.age.short.month"),
+    quarter: t("home.age.short.quarter"),
+    half: t("home.age.short.half"),
+    older: t("home.age.short.older"),
   };
 
   const SEGMENTS = [
-    { key: "urgent", label: "Urgent", color: "var(--error)" },
-    { key: "high", label: "High", color: "var(--warn)" },
-    { key: "medium", label: "Medium", color: "color-mix(in oklab, var(--text-muted) 60%, transparent)" },
-    { key: "low", label: "Low", color: "color-mix(in oklab, var(--text-faint) 38%, transparent)" },
-    { key: "none", label: "No priority", color: "color-mix(in oklab, var(--text-faint) 20%, transparent)" },
+    { key: "urgent", label: t("common.priority.urgent"), color: "var(--error)" },
+    { key: "high", label: t("common.priority.high"), color: "var(--warn)" },
+    { key: "medium", label: t("common.priority.medium"), color: "color-mix(in oklab, var(--text-muted) 60%, transparent)" },
+    { key: "low", label: t("common.priority.low"), color: "color-mix(in oklab, var(--text-faint) 38%, transparent)" },
+    { key: "none", label: t("home.age.noPriority"), color: "color-mix(in oklab, var(--text-faint) 20%, transparent)" },
   ] as const;
 
   const PLOT_H = 136;
@@ -39,7 +40,7 @@
   }
 </script>
 
-<div class="flex items-end gap-3 sm:gap-5 pt-6" role="img" aria-label="Open issues by age and priority">
+<div class="flex items-end gap-3 sm:gap-5 pt-6" role="img" aria-label={t("home.age.aria")}>
   {#each buckets as bucket, i (bucket.key)}
     <div
       class="relative flex-1 min-w-0 flex flex-col items-center"
@@ -64,12 +65,12 @@
           {/each}
           <p class="flex items-center gap-1.5 text-micro text-[var(--text-muted)] m-0 mt-1 pt-1 border-t border-[var(--border)]">
             <span class="size-2 rounded-sm shrink-0 bg-[var(--success)]"></span>
-            Ready for agents
+            {t("home.age.readyForAgents")}
             <span class="ml-auto pl-3 tabular-nums text-[var(--text)]">{bucket.agent_ready}</span>
           </p>
           <p class="flex items-center gap-1.5 text-micro text-[var(--text-muted)] m-0">
             <span class="size-2 shrink-0"></span>
-            Needs a person
+            {t("home.age.needsPerson")}
             <span class="ml-auto pl-3 tabular-nums text-[var(--text)]">{bucket.needs_human}</span>
           </p>
         </div>
@@ -87,7 +88,7 @@
         <span
           class="w-1 rounded-full bg-[var(--success)] shrink-0"
           style="height: {px(bucket.agent_ready)}px"
-          title="{bucket.agent_ready} ready for agents"
+          title={t("home.age.readyTitle", { count: bucket.agent_ready })}
         ></span>
       </div>
       <span class="mt-2 text-caption text-[var(--text)] text-center truncate max-w-full">
@@ -95,7 +96,7 @@
         <span class="hidden sm:inline">{LABEL[bucket.key]}</span>
       </span>
       <span class="text-micro text-[var(--success)] tabular-nums whitespace-nowrap">
-        {bucket.agent_ready}<span class="hidden sm:inline">{" for agents"}</span>
+        {bucket.agent_ready}<span class="hidden sm:inline">{t("home.age.forAgents.after")}</span>
       </span>
     </div>
   {/each}
@@ -108,9 +109,9 @@
     </span>
   {/each}
   <span class="flex items-center gap-1.5 text-micro text-[var(--text-muted)]">
-    <span class="size-2 rounded-sm" style="background: {SEGMENTS[3].color}"></span>Low or none
+    <span class="size-2 rounded-sm" style="background: {SEGMENTS[3].color}"></span>{t("home.age.lowOrNone")}
   </span>
   <span class="flex items-center gap-1.5 text-micro text-[var(--text-muted)]">
-    <span class="w-1 h-2.5 rounded-full bg-[var(--success)]"></span>Ready for agents
+    <span class="w-1 h-2.5 rounded-full bg-[var(--success)]"></span>{t("home.age.readyForAgents")}
   </span>
 </div>

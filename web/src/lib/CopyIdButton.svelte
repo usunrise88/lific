@@ -13,10 +13,11 @@
   import { onDestroy } from "svelte";
   import { Copy, Check } from "lucide-svelte";
   import { copyToClipboard } from "./clipboard";
+  import { t } from "./i18n";
 
   let {
     value,
-    label = "identifier",
+    label = t("app.copyId.identifier"),
     iconSize = 12,
     class: klass = "",
     iconClass = "",
@@ -60,8 +61,8 @@
   type="button"
   class={klass}
   onclick={copy}
-  title={`Copy ${label}`}
-  aria-label={`Copy ${label}`}
+  title={t("app.copyId.title", { label })}
+  aria-label={t("app.copyId.title", { label })}
 >
   {@render children?.()}
   {#if copied}

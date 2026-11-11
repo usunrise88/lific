@@ -9,6 +9,7 @@
   // like one family: dimmed backdrop, centered card, arrow/enter to
   // pick, Esc to close, mouse hover tracks selection.
 
+  import { t } from "./i18n";
   import {
     search as searchApi,
     resolveIssue,
@@ -29,7 +30,7 @@
     open = $bindable(false),
     projectId,
     projectIdentifier,
-    title = "Link an issue",
+    title = t("issues.picker.title"),
     /** Issue currently selected, so it can be shown / pre-filtered. */
     currentIdentifier = null,
     /** Show a "Clear" action that resolves with null (used by anchor). */
@@ -248,11 +249,11 @@
                  text-[var(--text)] placeholder:text-[var(--text-faint)]"
           placeholder={crossProject
             ? narrow
-              ? "Search issues…"
-              : `Search issues in any project or type ${projectIdentifier}-42…`
+              ? t("issues.picker.placeholder.short")
+              : t("issues.picker.placeholder.anyProject", { project: projectIdentifier })
             : narrow
-              ? `Search ${projectIdentifier} issues…`
-              : `Search ${projectIdentifier} issues or type ${projectIdentifier}-42…`}
+              ? t("issues.picker.placeholder.project", { project: projectIdentifier })
+              : t("issues.picker.placeholder.projectOrId", { project: projectIdentifier })}
           oninput={onInput}
           onkeydown={onKeydown}
         />
@@ -266,7 +267,7 @@
         <button
           class="sm:hidden size-11 -mr-2 shrink-0 grid place-items-center rounded-lg
                  text-[var(--text-muted)] active:bg-[var(--bg-subtle)] transition-colors"
-          aria-label="Close issue search"
+          aria-label={t("issues.picker.close")}
           onclick={close}
         >
           <X size={20} />
@@ -281,7 +282,7 @@
         <span>{title}</span>
         {#if currentIdentifier}
           <span class="font-mono text-[var(--text-muted)] normal-case tracking-normal">
-            · current: {currentIdentifier}
+            {t("issues.picker.current", { identifier: currentIdentifier })}
           </span>
         {/if}
       </div>
@@ -301,10 +302,10 @@
         {#if hits.length === 0}
           <p class="px-4 py-6 text-center text-body-sm text-[var(--text-faint)]">
             {searching
-              ? "Searching…"
+              ? t("issues.picker.searching")
               : query.trim()
-                ? `No issues match “${query.trim()}”`
-                : "Type to search issues…"}
+                ? t("issues.picker.noMatch", { query: query.trim() })
+                : t("issues.picker.typeToSearch")}
           </p>
         {:else}
           {#each hits as hit, i (hit.identifier)}
@@ -313,7 +314,7 @@
                 class="px-4 pt-2.5 pb-1 text-micro uppercase tracking-widest
                        font-semibold text-[var(--text-faint)]"
               >
-                Other projects
+                {t("issues.picker.otherProjects")}
               </p>
             {/if}
             <button
@@ -339,7 +340,7 @@
                 <span
                   class="max-w-[40%] truncate shrink rounded px-1.5 py-0.5 text-micro
                          bg-[var(--bg-subtle)] text-[var(--text-muted)]"
-                  title="In project {hit.projectLabel}"
+                  title={t("issues.picker.inProject", { project: hit.projectLabel })}
                 >
                   {hit.projectLabel}
                 </span>
@@ -362,10 +363,10 @@
                pb-[max(0.625rem,env(safe-area-inset-bottom))] sm:pb-2.5"
       >
         <span class="inline-flex items-center gap-1">
-          <kbd class="font-mono">↑↓</kbd> navigate
+          <kbd class="font-mono">↑↓</kbd> {t("issues.picker.navigate")}
         </span>
         <span class="inline-flex items-center gap-1">
-          <kbd class="font-mono">↵</kbd> select
+          <kbd class="font-mono">↵</kbd> {t("issues.picker.select")}
         </span>
         {#if allowClear && currentIdentifier}
           <button
@@ -373,7 +374,7 @@
                    hover:text-[var(--error)] transition-colors"
             onclick={clear}
           >
-            <X size={12} /> Clear anchor
+            <X size={12} /> {t("issues.picker.clearAnchor")}
           </button>
         {/if}
       </div>

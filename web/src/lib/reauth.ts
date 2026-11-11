@@ -14,6 +14,7 @@
  *  functions.
  */
 import { refreshSession, saveSession, type AuthUser, type RequestResult } from "./api";
+import { t } from "./i18n";
 
 /** The exact server refusal this module answers. */
 export const RECENT_AUTH_ERROR = "recent authentication required";
@@ -59,7 +60,7 @@ function adopt(
   if (result.data.user.id !== expectedUserId) {
     return {
       ok: false,
-      error: "That signed in as a different account, so it was not used.",
+      error: t("auth.reauth.differentAccount"),
       recoverable,
     };
   }

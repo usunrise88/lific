@@ -65,6 +65,7 @@
   import StatusIcon from "./StatusIcon.svelte";
   import PriorityIcon from "./PriorityIcon.svelte";
   import type { PaletteAction, PaletteActionChild } from "./palette";
+  import { t } from "./i18n";
 
   let {
     navigate,
@@ -335,12 +336,12 @@
     "issue", "page", "plan", "project", "module", "folder",
   ];
   const GROUP_LABEL: Record<PaletteResult["kind"], string> = {
-    issue: "Issues",
-    page: "Pages",
-    plan: "Plans",
-    project: "Projects",
-    module: "Modules",
-    folder: "Folders",
+    issue: t("palette.group.issue"),
+    page: t("palette.group.page"),
+    plan: t("palette.group.plan"),
+    project: t("palette.group.project"),
+    module: t("palette.group.module"),
+    folder: t("palette.group.folder"),
   };
   const GROUP_CAP = 8;
 
@@ -354,7 +355,7 @@
   const globalActions: PaletteAction[] = [
     {
       id: "new-project",
-      title: "New project",
+      title: t("palette.action.newProject"),
       run: () => navigate("/projects/new"),
     },
   ];
@@ -406,12 +407,12 @@
     const labelled = groups.map((g) => ({
       label: g.remote
         ? g.rs.some((r) => r.partial)
-          ? `${GROUP_LABEL[g.kind]} (server, partial matches)`
-          : `${GROUP_LABEL[g.kind]} (server)`
+          ? t("palette.group.serverPartial", { group: GROUP_LABEL[g.kind] })
+          : t("palette.group.server", { group: GROUP_LABEL[g.kind] })
         : GROUP_LABEL[g.kind],
       rs: g.rs,
     }));
-    if (recent.length > 0) labelled.unshift({ label: "Recent", rs: recent });
+    if (recent.length > 0) labelled.unshift({ label: t("palette.group.recent"), rs: recent });
     return labelled.map((g) => ({
       label: g.label,
       entries: g.rs.map((r) => ({ r, flatIdx: flatIdx++ })),
@@ -1096,12 +1097,12 @@
           class="flex-1 bg-transparent border-0 outline-none text-body-lg
                  text-[var(--text)] placeholder:text-[var(--text-faint)]"
           placeholder={mode.type === "prompt"
-            ? (mode.action.prompt?.placeholder ?? "Type a value…")
+            ? (mode.action.prompt?.placeholder ?? t("palette.placeholder.prompt"))
             : mode.type === "submenu"
-              ? "Filter…"
+              ? t("palette.placeholder.filter")
               : narrow
-                ? "Jump or act…"
-                : "Jump or act… (try 34, OMN156, doc 3, or “status”)"}
+                ? t("palette.placeholder.short")
+                : t("palette.placeholder.long")}
           oninput={onInput}
           onkeydown={onInputKeydown}
         />
@@ -1117,7 +1118,7 @@
         <button
           class="sm:hidden size-11 -mr-2 shrink-0 grid place-items-center rounded-lg
                  text-[var(--text-muted)] active:bg-[var(--bg-subtle)] transition-colors"
-          aria-label="Close search"
+          aria-label={t("palette.closeSearch")}
           onclick={hide}
         >
           <X size={20} />
@@ -1127,7 +1128,7 @@
       <!-- Results -->
       {#if mode.type === "prompt"}
         <p class="px-4 py-3 text-caption text-[var(--text-faint)]">
-          Enter to save · Esc to cancel
+          {t("palette.promptHint")}
         </p>
       {:else}
       <div
@@ -1138,12 +1139,12 @@
         {#if flatItems.length === 0}
           <p class="px-4 py-6 text-center text-body-sm text-[var(--text-faint)]">
             {searching
-              ? "Searching…"
+              ? t("palette.empty.searching")
               : query.trim()
-                ? `Nothing matches “${query.trim()}”`
+                ? t("palette.empty.noMatch", { query: query.trim() })
                 : mode.type === "submenu"
-                  ? "Nothing here"
-                  : "No projects yet"}
+                  ? t("palette.empty.nothingHere")
+                  : t("palette.empty.noProjects")}
           </p>
         {:else if mode.type === "submenu"}
           {#each childHits as c, i (c.title)}
@@ -1190,7 +1191,7 @@
               class="px-4 pt-2 pb-1 text-micro font-semibold uppercase
                      tracking-widest text-[var(--text-faint)]"
             >
-              Actions
+              {t("palette.group.actions")}
             </div>
             {#each actionHits as a, i (a.id)}
               <button
@@ -1307,9 +1308,9 @@
           class="hidden sm:flex shrink-0 items-center gap-4 px-4 py-1.5 border-t border-[var(--border)]
                  text-micro text-[var(--text-faint)]"
         >
-          <span><kbd class="font-mono">↑↓</kbd> move</span>
-          <span><kbd class="font-mono">↵</kbd> open</span>
-          <span><kbd class="font-mono">{isMac ? "⌘" : "Ctrl"}↵</kbd> new tab</span>
+          <span><kbd class="font-mono">↑↓</kbd> {t("palette.legend.move")}</span>
+          <span><kbd class="font-mono">↵</kbd> {t("palette.legend.open")}</span>
+          <span><kbd class="font-mono">{isMac ? "⌘" : "Ctrl"}↵</kbd> {t("palette.legend.newTab")}</span>
         </div>
       {/if}
       {/if}

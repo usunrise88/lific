@@ -36,6 +36,7 @@
   // this stays a pure presentational component.
 
   import { ChevronRight } from "lucide-svelte";
+  import { t } from "./i18n";
   import CopyIdButton from "./CopyIdButton.svelte";
   import { scopedHref } from "./publicScope"; // LIF-471: crumbs stay inside the public view
 
@@ -54,7 +55,7 @@
   );
 </script>
 
-<nav aria-label="Breadcrumb" class="min-w-0">
+<nav aria-label={t("nav.breadcrumb")} class="min-w-0">
   <ol class="flex items-center gap-1.5 min-w-0">
     {#each segments as seg, i (i)}
       {@const isLast = i === segments.length - 1}

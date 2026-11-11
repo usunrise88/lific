@@ -37,6 +37,7 @@
   import SubTabs from "../lib/SubTabs.svelte";
   import { loadSubTab, saveSubTab } from "../lib/subtab";
   import { getContext } from "svelte";
+  import { t } from "../lib/i18n";
   import { projectRole, loadProjectRole } from "../lib/projectRole.svelte"; // LIF-234
 
   // LIF-234: modules are project structure — create/edit is maintainer-gated
@@ -89,14 +90,9 @@
   // looking at "what's happening now" see it at the top.
   const STATUS_ORDER = ["active", "planned", "paused", "backlog", "done", "cancelled"];
 
-  const STATUS_LABEL: Record<string, string> = {
-    active: "Active",
-    planned: "Planned",
-    paused: "Paused",
-    backlog: "Backlog",
-    done: "Done",
-    cancelled: "Cancelled",
-  };
+  function statusLabel(s: string): string {
+    return STATUS_ORDER.includes(s) ? t(`modules.status.${s}`) : s;
+  }
 
   type ModuleTab = "active" | "backlog" | "archive" | "all";
   const MODULE_TAB_IDS = ["active", "backlog", "archive", "all"] as const;
@@ -139,7 +135,7 @@
     } else {
       cacheProjects(projRes.data);
       const found = projRes.data.find((p) => p.identifier === ident);
-      if (!found) { error = `Project ${ident} not found`; projectLoading = false; return; }
+      if (!found) { error = t("modules.notFound", { identifier: ident }); projectLoading = false; return; }
       if (ident !== projectIdentifier) return;
       project = found;
       model = ensureProjectModel(found.id);
@@ -176,20 +172,20 @@
   let moduleTabs = $derived.by(() => [
     {
       id: "active",
-      label: "Active",
+      label: t("modules.tab.active"),
       count: modules.filter((m) => TAB_STATUSES.active.includes(m.status)).length,
     },
     {
       id: "backlog",
-      label: "Backlog",
+      label: t("modules.tab.backlog"),
       count: modules.filter((m) => TAB_STATUSES.backlog.includes(m.status)).length,
     },
     {
       id: "archive",
-      label: "Archive",
+      label: t("modules.tab.archive"),
       count: modules.filter((m) => TAB_STATUSES.archive.includes(m.status)).length,
     },
-    { id: "all", label: "All", count: modules.length },
+    { id: "all", label: t("common.all"), count: modules.length },
   ]);
 
   let visibleModules = $derived.by(() => {
@@ -198,8 +194,12 @@
     return modules.filter((m) => statuses.includes(m.status));
   });
 
-  let emptyTabLabel = $derived(
-    activeTab === "active" ? "active" : activeTab === "archive" ? "archived" : "backlog",
+  let emptyTabTitle = $derived(
+    activeTab === "active"
+      ? t("modules.emptyTab.active")
+      : activeTab === "archive"
+        ? t("modules.emptyTab.archive")
+        : t("modules.emptyTab.backlog"),
   );
 
   // Modules grouped by status in display order. Each entry is non-empty;
@@ -325,7 +325,7 @@
       </button>
       <ChevronRight size={12} class="text-[var(--text-faint)]" />
       <span class="text-body-sm font-medium text-[var(--text)]">
-        Modules
+        {t("modules.title")}
       </span>
       {#if !loading}
         <span
@@ -349,7 +349,7 @@
           onclick={startCreate}
         >
           <Plus size={14} />
-          Module
+          {t("modules.new")}
         </button>
       {/if}
     </div>
@@ -411,18 +411,18 @@
         </section>
       </div>
     {:else if error}
-      <ErrorState title="Couldn't load modules" message={error}>
+      <ErrorState title={t("modules.loadError")} message={error}>
         <button
           class="text-body-sm font-medium text-[var(--btn-success-text)] bg-[var(--btn-success)] px-3 py-1.5 rounded-md hover:bg-[var(--btn-success-hover)] transition-colors"
           onclick={() => loadData(projectIdentifier)}
         >
-          Try again
+          {t("common.retry")}
         </button>
         <button
           class="text-body-sm text-[var(--text-muted)] border border-[var(--border)] px-3 py-1.5 rounded-md hover:bg-[var(--bg-subtle)] transition-colors"
           onclick={() => navigate(`/${projectIdentifier}/overview`)}
         >
-          Project overview
+          {t("modules.projectOverview")}
         </button>
       </ErrorState>
     {:else if modules.length === 0 && !creating}
@@ -435,10 +435,9 @@
         <div class="flex flex-col items-center py-20 gap-4 px-6 max-w-[480px] mx-auto text-center">
           <Mascot src="/LizzySleep2.png" nativeW={1000} nativeH={420} scale={0.25} />
           <div class="flex flex-col items-center gap-1.5">
-            <p class="text-heading font-medium text-[var(--text)]">No moving parts yet</p>
+            <p class="text-heading font-medium text-[var(--text)]">{t("modules.empty.title")}</p>
             <p class="text-body-sm text-[var(--text-muted)] leading-relaxed">
-              Modules gather related issues into a single arc of work: a feature,
-              a release, an effort. Spin one up to start organizing.
+              {t("modules.empty.body")}
             </p>
           </div>
           {#if canEdit}
@@ -450,7 +449,7 @@
               onclick={startCreate}
             >
               <Plus size={15} />
-              Create a module
+              {t("modules.create")}
             </button>
           {/if}
         </div>
@@ -475,10 +474,10 @@
             color="var(--success)"
           />
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-x-8 gap-y-3 flex-1 min-w-[240px]">
-            {@render heroStat(portfolio.moduleCount, "Modules")}
-            {@render heroStat(portfolio.inFlight, "In flight")}
-            {@render heroStat(portfolio.total, "Issues")}
-            {@render heroStat(portfolio.done, "Completed")}
+            {@render heroStat(portfolio.moduleCount, t("modules.stat.modules"))}
+            {@render heroStat(portfolio.inFlight, t("modules.stat.inFlight"))}
+            {@render heroStat(portfolio.total, t("modules.stat.issues"))}
+            {@render heroStat(portfolio.done, t("modules.stat.completed"))}
           </div>
         </div>
 
@@ -503,7 +502,7 @@
                 class="w-full text-body-lg font-medium bg-transparent
                        border-none outline-none text-[var(--text)]
                        placeholder:text-[var(--text-faint)]"
-                placeholder="Module name (e.g. Q1 Launch, Auth, Search rework)"
+                placeholder={t("modules.createRow.placeholder")}
                 autofocus
                 onkeydown={(e) => {
                   if (e.key === "Enter") commitCreate();
@@ -515,11 +514,11 @@
                 <p class="text-caption text-[var(--error)] mt-1">{createError}</p>
               {/if}
               <p class="text-micro text-[var(--text-faint)] mt-1">
-                Enter to create · Esc to cancel · status defaults to Active
+                {t("modules.createRow.hint")}
               </p>
             </div>
             {#if createSaving}
-              <div class="text-caption text-[var(--text-faint)] mt-1">Saving...</div>
+              <div class="text-caption text-[var(--text-faint)] mt-1">{t("modules.createRow.saving")}</div>
             {/if}
           </div>
         {/if}
@@ -528,9 +527,9 @@
           <div class="flex flex-col items-center py-14 gap-4 px-6 max-w-[480px] mx-auto text-center">
             <Mascot src="/LizzySleep2.png" nativeW={1000} nativeH={420} scale={0.25} />
             <div class="flex flex-col items-center gap-1.5">
-              <p class="text-heading font-medium text-[var(--text)]">No {emptyTabLabel} modules</p>
+              <p class="text-heading font-medium text-[var(--text)]">{emptyTabTitle}</p>
               <p class="text-body-sm text-[var(--text-muted)] leading-relaxed">
-                Create a module to start organizing this slice of work.
+                {t("modules.emptyTab.body")}
               </p>
             </div>
             {#if canEdit}
@@ -542,7 +541,7 @@
                 onclick={startCreate}
               >
                 <Plus size={15} />
-                Create a module
+                {t("modules.create")}
               </button>
             {/if}
           </div>
@@ -559,7 +558,7 @@
                   class="text-micro font-semibold uppercase tracking-widest
                          text-[var(--text-muted)]"
                 >
-                  {STATUS_LABEL[group.status] ?? group.status}
+                  {statusLabel(group.status)}
                 </h2>
                 <span class="text-micro text-[var(--text-faint)] tabular-nums">
                   {group.mods.length}
@@ -621,9 +620,9 @@
                         </div>
                         <p class="text-caption text-[var(--text-muted)] tabular-nums mt-1">
                           {#if prog.total > 0}
-                            {prog.done}/{prog.total} done
+                            {t("modules.card.progress", { done: prog.done, total: prog.total })}
                           {:else}
-                            No issues yet
+                            {t("modules.card.noIssues")}
                           {/if}
                         </p>
                         {#if preview}

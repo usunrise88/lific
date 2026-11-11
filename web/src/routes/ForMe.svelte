@@ -31,14 +31,15 @@
     saveSeen,
     isNew,
     plainText,
-    SORT_OPTIONS,
-    SCOPE_OPTIONS,
+    sortOptions,
+    scopeOptions,
     STATUS_OPTIONS,
     PRIORITY_OPTIONS,
     DEFAULT_FILTERS,
     type ForMeFilters,
   } from "../lib/forMe";
   import { selectedProjectIds, toggle, statusLabel, initials } from "../lib/feed";
+  import { t } from "../lib/i18n";
   import { startAutoRefresh } from "../lib/autoRefresh.svelte";
   import { loadScroll, clearScroll, scrollSaver } from "../lib/scrollMemory";
   import { openPeek, peekState, dockPeek, registerPeekSync } from "../lib/issues/peek.svelte";
@@ -336,12 +337,12 @@
     const res = await createComment(item.id, body);
     sending = false;
     if (!res.ok) {
-      toast(`Couldn't post comment: ${res.error}`);
+      toast(t("forMe.toast.postFailed", { error: res.error }));
       return;
     }
     draft = "";
     composerFor = null;
-    toast(`Comment posted on ${item.identifier}`);
+    toast(t("forMe.toast.posted", { target: item.identifier }));
     void refresh();
   }
 
@@ -373,12 +374,14 @@
   }
 
   function assignmentLabel(item: ForMeItem): string {
-    if (item.mine && item.assignees?.length === 1) return "You";
+    if (item.mine && item.assignees?.length === 1) return t("forMe.assignment.you");
     if (item.assignees?.length) {
-      return item.assignees.map((a) => (a.username === myUsername ? "you" : a.display_name || a.username)).join(", ");
+      return item.assignees
+        .map((a) => (a.username === myUsername ? t("forMe.assignment.youInList") : a.display_name || a.username))
+        .join(", ");
     }
-    if (item.needs_human) return "Any person";
-    return item.waiting_on_me ? "Agents" : "Nobody";
+    if (item.needs_human) return t("forMe.assignment.anyPerson");
+    return item.waiting_on_me ? t("forMe.assignment.agents") : t("forMe.assignment.nobody");
   }
 </script>
 
@@ -404,9 +407,9 @@
 {#snippet filterPanel()}
   <div class="flex flex-col gap-6">
     <section>
-      {@render sectionLabel("Sort")}
+      {@render sectionLabel(t("forMe.filter.sort"))}
       <div class="flex flex-col gap-0.5">
-        {#each SORT_OPTIONS as o (o.value)}
+        {#each sortOptions() as o (o.value)}
           {@const on = filters.sort === o.value}
           <button
             class="flex items-center gap-2 px-2 py-1.5 rounded-md text-left text-body-sm transition-colors
@@ -424,7 +427,7 @@
         aria-checked={filters.mineFirst}
         onclick={() => setFilters({ mineFirst: !filters.mineFirst })}
       >
-        <span class="text-body-sm text-[var(--text)]">Assigned to me first</span>
+        <span class="text-body-sm text-[var(--text)]">{t("forMe.filter.mineFirst")}</span>
         <span
           class="relative w-8 h-[18px] rounded-full transition-colors shrink-0
                  {filters.mineFirst ? 'bg-[var(--accent)]' : 'bg-[var(--border)]'}"
@@ -438,9 +441,9 @@
     </section>
 
     <section>
-      {@render sectionLabel("Whose")}
+      {@render sectionLabel(t("forMe.filter.whose"))}
       <div class="flex flex-wrap gap-1.5">
-        {#each SCOPE_OPTIONS as o (o.value)}
+        {#each scopeOptions() as o (o.value)}
           {#snippet c()}{o.label}<span class="tabular-nums text-[var(--text-faint)]">{counts[o.value]}</span>{/snippet}
           <span title={o.hint}>{@render pill(filters.scopes.includes(o.value), () => setFilters({ scopes: toggle(filters.scopes, o.value) }), c)}</span>
         {/each}
@@ -448,9 +451,9 @@
     </section>
 
     <section>
-      {@render sectionLabel("Requested by")}
+      {@render sectionLabel(t("forMe.filter.requestedBy"))}
       <div class="grid grid-cols-3 p-0.5 rounded-lg bg-[var(--bg-subtle)] border border-[var(--border)] text-caption">
-        {#each [["all", "Anyone"], ["agents", "Agents"], ["people", "People"]] as [v, label] (v)}
+        {#each [["all", t("forMe.filter.anyone")], ["agents", t("forMe.filter.agents")], ["people", t("forMe.filter.people")]] as [v, label] (v)}
           <button
             class="py-1 rounded-md transition-colors inline-flex items-center justify-center gap-1
                    {filters.requestedBy === v ? 'bg-[var(--surface)] text-[var(--text)] shadow-sm font-medium' : 'text-[var(--text-muted)] hover:text-[var(--text)]'}"
@@ -461,7 +464,7 @@
     </section>
 
     <section>
-      {@render sectionLabel("Status", filters.statuses.length ? undefined : "open")}
+      {@render sectionLabel(t("forMe.filter.status"), filters.statuses.length ? undefined : t("forMe.filter.statusOpen"))}
       <div class="flex flex-wrap gap-1.5">
         {#each STATUS_OPTIONS as st (st)}
           {#snippet c()}<StatusIcon status={st} size={12} />{statusLabel(st)}{/snippet}
@@ -471,10 +474,10 @@
     </section>
 
     <section>
-      {@render sectionLabel("Priority")}
+      {@render sectionLabel(t("forMe.filter.priority"))}
       <div class="flex flex-wrap gap-1.5">
         {#each PRIORITY_OPTIONS as pr (pr)}
-          {#snippet c()}<PriorityIcon priority={pr} size={12} /><span class="capitalize">{pr}</span>{/snippet}
+          {#snippet c()}<PriorityIcon priority={pr} size={12} />{t(`common.priority.${pr}`)}{/snippet}
           {@render pill(filters.priorities.includes(pr), () => setFilters({ priorities: toggle(filters.priorities, pr) }), c)}
         {/each}
       </div>
@@ -482,7 +485,7 @@
 
     {#if groups.length}
       <section>
-        {@render sectionLabel("Groups")}
+        {@render sectionLabel(t("forMe.filter.groups"))}
         <div class="flex flex-wrap gap-1.5">
           {#each groups as g (g.id)}
             {#snippet c()}{g.name}<span class="text-[var(--text-faint)] tabular-nums">{g.project_ids.length}</span>{/snippet}
@@ -493,11 +496,11 @@
     {/if}
 
     <section>
-      {@render sectionLabel("Projects", filters.projects.length ? `${filters.projects.length} selected` : undefined)}
+      {@render sectionLabel(t("forMe.filter.projects"), filters.projects.length ? t("forMe.filter.selected", { count: filters.projects.length }) : undefined)}
       {#if projects.length > 8}
         <label class="mb-1.5 flex items-center gap-2 px-2 py-1 rounded-md border border-[var(--border)] focus-within:border-[var(--accent)]">
           <Search size={12} class="text-[var(--text-faint)]" />
-          <input class="flex-1 min-w-0 bg-transparent outline-none text-body-sm" placeholder="Find project" bind:value={projectQuery} />
+          <input class="flex-1 min-w-0 bg-transparent outline-none text-body-sm" placeholder={t("forMe.filter.findProject")} bind:value={projectQuery} />
         </label>
       {/if}
       <div class="flex flex-col gap-0.5">
@@ -518,7 +521,7 @@
 
     {#if filterCount}
       <button class="self-start text-caption text-[var(--text-muted)] hover:text-[var(--text)] inline-flex items-center gap-1" onclick={resetFilters}>
-        <X size={12} />Reset filters
+        <X size={12} />{t("forMe.filter.reset")}
       </button>
     {/if}
   </div>
@@ -577,10 +580,10 @@
         <span class="truncate text-[var(--text-faint)]">{item.project_name}</span>
         <span class="ml-auto flex items-center gap-1.5 shrink-0">
           {#if fresh}
-            <span class="text-micro font-semibold uppercase tracking-wider px-1.5 py-px rounded bg-[var(--accent)] text-[var(--accent-text)]">New</span>
+            <span class="text-micro font-semibold uppercase tracking-wider px-1.5 py-px rounded bg-[var(--accent)] text-[var(--accent-text)]">{t("forMe.card.new")}</span>
           {/if}
           {#if item.priority !== "none"}
-            <span title="Priority: {item.priority}"><PriorityIcon priority={item.priority} size={14} /></span>
+            <span title={t("forMe.card.priorityTitle", { priority: t(`forMe.card.priority.${item.priority}`) })}><PriorityIcon priority={item.priority} size={14} /></span>
           {/if}
         </span>
       </header>
@@ -611,7 +614,7 @@
         </span>
         {#if item.waiting_on_me}
           <span class="inline-flex items-center gap-1 text-micro font-medium px-1.5 py-0.5 rounded-full bg-[color-mix(in_oklab,var(--warn)_15%,transparent)] text-[var(--warn-text)]">
-            <Hourglass size={10} />Waiting on you
+            <Hourglass size={10} />{t("forMe.card.waitingOnYou")}
           </span>
         {/if}
         {#each labels.slice(0, LABEL_PREVIEW) as l (l)}
@@ -628,7 +631,7 @@
           <UserCheck size={11} />{assignmentLabel(item)}
         </span>
         {#if item.assigned_by}
-          <span class="truncate">· from {item.assigned_by.name}{item.assigned_by.is_bot ? " (agent)" : ""}</span>
+          <span class="truncate">{item.assigned_by.is_bot ? t("forMe.card.fromAgent", { name: item.assigned_by.name }) : t("forMe.card.from", { name: item.assigned_by.name })}</span>
         {/if}
         <span class="ml-auto shrink-0 flex items-center gap-2">
           {#if item.comment_count}
@@ -642,11 +645,11 @@
     <!-- Quick actions. -->
     <footer class="flex items-center gap-0.5 px-2 py-1.5 border-t border-[var(--border)]" data-fm-menu>
       {#snippet ic1()}<MessageSquare size={13} />{/snippet}
-      {@render actionButton("Comment", () => openComposer(item), composerFor === item.id, ic1)}
+      {@render actionButton(t("forMe.action.comment"), () => openComposer(item), composerFor === item.id, ic1)}
 
       <div class="relative">
         {#snippet ic2()}<StatusIcon status={item.status} size={13} />{/snippet}
-        {@render actionButton("Status", () => toggleMenu(item, "status"), menu === `${item.id}:status`, ic2)}
+        {@render actionButton(t("forMe.action.status"), () => toggleMenu(item, "status"), menu === `${item.id}:status`, ic2)}
         {#if menu === `${item.id}:status`}
           {#snippet statusMenu()}
             {#each STATUS_OPTIONS.filter((s) => s !== "cancelled") as st (st)}
@@ -660,23 +663,23 @@
 
       <div class="relative">
         {#snippet ic3()}<UserRound size={13} />{/snippet}
-        {@render actionButton("Reassign", () => toggleMenu(item, "assign"), menu === `${item.id}:assign`, ic3)}
+        {@render actionButton(t("forMe.action.reassign"), () => toggleMenu(item, "assign"), menu === `${item.id}:assign`, ic3)}
         {#if menu === `${item.id}:assign`}
           {@const names = assignmentNames(item)}
           {#snippet assignMenu()}
             {#if myUsername}
               {#snippet im()}<UserCheck size={13} />{/snippet}
-              {@render menuItem("Me", () => reassign(item, [myUsername!]), names.length === 1 && names[0] === myUsername, im)}
+              {@render menuItem(t("forMe.assign.me"), () => reassign(item, [myUsername!]), names.length === 1 && names[0] === myUsername, im)}
             {/if}
             {#snippet ia()}<Users size={13} />{/snippet}
-            {@render menuItem("Any person", () => reassign(item, ["human"]), names.length === 1 && names[0] === "human", ia)}
+            {@render menuItem(t("forMe.assign.anyPerson"), () => reassign(item, ["human"]), names.length === 1 && names[0] === "human", ia)}
             {#each people.filter((p) => p.username !== myUsername) as p (p.id)}
               {#snippet ip()}<span class="size-4 rounded-full grid place-items-center text-[8px] font-bold bg-[var(--accent)] text-[var(--accent-text)]">{initials(p.display_name || p.username)}</span>{/snippet}
               {@render menuItem(p.display_name || p.username, () => reassign(item, [p.username]), names.length === 1 && names[0] === p.username, ip)}
             {/each}
             <div class="my-1 h-px bg-[var(--border)]"></div>
             {#snippet ib()}<Bot size={13} />{/snippet}
-            {@render menuItem("Hand back to agents", () => reassign(item, []), names.length === 0, ib)}
+            {@render menuItem(t("forMe.assign.handBack"), () => reassign(item, []), names.length === 0, ib)}
           {/snippet}
           {@render menuShell(assignMenu)}
         {/if}
@@ -684,10 +687,10 @@
 
       <span class="ml-auto flex items-center gap-0.5">
         {#snippet ic4()}<CircleSlash size={13} />{/snippet}
-        {@render actionButton("Cancel", () => setStatus(item, "cancelled"), false, ic4, true)}
+        {@render actionButton(t("forMe.action.cancel"), () => setStatus(item, "cancelled"), false, ic4, true)}
         <button
           class="hidden sm:grid size-6 place-items-center rounded-md text-[var(--text-faint)] hover:text-[var(--text)] hover:bg-[var(--bg-subtle)]"
-          title="Open" aria-label="Open {item.identifier}"
+          title={t("common.open")} aria-label={t("forMe.action.openIssue", { id: item.identifier })}
           onclick={() => navigate(`/${item.project_identifier}/issues/${item.identifier}`)}
         ><ArrowUpRight size={13} /></button>
       </span>
@@ -698,7 +701,7 @@
         <textarea
           data-composer={item.id}
           class="block w-full resize-none bg-transparent px-2.5 py-1.5 text-body-sm text-[var(--text)] placeholder:text-[var(--text-faint)] outline-none min-h-[56px]"
-          placeholder="Comment on {item.identifier}… Markdown works"
+          placeholder={t("forMe.composer.placeholder", { target: item.identifier })}
           bind:value={draft}
           use:autoGrow
           onkeydown={(e) => composerKey(e, item)}
@@ -706,12 +709,12 @@
         ></textarea>
         <div class="flex items-center justify-end gap-1.5 px-1.5 pb-1.5">
           <span class="hidden sm:inline mr-auto pl-1 text-micro text-[var(--text-faint)]">⌘/Ctrl + Enter · Esc</span>
-          <button class="text-caption px-2 py-0.5 rounded-md text-[var(--text-muted)] hover:bg-[var(--bg-subtle)]" onclick={() => (composerFor = null)}>Cancel</button>
+          <button class="text-caption px-2 py-0.5 rounded-md text-[var(--text-muted)] hover:bg-[var(--bg-subtle)]" onclick={() => (composerFor = null)}>{t("common.cancel")}</button>
           <button
             class="inline-flex items-center gap-1 text-caption font-medium px-2 py-0.5 rounded-md text-[var(--btn-success-text)] bg-[var(--btn-success)] hover:bg-[var(--btn-success-hover)] disabled:opacity-50"
             disabled={!draft.trim() || sending}
             onclick={() => sendComment(item)}
-          ><SendHorizontal size={11} />{sending ? "Sending…" : "Send"}</button>
+          ><SendHorizontal size={11} />{sending ? t("common.sending") : t("common.send")}</button>
         </div>
       </div>
     {/if}
@@ -720,24 +723,24 @@
 
 {#snippet topbarContent()}
   <div class="flex items-center gap-3 px-4 sm:px-6 py-2 w-full">
-    <span class="hidden sm:inline text-body-sm font-medium text-[var(--text)]">For me</span>
+    <span class="hidden sm:inline text-body-sm font-medium text-[var(--text)]">{t("forMe.title")}</span>
     {#if !loading}
       <span class="text-micro text-[var(--text-faint)] tabular-nums">{total}</span>
     {/if}
     {#if freshCount}
-      <span class="text-micro font-medium px-1.5 py-px rounded-full bg-[var(--accent-subtle)] text-[var(--accent)]">{freshCount} new</span>
+      <span class="text-micro font-medium px-1.5 py-px rounded-full bg-[var(--accent-subtle)] text-[var(--accent)]">{t("forMe.newCount", { count: freshCount })}</span>
     {/if}
     <div class="ml-auto flex items-center gap-2">
       {#if filterCount}
         <button class="hidden lg:inline-flex items-center gap-1 text-caption text-[var(--text-muted)] hover:text-[var(--text)]" onclick={resetFilters}>
-          <X size={12} />Reset
+          <X size={12} />{t("common.reset")}
         </button>
       {/if}
       <button
         class="lg:hidden inline-flex items-center gap-1.5 text-caption px-2 py-1 rounded-md border transition-colors
                {filtersOpen || filterCount ? 'border-[var(--accent)] text-[var(--accent)]' : 'border-[var(--border)] text-[var(--text-muted)]'}"
         onclick={() => (filtersOpen = !filtersOpen)}
-      ><SlidersHorizontal size={12} />Filters{filterCount ? ` · ${filterCount}` : ""}</button>
+      ><SlidersHorizontal size={12} />{t("forMe.filter.button")}{filterCount ? ` · ${filterCount}` : ""}</button>
     </div>
   </div>
 {/snippet}
@@ -765,21 +768,21 @@
             {/each}
           </div>
         {:else if error}
-          <ErrorState title="Couldn't load your work" message={error}>
+          <ErrorState title={t("forMe.error.title")} message={error}>
             <button
               class="text-body-sm font-medium text-[var(--btn-success-text)] bg-[var(--btn-success)] px-3 py-1.5 rounded-md hover:bg-[var(--btn-success-hover)] transition-colors"
               onclick={load}
-            >Try again</button>
+            >{t("common.retry")}</button>
           </ErrorState>
         {:else if items.length === 0}
           <div class="flex flex-col items-center py-20 gap-3 px-6 max-w-[440px] mx-auto text-center">
             <Inbox size={32} class="text-[var(--text-faint)]" />
             {#if filterCount}
-              <p class="text-body-lg text-[var(--text-muted)] m-0">Nothing matches these filters</p>
-              <button class="text-caption text-[var(--accent)] hover:underline" onclick={resetFilters}>Reset filters</button>
+              <p class="text-body-lg text-[var(--text-muted)] m-0">{t("forMe.empty.filtered")}</p>
+              <button class="text-caption text-[var(--accent)] hover:underline" onclick={resetFilters}>{t("forMe.filter.reset")}</button>
             {:else}
-              <p class="text-body-lg text-[var(--text-muted)] m-0">Nothing needs a person right now</p>
-              <p class="text-body-sm text-[var(--text-faint)] m-0">Issues an agent hands to a person, or that wait on you, show up here.</p>
+              <p class="text-body-lg text-[var(--text-muted)] m-0">{t("forMe.empty.title")}</p>
+              <p class="text-body-sm text-[var(--text-faint)] m-0">{t("forMe.empty.body")}</p>
             {/if}
           </div>
         {:else}
@@ -790,7 +793,7 @@
           </div>
           <div bind:this={sentinel} class="h-px"></div>
           {#if loadingMore}
-            <p class="text-center text-caption text-[var(--text-faint)] py-4 m-0">Loading…</p>
+            <p class="text-center text-caption text-[var(--text-faint)] py-4 m-0">{t("common.loading")}</p>
           {/if}
         {/if}
       </div>

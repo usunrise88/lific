@@ -33,7 +33,7 @@
     getFontScale, setFontScale, type FontScale,
     getMotionPreference, setMotionPreference, type MotionPreference,
   } from "../lib/theme";
-  import { ACCENT_PRESETS } from "../lib/appearance/presets";
+  import { accentPresets } from "../lib/appearance/presets";
   import LanguagePicker from "../lib/LanguagePicker.svelte";
   import { t } from "../lib/i18n";
   import { RADIX_THEMES, type ThemeSwatch } from "../lib/appearance/themes";
@@ -72,9 +72,9 @@
 
   function genericTemplate(id: string, name: string): ToolTemplate {
     return {
-      id, name, description: "Custom MCP connection",
+      id, name, description: t("settings.custom.description"),
       configPath: { linux: null, mac: null, windows: null },
-      configNote: [{ text: "Use this URL and Authorization header in your client's HTTP MCP settings. The exact config format depends on your client." }],
+      configNote: [{ text: t("settings.custom.configNote") }],
       generateConfig: (url, key) => JSON.stringify({ url, headers: { Authorization: `Bearer ${key}` } }, null, 2),
     };
   }
@@ -90,11 +90,11 @@
     const name = customName.trim() || id;
     toolsError = "";
     if (!/^[a-z0-9][a-z0-9_-]{0,47}$/.test(id)) {
-      toolsError = "Use 1-48 letters, numbers, hyphens or underscores for the connection ID, starting with a letter or number.";
+      toolsError = t("settings.custom.invalidId");
       return;
     }
     if (getToolBot(id)?.connected) {
-      toolsError = "That connection already exists. Choose a different ID for another agent.";
+      toolsError = t("settings.custom.exists");
       return;
     }
     const template = TOOL_TEMPLATES.find((t) => t.id === customTemplate) ?? genericTemplate(id, name);
@@ -185,11 +185,11 @@
   let persistHint = $derived.by(() => {
     switch (selectedOs) {
       case "mac":
-        return "Runs in the current shell. To persist it, add the line to ~/.zshrc (the default macOS shell).";
+        return t("settings.connect.persist.mac");
       case "linux":
-        return "Runs in the current shell. To persist it, add the line to ~/.bashrc or ~/.profile.";
+        return t("settings.connect.persist.linux");
       case "windows":
-        return "setx applies to new terminals, not the current one. Reopen your terminal (or Pi) after running it.";
+        return t("settings.connect.persist.windows");
     }
   });
 
@@ -212,7 +212,7 @@
   const THEME_CHOICES: { id: string; label: string; light: ThemeSwatch; dark: ThemeSwatch }[] = [
     {
       id: CLASSIC_THEME,
-      label: "Classic",
+      label: t("settings.appearance.classic"),
       light: { bg: "#eef4f1", surface: "#f7faf9", accent: "#5746a0", text: "#18201d" },
       dark: { bg: "#0d1110", surface: "#252c29", accent: "#9287d7", text: "#e3e8e6" },
     },
@@ -306,7 +306,7 @@
   async function submitPassword() {
     if (pwSaving) return;
     pwError = ""; pwSuccess = false;
-    if (newPw.length < 8) { pwError = "New password must be at least 8 characters."; return; }
+    if (newPw.length < 8) { pwError = t("settings.password.tooShort"); return; }
     pwSaving = true;
     // `changePassword` adopts the replacement session token the server
     // returns. Everything after this point depends on that: the old token is
@@ -475,7 +475,7 @@
     if (pending.userId !== user.id || connectTool?.id !== pending.toolId) {
       // The signed-in account or the open tool changed under the prompt.
       // Retrying would connect something nobody asked for.
-      connectError = "That connection was interrupted. Close this and try again.";
+      connectError = t("settings.connect.interrupted");
       reauthNeeded = null;
       reauthPassword = "";
       return;
@@ -497,8 +497,7 @@
     const outcome = await attemptConnect(connectTool, false);
     if (outcome === "ok") reauthNeeded = null;
     else if (outcome === "stale" && !connectError) {
-      connectError =
-        "That still was not accepted. Sign out and sign back in, then try connecting again.";
+      connectError = t("settings.connect.stillRejected");
     }
     reauthBusy = false;
   }
@@ -569,7 +568,7 @@
 
 {#snippet topbarContent()}
   <div class="flex items-center gap-3 px-6 py-2 w-full">
-    <span class="text-body-sm font-medium text-[var(--text)]">Settings</span>
+    <span class="text-body-sm font-medium text-[var(--text)]">{t("settings.title")}</span>
   </div>
 {/snippet}
 
@@ -625,7 +624,7 @@
             <span class="text-[var(--text-muted)]">{user.email}</span>
             <span class="text-micro font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full
                          {user.is_admin ? 'text-[var(--accent)] bg-[var(--accent-subtle)]' : 'text-[var(--text-muted)] bg-[var(--bg-subtle)]'}">
-              {user.is_admin ? "Admin" : "Member"}
+              {user.is_admin ? t("settings.role.admin") : t("settings.role.member")}
             </span>
           </div>
         </div>
@@ -635,11 +634,11 @@
       <section class="rounded-xl bg-[var(--surface)] shadow-[0_1px_2px_rgba(0,0,0,0.06)] p-5 animate-reveal delay-250">
         <div class="flex items-center gap-2 mb-1">
           <Palette size={15} class="text-[var(--text-muted)]" />
-          <h2 class="text-body-lg font-semibold text-[var(--text)]">Appearance</h2>
+          <h2 class="text-body-lg font-semibold text-[var(--text)]">{t("settings.appearance.title")}</h2>
         </div>
-        <p class="text-body-sm text-[var(--text-muted)] mb-3.5">System follows your OS.</p>
+        <p class="text-body-sm text-[var(--text-muted)] mb-3.5">{t("settings.appearance.hint")}</p>
         <div class="inline-flex p-0.5 rounded-lg bg-[var(--bg)] shadow-[inset_0_1px_2px_rgba(0,0,0,0.10)]">
-          {#each [["light", "Light", Sun], ["dark", "Dark", Moon], ["system", "System", Monitor]] as [val, label, Icon]}
+          {#each [["light", t("settings.appearance.light"), Sun], ["dark", t("settings.appearance.dark"), Moon], ["system", t("settings.appearance.system"), Monitor]] as [val, label, Icon]}
             {@const IconComp = Icon as typeof Sun}
             <button
               class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-body-sm font-medium transition-all
@@ -663,7 +662,7 @@
         <!-- Theme (fork): Classic or a Radix Colors palette. Each card previews
              the theme in light and dark. -->
         <div class="mt-5 pt-5 border-t border-[var(--border)]">
-          <span class="block text-micro font-semibold uppercase tracking-widest text-[var(--text-faint)] mb-2.5">Theme</span>
+          <span class="block text-micro font-semibold uppercase tracking-widest text-[var(--text-faint)] mb-2.5">{t("settings.appearance.theme")}</span>
           <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
             {#each THEME_CHOICES as th (th.id)}
               {@const on = themePresetPref === th.id}
@@ -696,9 +695,9 @@
         <!-- Accent color: only for Classic; a Radix theme brings its own. -->
         {#if themePresetPref === CLASSIC_THEME}
         <div class="mt-5 pt-5 border-t border-[var(--border)]">
-          <span class="block text-micro font-semibold uppercase tracking-widest text-[var(--text-faint)] mb-2.5">Accent color</span>
+          <span class="block text-micro font-semibold uppercase tracking-widest text-[var(--text-faint)] mb-2.5">{t("settings.appearance.accent")}</span>
           <div class="flex items-center gap-2.5 flex-wrap">
-            {#each ACCENT_PRESETS as preset (preset.id)}
+            {#each accentPresets() as preset (preset.id)}
               <button
                 type="button"
                 class="size-8 shrink-0 rounded-full transition-transform motion-safe:active:scale-90
@@ -706,7 +705,7 @@
                 style:background-color={preset.swatch}
                 onclick={() => pickAccent(preset.id)}
                 title={preset.label}
-                aria-label="Accent: {preset.label}"
+                aria-label={t("settings.appearance.accentAria", { name: preset.label })}
                 aria-pressed={accentPref === preset.id}
               >
                 {#if accentPref === preset.id}
@@ -720,9 +719,9 @@
 
         <!-- Density -->
         <div class="mt-5 pt-5 border-t border-[var(--border)]">
-          <span class="block text-micro font-semibold uppercase tracking-widest text-[var(--text-faint)] mb-2.5">Density</span>
+          <span class="block text-micro font-semibold uppercase tracking-widest text-[var(--text-faint)] mb-2.5">{t("settings.appearance.density")}</span>
           <div class="inline-flex p-0.5 rounded-lg bg-[var(--bg)] shadow-[inset_0_1px_2px_rgba(0,0,0,0.10)]">
-            {#each [["comfortable", "Comfortable", Rows3], ["compact", "Compact", Rows2]] as [val, label, Icon]}
+            {#each [["comfortable", t("settings.appearance.comfortable"), Rows3], ["compact", t("settings.appearance.compact"), Rows2]] as [val, label, Icon]}
               {@const IconComp = Icon as typeof Rows3}
               <button
                 class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-body-sm font-medium transition-all
@@ -741,10 +740,10 @@
         <!-- Text size -->
         <div class="mt-5 pt-5 border-t border-[var(--border)]">
           <span class="flex items-center gap-1.5 text-micro font-semibold uppercase tracking-widest text-[var(--text-faint)] mb-2.5">
-            <Type size={12} /> Text size
+            <Type size={12} /> {t("settings.appearance.textSize")}
           </span>
           <div class="inline-flex p-0.5 rounded-lg bg-[var(--bg)] shadow-[inset_0_1px_2px_rgba(0,0,0,0.10)]">
-            {#each [["sm", "S"], ["md", "M"], ["lg", "L"]] as [val, label]}
+            {#each [["sm", t("settings.appearance.size.sm")], ["md", t("settings.appearance.size.md")], ["lg", t("settings.appearance.size.lg")]] as [val, label]}
               <button
                 class="px-3.5 py-1.5 rounded-md text-body-sm font-medium transition-all
                        {fontScalePref === val
@@ -760,9 +759,9 @@
 
         <!-- Motion -->
         <div class="mt-5 pt-5 border-t border-[var(--border)]">
-          <span class="block text-micro font-semibold uppercase tracking-widest text-[var(--text-faint)] mb-2.5">Motion</span>
+          <span class="block text-micro font-semibold uppercase tracking-widest text-[var(--text-faint)] mb-2.5">{t("settings.appearance.motion")}</span>
           <div class="inline-flex p-0.5 rounded-lg bg-[var(--bg)] shadow-[inset_0_1px_2px_rgba(0,0,0,0.10)]">
-            {#each [["system", "System", Monitor], ["reduced", "Reduced", ZapOff], ["full", "Full", Zap]] as [val, label, Icon]}
+            {#each [["system", t("settings.appearance.system"), Monitor], ["reduced", t("settings.appearance.reduced"), ZapOff], ["full", t("settings.appearance.full"), Zap]] as [val, label, Icon]}
               {@const IconComp = Icon as typeof Monitor}
               <button
                 class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-body-sm font-medium transition-all
@@ -777,7 +776,7 @@
             {/each}
           </div>
           <p class="text-caption text-[var(--text-muted)] mt-2">
-            System honors your OS's reduce-motion setting.
+            {t("settings.appearance.motionHint")}
           </p>
         </div>
       </section>
@@ -786,10 +785,10 @@
       <section class="mt-10 animate-reveal delay-250">
         <div class="flex items-center gap-2 mb-1">
           <Plug size={16} class="text-[var(--text-muted)]" />
-          <h2 class="text-[1rem] font-semibold text-[var(--text)]">Connected tools</h2>
+          <h2 class="text-[1rem] font-semibold text-[var(--text)]">{t("settings.tools.title")}</h2>
         </div>
         <p class="text-body text-[var(--text-muted)] mb-5 leading-relaxed">
-          Link an AI coding tool to Lific over MCP. Each connection mints a bot identity that acts on your behalf; disconnect any time.
+          {t("settings.tools.intro")}
         </p>
 
         <div class="grid sm:grid-cols-2 gap-2.5">
@@ -806,11 +805,11 @@
                   {#if st === "connected"}
                     <span class="inline-flex items-center gap-1 text-micro font-semibold uppercase tracking-wide
                                  text-[var(--success)] bg-[var(--success-bg)] px-1.5 py-0.5 rounded-full">
-                      <span class="size-1.5 rounded-full bg-[var(--success)]"></span> Connected
+                      <span class="size-1.5 rounded-full bg-[var(--success)]"></span> {t("settings.tools.connected")}
                     </span>
                   {:else if st === "disconnected"}
                     <span class="text-micro font-semibold uppercase tracking-wide text-[var(--warn)] bg-[color-mix(in_oklab,var(--warn)_14%,transparent)] px-1.5 py-0.5 rounded-full">
-                      Disconnected
+                      {t("settings.tools.disconnected")}
                     </span>
                   {/if}
                 </div>
@@ -823,7 +822,7 @@
                     disabled={busyId === bot.id}
                     onclick={() => handleDisconnect(bot.id)}
                   >
-                    {busyId === bot.id ? "…" : "Disconnect"}
+                    {busyId === bot.id ? "…" : t("settings.tools.disconnect")}
                   </button>
                 {:else if st === "disconnected" && bot}
                   <button
@@ -831,14 +830,14 @@
                     disabled={busyId === bot.id}
                     onclick={() => handleRemove(bot.id)}
                   >
-                    Remove
+                    {t("common.remove")}
                   </button>
                   <button
                     class="flex items-center gap-1.5 text-body-sm font-medium text-[var(--btn-success-text)]
                            bg-[var(--btn-success)] px-3 py-1.5 rounded-md hover:bg-[var(--btn-success-hover)] transition-colors"
                     onclick={() => openConnect(template)}
                   >
-                    Reconnect
+                    {t("settings.tools.reconnect")}
                   </button>
                 {:else}
                   <button
@@ -847,7 +846,7 @@
                            motion-safe:active:scale-[0.97]"
                     onclick={() => openConnect(template)}
                   >
-                    Connect
+                    {t("settings.tools.connect")}
                   </button>
                 {/if}
               </div>
@@ -855,40 +854,40 @@
           {/each}
         </div>
         <button class="mt-4 toolbar-pill" onclick={() => { customOpen = !customOpen; toolsError = ""; }} aria-expanded={customOpen}>
-          Add custom or named connection
+          {t("settings.custom.toggle")}
         </button>
         {#if toolsError}<p role="alert" class="mt-3 text-body-sm text-[var(--error)]">{toolsError}</p>{/if}
         {#if customOpen}
           <form class="mt-4 max-w-lg flex flex-col gap-3" onsubmit={(e) => { e.preventDefault(); connectCustom(); }}>
-            <p class="text-body-sm text-[var(--text-muted)]">Give each agent or machine its own connection ID. Disconnecting one leaves the others connected.</p>
-            <label class="text-body-sm">Config template
+            <p class="text-body-sm text-[var(--text-muted)]">{t("settings.custom.intro")}</p>
+            <label class="text-body-sm">{t("settings.custom.template")}
               <select class="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--surface)] p-2" bind:value={customTemplate}>
-                <option value="">Custom HTTP MCP client</option>
+                <option value="">{t("settings.custom.genericClient")}</option>
                 {#each TOOL_TEMPLATES as template}<option value={template.id}>{template.name}</option>{/each}
               </select>
             </label>
-            <label class="text-body-sm">Connection ID
+            <label class="text-body-sm">{t("settings.custom.id")}
               <input required maxlength="48" pattern={"[a-zA-Z0-9][a-zA-Z0-9_\\-]{0,47}"} placeholder="codex-laptop" class="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--surface)] p-2" bind:value={customId} />
             </label>
-            <label class="text-body-sm">Display name (optional)
-              <input maxlength="80" placeholder="Codex on my laptop" class="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--surface)] p-2" bind:value={customName} />
+            <label class="text-body-sm">{t("settings.custom.name")}
+              <input maxlength="80" placeholder={t("settings.custom.namePlaceholder")} class="mt-1 w-full rounded-md border border-[var(--border)] bg-[var(--surface)] p-2" bind:value={customName} />
             </label>
-            <button type="submit" class="self-start text-body-sm font-medium text-[var(--btn-success-text)] bg-[var(--btn-success)] px-3 py-2 rounded-md">Connect agent</button>
+            <button type="submit" class="self-start text-body-sm font-medium text-[var(--btn-success-text)] bg-[var(--btn-success)] px-3 py-2 rounded-md">{t("settings.custom.submit")}</button>
           </form>
         {/if}
       </section>
 
       <!-- ── ACCOUNT (profile + security, bottom of page) ─── -->
       <section class="mt-10 pt-8 border-t border-[var(--border)] animate-reveal delay-250">
-        <h2 class="text-[1rem] font-semibold text-[var(--text)] mb-1">Account</h2>
+        <h2 class="text-[1rem] font-semibold text-[var(--text)] mb-1">{t("settings.account.title")}</h2>
         <p class="text-body text-[var(--text-muted)] mb-6 leading-relaxed">
-          Manage your profile, password, and sessions.
+          {t("settings.account.intro")}
         </p>
 
         <!-- Profile (proper labeled form) -->
         <div class="max-w-[480px] flex flex-col gap-3.5">
           <label class="block">
-            <span class="block text-micro font-semibold uppercase tracking-widest text-[var(--text-faint)] mb-1.5">Display name</span>
+            <span class="block text-micro font-semibold uppercase tracking-widest text-[var(--text-faint)] mb-1.5">{t("settings.profile.displayName")}</span>
             <input
               bind:value={profileName}
               class="w-full px-3 py-2 text-body rounded-md border border-[var(--border)] bg-[var(--bg)] text-[var(--text)]
@@ -896,7 +895,7 @@
             />
           </label>
           <label class="block">
-            <span class="block text-micro font-semibold uppercase tracking-widest text-[var(--text-faint)] mb-1.5">Email</span>
+            <span class="block text-micro font-semibold uppercase tracking-widest text-[var(--text-faint)] mb-1.5">{t("settings.profile.email")}</span>
             <input
               bind:value={profileEmail}
               type="email"
@@ -905,7 +904,7 @@
             />
           </label>
           <div>
-            <span class="block text-micro font-semibold uppercase tracking-widest text-[var(--text-faint)] mb-1.5">Username</span>
+            <span class="block text-micro font-semibold uppercase tracking-widest text-[var(--text-faint)] mb-1.5">{t("settings.profile.username")}</span>
             <p class="text-body font-mono text-[var(--text-muted)]">@{user.username}</p>
           </div>
         </div>
@@ -919,10 +918,10 @@
             disabled={!hasProfileChanges || profileSaving}
             onclick={saveProfile}
           >
-            {profileSaving ? "Saving…" : "Save changes"}
+            {profileSaving ? t("common.saving") : t("settings.profile.save")}
           </button>
           {#if profileSavedAt}
-            <span class="inline-flex items-center gap-1 text-body-sm text-[var(--success)]" aria-live="polite"><Check size={13} /> Saved</span>
+            <span class="inline-flex items-center gap-1 text-body-sm text-[var(--success)]" aria-live="polite"><Check size={13} /> {t("common.saved")}</span>
           {/if}
         </div>
 
@@ -930,25 +929,23 @@
         <div class="mt-8 pt-6 border-t border-[var(--border)]">
           <div class="flex items-center gap-2 mb-3.5">
             <Lock size={15} class="text-[var(--text-muted)]" />
-            <h3 class="text-body-lg font-semibold text-[var(--text)]">Password</h3>
+            <h3 class="text-body-lg font-semibold text-[var(--text)]">{t("settings.password.title")}</h3>
           </div>
           <div class="max-w-[480px] flex flex-col gap-2.5">
             <input
-              type="password" bind:value={curPw} placeholder="Current password" autocomplete="current-password"
+              type="password" bind:value={curPw} placeholder={t("settings.password.current")} autocomplete="current-password"
               class="px-3 py-2 text-body rounded-md border border-[var(--border)] bg-[var(--bg)] text-[var(--text)]
                      outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
             />
             <input
-              type="password" bind:value={newPw} placeholder="New password (min 8 chars)" autocomplete="new-password"
+              type="password" bind:value={newPw} placeholder={t("settings.password.new")} autocomplete="new-password"
               class="px-3 py-2 text-body rounded-md border border-[var(--border)] bg-[var(--bg)] text-[var(--text)]
                      outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
               onkeydown={(e) => { if (e.key === 'Enter') submitPassword(); }}
             />
           </div>
           <p class="text-caption text-[var(--text-muted)] mt-2.5 max-w-[480px] leading-relaxed">
-            Changing your password signs you out on every other device and revokes this account's
-            API keys, OAuth sessions and connected tools. You stay signed in here. Every tool you
-            use with Lific has to be reconnected afterwards.
+            {t("settings.password.note")}
           </p>
           {#if pwError}
             <p class="text-caption text-[var(--error)] mt-2 flex items-center gap-1" role="alert"><AlertTriangle size={12} /> {pwError}</p>
@@ -960,11 +957,11 @@
               disabled={pwSaving || !curPw || !newPw}
               onclick={submitPassword}
             >
-              {pwSaving ? "Updating…" : "Change password"}
+              {pwSaving ? t("settings.password.saving") : t("settings.password.submit")}
             </button>
             {#if pwSuccess}
               <span class="inline-flex items-center gap-1 text-body-sm text-[var(--success)]" role="status">
-                <Check size={13} /> Password changed. Connected tools were revoked; reconnect them below.
+                <Check size={13} /> {t("settings.password.changed")}
               </span>
             {/if}
           </div>
@@ -972,9 +969,9 @@
 
         <!-- Sessions (sign out) — the very bottom of the page -->
         <div class="mt-8 pt-6 border-t border-[var(--border)]">
-          <h3 class="text-body-lg font-semibold text-[var(--text)] mb-1">Sessions</h3>
+          <h3 class="text-body-lg font-semibold text-[var(--text)] mb-1">{t("settings.sessions.title")}</h3>
           <p class="text-body-sm text-[var(--text-muted)] mb-3.5 leading-relaxed">
-            Sign out of this device, or revoke access everywhere at once.
+            {t("settings.sessions.intro")}
           </p>
           <div class="flex flex-wrap items-center gap-2">
             <button
@@ -984,7 +981,7 @@
               onclick={logoutNow}
             >
               <LogOut size={14} />
-              Sign out
+              {t("settings.sessions.signOut")}
             </button>
             <button
               class="inline-flex items-center gap-1.5 text-body-sm text-[var(--error)] border border-[var(--error)]
@@ -993,7 +990,7 @@
               aria-expanded={confirmingSignOutAll}
               onclick={() => { confirmingSignOutAll = !confirmingSignOutAll; signOutAllError = ""; }}
             >
-              Sign out everywhere and revoke access
+              {t("settings.sessions.signOutAll")}
             </button>
           </div>
           <!-- Inline confirm (never a browser confirm()), matching the
@@ -1006,9 +1003,7 @@
               role="alert"
             >
               <p class="text-caption text-[var(--text)] leading-relaxed">
-                This signs out every device, including this one, and revokes this account's API
-                keys, OAuth sessions and connected tools. Every tool you use with Lific has to be
-                reconnected afterwards. This cannot be undone.
+                {t("settings.sessions.confirm")}
               </p>
               {#if signOutAllError}
                 <p class="text-caption text-[var(--error)] flex items-center gap-1">
@@ -1022,7 +1017,7 @@
                   disabled={signingOut}
                   onclick={signOutAll}
                 >
-                  {signingOut ? "Revoking…" : "Yes, revoke everything"}
+                  {signingOut ? t("settings.sessions.revoking") : t("settings.sessions.confirmButton")}
                 </button>
                 <button
                   class="text-body-sm text-[var(--text-muted)] px-3 py-1.5 rounded-md
@@ -1030,7 +1025,7 @@
                   disabled={signingOut}
                   onclick={() => { confirmingSignOutAll = false; signOutAllError = ""; }}
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </button>
               </div>
             </div>
@@ -1051,7 +1046,7 @@
              max-h-[85dvh] overflow-y-auto"
       role="dialog"
       aria-modal="true"
-      aria-label={`Connect ${connectTool.name}`}
+      aria-label={t("settings.connect.title", { name: connectTool.name })}
       tabindex="-1"
       onclick={(e) => e.stopPropagation()}
     >
@@ -1061,10 +1056,10 @@
           <ToolIcon tool={connectTool.id} size={18} />
         </div>
         <div class="flex-1 min-w-0">
-          <h3 class="text-body-lg font-semibold text-[var(--text)] leading-tight">Connect {connectTool.name}</h3>
+          <h3 class="text-body-lg font-semibold text-[var(--text)] leading-tight">{t("settings.connect.title", { name: connectTool.name })}</h3>
           <p class="text-caption text-[var(--text-muted)] truncate">{connectTool.description}</p>
         </div>
-        <button class="size-7 grid place-items-center rounded-md text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-subtle)] transition-colors disabled:opacity-50" onclick={closeConnect} disabled={connecting || reauthBusy} aria-label="Close">
+        <button class="size-7 grid place-items-center rounded-md text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-subtle)] transition-colors disabled:opacity-50" onclick={closeConnect} disabled={connecting || reauthBusy} aria-label={t("common.close")}>
           <X size={16} />
         </button>
       </div>
@@ -1073,7 +1068,7 @@
         {#if connecting}
           <div class="flex items-center gap-3 py-8 justify-center text-[var(--text-muted)]">
             <div class="size-5 rounded-full border-2 border-[var(--border)] border-t-[var(--accent)] animate-spin"></div>
-            <span class="text-body">Minting credentials…</span>
+            <span class="text-body">{t("settings.connect.minting")}</span>
           </div>
         {:else if reauthNeeded}
           <!-- The session is fine; it is just older than the window a durable
@@ -1083,14 +1078,12 @@
             <div class="flex items-start gap-2.5 text-body text-[var(--text)] bg-[var(--bg-subtle)] px-3.5 py-3 rounded-md">
               <Lock size={16} class="shrink-0 mt-0.5 text-[var(--text-muted)]" />
               <p class="leading-relaxed">
-                Connecting {connectTool.name} gives it lasting access to your account, so confirm
-                your password to continue. You have been signed in for a while.
+                {t("settings.connect.reauth", { name: connectTool.name })}
               </p>
             </div>
             {#if autoReauthNote}
               <p class="text-caption text-[var(--text-muted)]" role="status">
-                Signing you in automatically did not work ({autoReauthNote}), so please confirm
-                your password.
+                {t("settings.connect.autoFailed", { reason: autoReauthNote })}
               </p>
             {/if}
             {#if connectError}
@@ -1100,7 +1093,7 @@
             {/if}
             <label class="block">
               <span class="block text-micro font-semibold uppercase tracking-widest text-[var(--text-faint)] mb-1.5">
-                Current password
+                {t("settings.password.current")}
               </span>
               <input
                 type="password"
@@ -1119,14 +1112,14 @@
                 disabled={reauthBusy || !reauthPassword}
                 onclick={submitReauthAndConnect}
               >
-                {reauthBusy ? "Verifying…" : `Confirm and connect ${connectTool.name}`}
+                {reauthBusy ? t("settings.connect.verifying") : t("settings.connect.confirm", { name: connectTool.name })}
               </button>
               <button
                 class="text-body-sm text-[var(--text-muted)] px-3 py-1.5 rounded-md hover:bg-[var(--bg-subtle)] transition-colors disabled:opacity-50"
                 disabled={reauthBusy}
                 onclick={closeConnect}
               >
-                Cancel
+                {t("common.cancel")}
               </button>
             </div>
           </div>
@@ -1146,7 +1139,7 @@
             <div class="flex items-center gap-2.5 mb-2">
               <span class="size-5 shrink-0 grid place-items-center rounded-full bg-[var(--btn-success)] text-[var(--btn-success-text)] text-micro font-bold tabular-nums">1</span>
               <h4 class="flex items-center gap-1.5 text-body font-semibold text-[var(--text)]">
-                <KeyRound size={14} class="text-[var(--text-muted)]" /> Copy your API key
+                <KeyRound size={14} class="text-[var(--text-muted)]" /> {t("settings.connect.step.key")}
               </h4>
             </div>
 
@@ -1159,8 +1152,8 @@
                 <button
                   class="shrink-0 size-7 grid place-items-center rounded-md text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-subtle)] transition-colors"
                   onclick={() => (keyRevealed = !keyRevealed)}
-                  title={keyRevealed ? "Hide key" : "Reveal key"}
-                  aria-label={keyRevealed ? "Hide key" : "Reveal key"}
+                  title={keyRevealed ? t("settings.connect.hideKey") : t("settings.connect.revealKey")}
+                  aria-label={keyRevealed ? t("settings.connect.hideKey") : t("settings.connect.revealKey")}
                 >
                   {#if keyRevealed}<EyeOff size={15} />{:else}<Eye size={15} />{/if}
                 </button>
@@ -1172,7 +1165,7 @@
                   : 'bg-[var(--btn-success)] text-[var(--btn-success-text)] hover:bg-[var(--btn-success-hover)]'}"
                 onclick={copyKey}
               >
-                {#if keyCopied}<Check size={14} /> Copied to clipboard{:else}<Copy size={14} /> Copy key{/if}
+                {#if keyCopied}<Check size={14} /> {t("settings.connect.keyCopied")}{:else}<Copy size={14} /> {t("settings.connect.copyKey")}{/if}
               </button>
             </div>
           </section>
@@ -1182,7 +1175,7 @@
             <div class="flex items-center gap-2.5 mb-2">
               <span class="size-5 shrink-0 grid place-items-center rounded-full bg-[var(--btn-success)] text-[var(--btn-success-text)] text-micro font-bold tabular-nums">2</span>
               <h4 class="flex items-center gap-1.5 text-body font-semibold text-[var(--text)]">
-                <FileCode2 size={14} class="text-[var(--text-muted)]" /> Add to your config
+                <FileCode2 size={14} class="text-[var(--text-muted)]" /> {t("settings.connect.step.config")}
               </h4>
             </div>
 
@@ -1206,12 +1199,12 @@
                 {/each}
               </div>
               {#if !pathsDiffer}
-                <span class="text-micro text-[var(--text-muted)] shrink-0">same everywhere</span>
+                <span class="text-micro text-[var(--text-muted)] shrink-0">{t("settings.connect.sameEverywhere")}</span>
               {/if}
             </div>
 
             <div class="flex items-center gap-2 mb-2.5">
-              <span class="text-micro font-semibold uppercase tracking-wide text-[var(--text-muted)] shrink-0">File</span>
+              <span class="text-micro font-semibold uppercase tracking-wide text-[var(--text-muted)] shrink-0">{t("settings.connect.file")}</span>
               <code class="flex-1 min-w-0 font-mono text-caption bg-[var(--bg-subtle)] px-2 py-1 rounded text-[var(--text)] overflow-x-auto whitespace-nowrap">{activePath}</code>
             </div>
             {/if}
@@ -1238,7 +1231,7 @@
                           : 'bg-[color-mix(in_oklab,var(--btn-success)_14%,var(--bg))] text-[var(--success)] hover:bg-[color-mix(in_oklab,var(--btn-success)_22%,var(--bg))]'}"
                         onclick={() => copyNote(i, step.command!)}
                       >
-                        {#if noteCopiedIdx === i}<Check size={13} /> Copied{:else}<Copy size={13} /> Copy command{/if}
+                        {#if noteCopiedIdx === i}<Check size={13} /> {t("common.copied")}{:else}<Copy size={13} /> {t("settings.connect.copyCommand")}{/if}
                       </button>
                     </div>
                   {/if}
@@ -1257,7 +1250,7 @@
                        {copied ? 'text-[var(--success)]' : 'text-[var(--text-muted)] hover:text-[var(--text)]'} transition-colors"
                 onclick={copyConfig}
               >
-                {#if copied}<Check size={12} /> Copied{:else}<Copy size={12} /> Copy{/if}
+                {#if copied}<Check size={12} /> {t("common.copied")}{:else}<Copy size={12} /> {t("common.copy")}{/if}
               </button>
             </div>
           </section>
@@ -1268,7 +1261,7 @@
               <div class="flex items-center gap-2.5 mb-2">
                 <span class="size-5 shrink-0 grid place-items-center rounded-full bg-[var(--btn-success)] text-[var(--btn-success-text)] text-micro font-bold tabular-nums">3</span>
                 <h4 class="flex items-center gap-1.5 text-body font-semibold text-[var(--text)]">
-                  <Terminal size={14} class="text-[var(--text-muted)]" /> Set the env var
+                  <Terminal size={14} class="text-[var(--text-muted)]" /> {t("settings.connect.step.env")}
                   <span class="font-normal text-[var(--text-muted)]">· {OS_LABELS[selectedOs]}</span>
                 </h4>
               </div>
@@ -1283,7 +1276,7 @@
                          {exportCopied ? 'text-[var(--success)]' : 'text-[var(--text-muted)] hover:text-[var(--text)]'} transition-colors"
                   onclick={copyExport}
                 >
-                  {#if exportCopied}<Check size={12} /> Copied{:else}<Copy size={12} /> Copy{/if}
+                  {#if exportCopied}<Check size={12} /> {t("common.copied")}{:else}<Copy size={12} /> {t("common.copy")}{/if}
                 </button>
               </div>
               <p class="text-micro text-[var(--text-muted)] mt-1.5 leading-relaxed">{persistHint}</p>
@@ -1291,7 +1284,7 @@
           {/if}
 
           <p class="text-micro text-[var(--text-muted)] text-center leading-relaxed">
-            The key is shown only this once, so copy it now. You can reconnect any time to mint a fresh one.
+            {t("settings.connect.shownOnce")}
           </p>
         {/if}
       </div>
@@ -1301,7 +1294,7 @@
           class="text-body-sm font-medium text-[var(--btn-success-text)] bg-[var(--btn-success)] px-4 py-1.5 rounded-md hover:bg-[var(--btn-success-hover)] transition-colors"
           onclick={closeConnect}
         >
-          Done
+          {t("common.done")}
         </button>
       </div>
     </div>

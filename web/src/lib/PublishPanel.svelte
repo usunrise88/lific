@@ -9,6 +9,7 @@
   import { copyToClipboard } from "./clipboard";
   import { toast } from "./toast/toast.svelte";
   import { Globe, Copy, ExternalLink, AlertTriangle } from "lucide-svelte";
+  import { t } from "./i18n";
 
   let {
     project,
@@ -38,7 +39,7 @@
     }
     acknowledged = false;
     onChange(res.data);
-    toast(next ? "Project published" : "Public access turned off", {
+    toast(next ? t("publish.toast.published") : t("publish.toast.unpublished"), {
       kind: next ? "success" : "info",
     });
   }
@@ -49,12 +50,12 @@
     <Globe size={15} class="mt-0.5 shrink-0 text-[var(--text-muted)]" />
     <div class="flex-1 min-w-0">
       <h2 class="text-body-sm font-semibold text-[var(--text)]">
-        Public view
+        {t("publish.title")}
       </h2>
       <p class="text-caption text-[var(--text-muted)] mt-0.5">
         {project.is_public
-          ? "This project's current issues and pages are readable by anyone, with no account."
-          : "Off. Only people with access to this project can see its issues and pages."}
+          ? t("publish.state.on")
+          : t("publish.state.off")}
       </p>
     </div>
     <span
@@ -64,14 +65,14 @@
         ? "border-color: color-mix(in oklab, var(--success) 45%, transparent); color: var(--success)"
         : "border-color: var(--border); color: var(--text-faint)"}
     >
-      {project.is_public ? "Public" : "Private"}
+      {project.is_public ? t("publish.badge.public") : t("publish.badge.private")}
     </span>
   </div>
 
   <div class="px-4 py-4 flex flex-col gap-4">
     {#if project.is_public}
       <div class="flex flex-col gap-2">
-        <p class="text-caption text-[var(--text-muted)]">Public address</p>
+        <p class="text-caption text-[var(--text-muted)]">{t("publish.address")}</p>
         <div class="flex items-center gap-2">
           <code
             class="flex-1 min-w-0 truncate text-body-sm font-mono px-2.5 py-1.5
@@ -82,8 +83,8 @@
             class="shrink-0 size-8 grid place-items-center rounded-md border
                    border-[var(--border)] text-[var(--text-muted)]
                    hover:text-[var(--text)] hover:bg-[var(--bg-subtle)] transition-colors"
-            aria-label="Copy public link"
-            onclick={() => copyToClipboard(url, "public link")}
+            aria-label={t("publish.copyAria")}
+            onclick={() => copyToClipboard(url, t("publish.copyLabel"))}
           >
             <Copy size={14} />
           </button>
@@ -91,7 +92,7 @@
             class="shrink-0 size-8 grid place-items-center rounded-md border
                    border-[var(--border)] text-[var(--text-muted)]
                    hover:text-[var(--text)] hover:bg-[var(--bg-subtle)] transition-colors"
-            aria-label="Open public view"
+            aria-label={t("publish.openAria")}
             href={url}
             target="_blank"
             rel="noopener noreferrer"
@@ -100,8 +101,7 @@
           </a>
         </div>
         <p class="text-caption text-[var(--text-faint)]">
-          The address stays the same. Turning public access off and on again
-          brings this exact link back.
+          {t("publish.stableAddress")}
         </p>
       </div>
 
@@ -114,11 +114,10 @@
           disabled={saving}
           onclick={() => setPublished(false)}
         >
-          {saving ? "Working…" : "Turn off public access"}
+          {saving ? t("publish.working") : t("publish.turnOff")}
         </button>
         <p class="text-caption text-[var(--text-faint)]">
-          Closes the link immediately. Copies people already downloaded stay
-          downloaded.
+          {t("publish.turnOffNote")}
         </p>
       </div>
     {:else}
@@ -130,28 +129,21 @@
         <AlertTriangle size={15} class="mt-0.5 shrink-0 text-[var(--warn)]" />
         <div class="text-body-sm text-[var(--text)] flex flex-col gap-2">
           <p class="font-medium">
-            Publishing makes existing content public, not just future content.
+            {t("publish.warn.title")}
           </p>
           <ul class="list-disc pl-4 flex flex-col gap-1 text-[var(--text-muted)]">
             <li>
-              Every current issue and page in this project, including full
-              descriptions, labels, modules and folders.
+              {t("publish.warn.content")}
             </li>
             <li>
-              Every comment on those issues and pages, shown with the
-              commenter's display name.
+              {t("publish.warn.comments")}
             </li>
             <li>
-              Every file attached to those issues, pages and comments,
-              downloadable by anyone.
+              {t("publish.warn.files")}
             </li>
           </ul>
           <p class="text-[var(--text-muted)]">
-            Plans, history, deleted items, usernames and your member list stay
-            private. Nobody needs an account or a password, and there is no
-            secret in the link, so search engines can find it. Turning this
-            back off closes the link but cannot recall anything already
-            downloaded.
+            {t("publish.warn.private")}
           </p>
         </div>
       </div>
@@ -163,8 +155,7 @@
           class="mt-0.5 accent-[var(--accent)]"
         />
         <span class="text-[var(--text-muted)]">
-          I've reviewed this project's issues, pages, comments and
-          attachments, and they can be public.
+          {t("publish.acknowledge")}
         </span>
       </label>
 
@@ -178,7 +169,7 @@
           disabled={!acknowledged || saving}
           onclick={() => setPublished(true)}
         >
-          {saving ? "Publishing…" : "Publish issues"}
+          {saving ? t("publish.publishing") : t("publish.publish")}
         </button>
       </div>
     {/if}

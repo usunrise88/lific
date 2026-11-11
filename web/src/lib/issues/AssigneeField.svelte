@@ -2,6 +2,7 @@
   // LIF-147: the issue sidebar's "Assignee" field. Shows who the issue is
   // for (any agent, any person, or named people); editors click it to open
   // the AssigneePicker. Viewers get the same text without the control.
+  import { t } from "../i18n";
   import { Bot, User } from "lucide-svelte";
   import type { Issue } from "../api";
   import AssigneePicker from "./AssigneePicker.svelte";
@@ -26,13 +27,13 @@
 </script>
 
 <div class="issue-meta-field" data-testid="issue-assignee" data-assignment={kind}>
-  <p class="issue-meta-field-label">Assignee</p>
+  <p class="issue-meta-field-label">{t("issues.assignee.label")}</p>
   <button
     type="button"
     class="flex flex-col items-stretch gap-1 text-body-sm rounded-md px-2 py-1 -mx-2
            transition-colors w-full text-left
            {editable ? 'hover:bg-[var(--bg-subtle)] cursor-pointer' : 'cursor-default'}"
-    title={editable ? "Change assignee" : undefined}
+    title={editable ? t("issues.assignee.change") : undefined}
     aria-haspopup={editable ? "dialog" : undefined}
     disabled={!editable}
     onclick={(e) => {
@@ -52,12 +53,12 @@
     {:else if kind === "human"}
       <span class="flex items-center gap-2">
         <User size={14} class="shrink-0 text-[var(--accent)]" />
-        <span class="text-[var(--text)]">Any person</span>
+        <span class="text-[var(--text)]">{t("issues.assignee.anyPerson")}</span>
       </span>
     {:else}
       <span class="flex items-center gap-2">
         <Bot size={14} class="shrink-0 text-[var(--text-faint)]" />
-        <span class="text-[var(--text-faint)]">Any agent</span>
+        <span class="text-[var(--text-faint)]">{t("issues.assignee.anyAgent")}</span>
       </span>
     {/if}
   </button>

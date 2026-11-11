@@ -33,6 +33,7 @@
   import { createComposerAttachments } from "./attachments/composer.svelte";
   import AttachComposer from "./attachments/AttachComposer.svelte";
   import AttachTrigger from "./attachments/AttachTrigger.svelte";
+  import { t } from "./i18n";
   import {
     canManageComment,
     commentKeyboardAction,
@@ -50,7 +51,7 @@
     currentUser = null,
     onUpdate,
     onDelete,
-    placeholder = "Write a comment\u2026",
+    placeholder = t("comments.placeholder"),
     // LIF-263: project the comments belong to. When set, the composer
     // fetches @mention candidates and offers autocomplete. Null (workspace
     // pages) disables mentions entirely.
@@ -514,12 +515,12 @@
 
 <section class="cmt">
   <header class="cmt__head">
-    <h2 class="cmt__title">Comments</h2>
+    <h2 class="cmt__title">{t("comments.title")}</h2>
     {#if comments.length > 0}
       <span
         class="cmt__count"
         title={showOlderControl
-          ? `${comments.length} newest shown, older comments not loaded yet`
+          ? t("comments.newestShown", { count: comments.length })
           : undefined}
       >{comments.length}{showOlderControl ? "+" : ""}</span>
     {/if}
@@ -534,7 +535,7 @@
         disabled={loadingOlder}
         aria-busy={loadingOlder}
       >
-        {loadingOlder ? "Loading older comments\u2026" : "Load older comments"}
+        {loadingOlder ? t("comments.older.loading") : t("comments.older.load")}
       </button>
     </div>
   {/if}
@@ -550,18 +551,18 @@
               <a href="#comment-{comment.id}" class="cmt__anchor">#{comment.id}</a>
               <span class="cmt__author">{author}</span>
               {#if comment.kind === "verification"}
-                <span class="cmt__kind" title="Evidence recorded when this issue was closed">Verification</span>
+                <span class="cmt__kind" title={t("comments.verification.title")}>{t("comments.verification.label")}</span>
               {/if}
               <span class="cmt__time"><TimeAgo date={comment.created_at} /></span>
               {#if commentWasEdited(comment)}
-                <span class="cmt__edited" title={`Edited ${comment.updated_at}`}>edited</span>
+                <span class="cmt__edited" title={t("comments.editedTitle", { time: comment.updated_at })}>{t("comments.edited")}</span>
               {/if}
               {#if canManageComment(comment, currentUser, onUpdate !== undefined && onDelete !== undefined)}
                 <div class="cmt__menu-wrap">
                   <button
                     type="button"
                     class="cmt__menu-button"
-                    aria-label={`Comment ${comment.id} actions`}
+                    aria-label={t("comments.menu.label", { id: comment.id })}
                     aria-haspopup="menu"
                     aria-expanded={menuId === comment.id}
                     onclick={() => {
@@ -571,18 +572,18 @@
                     onkeydown={onMenuKeydown}
                   ><MoreHorizontal size={16} /></button>
                   {#if menuId === comment.id}
-                    <div class="cmt__menu" role="menu" tabindex="-1" aria-label={`Comment ${comment.id} actions`} onkeydown={onMenuKeydown}>
+                    <div class="cmt__menu" role="menu" tabindex="-1" aria-label={t("comments.menu.label", { id: comment.id })} onkeydown={onMenuKeydown}>
                       {#if confirmDeleteId === comment.id}
-                        <p>Delete this comment?</p>
+                        <p>{t("comments.deleteConfirm")}</p>
                         <div class="cmt__menu-confirm">
-                          <button type="button" onclick={() => (confirmDeleteId = null)} disabled={deletingId === comment.id}>Cancel</button>
+                          <button type="button" onclick={() => (confirmDeleteId = null)} disabled={deletingId === comment.id}>{t("common.cancel")}</button>
                           <button type="button" class="cmt__delete" onclick={() => confirmDelete(comment.id)} disabled={deletingId === comment.id}>
-                            {deletingId === comment.id ? "Deleting…" : "Delete"}
+                            {deletingId === comment.id ? t("comments.deleting") : t("common.delete")}
                           </button>
                         </div>
                       {:else}
-                        <button type="button" role="menuitem" onclick={() => startEdit(comment)} disabled={updatingId !== null || deletingId !== null}>Edit</button>
-                        <button type="button" role="menuitem" onclick={() => (confirmDeleteId = comment.id)} disabled={updatingId !== null || deletingId !== null}>Delete</button>
+                        <button type="button" role="menuitem" onclick={() => startEdit(comment)} disabled={updatingId !== null || deletingId !== null}>{t("common.edit")}</button>
+                        <button type="button" role="menuitem" onclick={() => (confirmDeleteId = comment.id)} disabled={updatingId !== null || deletingId !== null}>{t("common.delete")}</button>
                       {/if}
                     </div>
                   {/if}
@@ -595,7 +596,7 @@
                   <div class="cmt__input-wrap">
                     <textarea bind:this={editTextareaEl} bind:value={editDraft} class="cmt__input" oninput={onInput} onkeydown={(e) => onKeydown(e, "edit")} onclick={updateMentionContext} onpaste={(e) => editAttach.handlePaste(e)}></textarea>
                     {#if mentionOpen && mentionMatches.length > 0}
-                      <ul class="mention-pop" role="listbox" aria-label="Mention a user">
+                      <ul class="mention-pop" role="listbox" aria-label={t("comments.mention.label")}>
                         {#each mentionMatches as cand, i (cand.user_id)}
                           <li><button type="button" role="option" aria-selected={i === mentionIndex} class="mention-pop__row" class:is-active={i === mentionIndex} onmousedown={(e) => { e.preventDefault(); selectMention(cand); }} onmouseenter={() => (mentionIndex = i)}><span class="mention-pop__avatar" aria-hidden="true">{initialsOf(cand.display_name || cand.username)}</span><span class="mention-pop__text"><span class="mention-pop__name">{cand.display_name || cand.username}</span><span class="mention-pop__user">@{cand.username}</span></span></button></li>
                         {/each}
@@ -619,9 +620,9 @@
     <div class="cmt__empty">
       <span class="cmt__empty-icon"><MessageSquare size={16} /></span>
       <div>
-        <p class="cmt__empty-title">No comments yet</p>
+        <p class="cmt__empty-title">{t("comments.empty.title")}</p>
         {#if editable}
-          <p class="cmt__empty-sub">Start the conversation below.</p>
+          <p class="cmt__empty-sub">{t("comments.empty.sub")}</p>
         {/if}
       </div>
     </div>
@@ -644,7 +645,7 @@
         ></textarea>
 
         {#if mentionOpen && mentionMatches.length > 0}
-          <ul class="mention-pop" role="listbox" aria-label="Mention a user">
+          <ul class="mention-pop" role="listbox" aria-label={t("comments.mention.label")}>
             {#each mentionMatches as cand, i (cand.user_id)}
               <li>
                 <button
@@ -671,7 +672,7 @@
             {/each}
           </ul>
         {:else if mentionOpen && candidates.length > 0}
-          <div class="mention-pop mention-pop--empty">No people match</div>
+          <div class="mention-pop mention-pop--empty">{t("comments.mention.noMatch")}</div>
         {/if}
         </div>
       </AttachComposer>
@@ -688,7 +689,7 @@
         busy={attach.uploads.busy}
         onFiles={(files, source) => attach.enqueue(files, source)}
       />
-      <span class="cmt__hint">Markdown · drag, paste or attach files</span>
+      <span class="cmt__hint">{t("comments.hint")}</span>
     </div>
     <div class="cmt__actions">
       <span class="cmt__kbd" aria-hidden="true">
@@ -696,7 +697,7 @@
         <kbd><CornerDownLeft size={11} /></kbd>
       </span>
       <button class="cmt__send" disabled={!canSend} onclick={submit}>
-        {submitting ? "Posting\u2026" : "Comment"}
+        {submitting ? t("comments.posting") : t("comments.submit")}
       </button>
     </div>
   </div>
@@ -709,7 +710,7 @@
         busy={editAttach.uploads.busy}
         onFiles={(files, source) => editAttach.enqueue(files, source)}
       />
-      <span class="cmt__hint">Markdown · drag, paste or attach files</span>
+      <span class="cmt__hint">{t("comments.hint")}</span>
     </div>
     <div class="cmt__actions">
       <span class="cmt__kbd" aria-hidden="true">
@@ -722,7 +723,7 @@
         onclick={cancelEdit}
         disabled={updatingId === editingId}
       >
-        Cancel
+        {t("common.cancel")}
       </button>
       <button
         type="button"
@@ -730,7 +731,7 @@
         onclick={saveEdit}
         disabled={editDraft.trim() === "" || editAttach.uploads.pending || updatingId === editingId}
       >
-        {updatingId === editingId ? "Saving…" : "Save"}
+        {updatingId === editingId ? t("comments.saving") : t("common.save")}
       </button>
     </div>
   </div>

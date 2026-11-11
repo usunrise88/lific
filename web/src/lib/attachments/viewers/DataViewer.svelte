@@ -17,6 +17,7 @@
   import { fetchAttachmentText } from "../../api";
   import { detectDelimiter, parseDelimited, sortRows, type ParsedTable } from "./csv";
   import { MAX_INLINE_BYTES } from "./kind";
+  import { t } from "../../i18n";
 
   let {
     id,
@@ -49,7 +50,7 @@
       return;
     }
     if (res.text.length > MAX_INLINE_BYTES) {
-      loadError = "This file is too large to preview inline.";
+      loadError = t("viewers.data.tooLarge");
       return;
     }
     text = res.text;
@@ -78,17 +79,19 @@
       try {
         return { ok: true, value: JSON.parse(text) };
       } catch (e) {
-        return { ok: false, error: e instanceof Error ? e.message : "Invalid JSON" };
+        return { ok: false, error: e instanceof Error ? e.message : t("viewers.data.invalidJsonError") };
       }
     },
   );
 
   const meta = $derived.by(() => {
     if (mode === "table" && table) {
-      const rows = table.totalRows;
-      return `${table.columnCount} ${table.columnCount === 1 ? "column" : "columns"}, ${rows} ${rows === 1 ? "row" : "rows"}`;
+      return t("viewers.data.meta", {
+        columns: t("viewers.data.columns", { count: table.columnCount }),
+        rows: t("viewers.data.rows", { count: table.totalRows }),
+      });
     }
-    if (mode === "json" && json) return json.ok ? "JSON" : "invalid JSON";
+    if (mode === "json" && json) return json.ok ? "JSON" : t("viewers.data.invalidJson");
     return null;
   });
 
@@ -117,24 +120,25 @@
           if (expanded) void load();
         }}
       >
-        {expanded ? "Collapse" : "Expand"}
+        {expanded ? t("viewers.collapse") : t("viewers.expand")}
       </button>
     {/snippet}
 
     {#if loadError}
       <p class="dt__note">{loadError}</p>
     {:else if text === null}
-      <p class="dt__note">{loading ? "Loading preview..." : "Preview not loaded yet."}</p>
+      <p class="dt__note">{loading ? t("viewers.data.loading") : t("viewers.notLoaded")}</p>
     {:else if !expanded}
       <p class="dt__note">
         {#if mode === "table" && table}
-          {table.columnCount}
-          {table.columnCount === 1 ? "column" : "columns"} and {table.totalRows}
-          {table.totalRows === 1 ? "row" : "rows"}. Expand to browse.
+          {t("viewers.data.collapsed", {
+            columns: t("viewers.data.columns", { count: table.columnCount }),
+            rows: t("viewers.data.rows", { count: table.totalRows }),
+          })}
         {:else if mode === "json" && json && !json.ok}
-          This file is not valid JSON: {json.error}
+          {t("viewers.data.notJson", { error: json.error })}
         {:else}
-          Expand to browse the contents.
+          {t("viewers.data.expandHint")}
         {/if}
       </p>
     {:else if mode === "table" && table}
@@ -145,7 +149,7 @@
               {#each table.headers as header, i (i)}
                 <th scope="col">
                   <button type="button" class="dt__th" onclick={() => toggleSort(i)}>
-                    <span>{header || `Column ${i + 1}`}</span>
+                    <span>{header || t("viewers.data.column", { n: i + 1 })}</span>
                     {#if sortColumn === i}
                       {#if sortDirection === "asc"}<ArrowUp size={11} />{:else}<ArrowDown
                           size={11}
@@ -169,8 +173,7 @@
       </div>
       {#if table.truncated}
         <p class="dt__foot">
-          Showing the first {sortedRows.length} of {table.totalRows} rows. Download the file for the
-          rest.
+          {t("viewers.data.truncated", { shown: sortedRows.length, count: table.totalRows })}
         </p>
       {/if}
     {:else if mode === "json" && json}
@@ -179,7 +182,7 @@
           <JsonNode value={json.value} open={true} />
         </div>
       {:else}
-        <p class="dt__note">This file is not valid JSON: {json.error}</p>
+        <p class="dt__note">{t("viewers.data.notJson", { error: json.error })}</p>
       {/if}
     {/if}
   </ViewerFrame>

@@ -8,6 +8,7 @@
 
   import type { WeekPoint } from "../api";
   import { smoothPath, smoothAreaPath, niceTicks, type Point } from "./curve";
+  import { t, locale } from "../i18n";
 
   let { created, closed }: { created: WeekPoint[]; closed: WeekPoint[] } = $props();
 
@@ -46,7 +47,7 @@
   function weekLabel(iso: string): string {
     if (!iso) return "";
     const d = new Date(`${iso}T00:00:00Z`);
-    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+    return d.toLocaleDateString(locale(), { month: "short", day: "numeric", timeZone: "UTC" });
   }
 
   // First / (up to 3 interior) / last, so the axis stays legible from a
@@ -69,21 +70,21 @@
     viewBox="0 0 {VB_W} {VB_H}"
     class="w-full h-auto block"
     role="img"
-    aria-label="Issues created vs closed per week"
+    aria-label={t("insights.trend.aria")}
   >
     <!-- gridlines + y labels -->
-    {#each ticks as t (t)}
+    {#each ticks as tick (tick)}
       <line
         x1={PAD_L}
         x2={VB_W - PAD_R}
-        y1={yAt(t)}
-        y2={yAt(t)}
+        y1={yAt(tick)}
+        y2={yAt(tick)}
         stroke="var(--border)"
         stroke-width="1"
-        stroke-dasharray={t === 0 ? undefined : "2 3"}
+        stroke-dasharray={tick === 0 ? undefined : "2 3"}
       />
-      <text x={PAD_L - 6} y={yAt(t) + 3} text-anchor="end" class="fill-[var(--text-faint)]" font-size="9">
-        {t}
+      <text x={PAD_L - 6} y={yAt(tick) + 3} text-anchor="end" class="fill-[var(--text-faint)]" font-size="9">
+        {tick}
       </text>
     {/each}
 
@@ -159,10 +160,10 @@
       >
         <p class="text-caption font-medium text-[var(--text)] mb-0.5">{weekLabel(pt.week_start)}</p>
         <p class="text-micro text-[var(--accent)] m-0">
-          Created <span class="tabular-nums font-semibold">{pt.count}</span>
+          {t("insights.trend.created")} <span class="tabular-nums font-semibold">{pt.count}</span>
         </p>
         <p class="text-micro text-[var(--success)] m-0">
-          Closed <span class="tabular-nums font-semibold">{cpt?.count ?? 0}</span>
+          {t("insights.trend.closed")} <span class="tabular-nums font-semibold">{cpt?.count ?? 0}</span>
         </p>
       </div>
     {/if}
@@ -173,10 +174,10 @@
 <div class="flex items-center gap-4 mt-1 px-1">
   <span class="flex items-center gap-1.5 text-caption text-[var(--text-muted)]">
     <span class="size-2 rounded-full shrink-0" style="background: var(--accent)"></span>
-    Created
+    {t("insights.trend.created")}
   </span>
   <span class="flex items-center gap-1.5 text-caption text-[var(--text-muted)]">
     <span class="size-2 rounded-full shrink-0" style="background: var(--success)"></span>
-    Closed
+    {t("insights.trend.closed")}
   </span>
 </div>

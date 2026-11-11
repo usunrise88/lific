@@ -15,6 +15,7 @@
   import Markdown from "../Markdown.svelte";
   import Skeleton from "../Skeleton.svelte";
   import { motionReduced } from "../theme";
+  import { t } from "../i18n";
 
   let { navigate }: { navigate: (path: string) => void } = $props();
 
@@ -75,10 +76,10 @@
   }
 
   const STATUS_LABEL: Record<string, string> = {
-    draft: "Draft",
-    active: "Active",
-    complete: "Complete",
-    archived: "Archived",
+    draft: t("pages.status.draft"),
+    active: t("pages.status.active"),
+    complete: t("pages.status.complete"),
+    archived: t("pages.status.archived"),
   };
 </script>
 
@@ -104,7 +105,7 @@
     out:fly={panelOutParams()}
     role="dialog"
     aria-modal="true"
-    aria-label={page ? `${page.title} preview` : "Page preview"}
+    aria-label={page ? t("pages.peek.titled", { title: page.title }) : t("pages.peek.label")}
   >
     <!-- Grab zone: pill + header — drag down here to dismiss on mobile. -->
     <div
@@ -136,7 +137,7 @@
         class="size-7 flex items-center justify-center rounded-md
                text-[var(--text-faint)] hover:text-[var(--text)]
                hover:bg-[var(--bg-subtle)] transition-colors"
-        aria-label="Close preview"
+        aria-label={t("pages.peek.close")}
         onclick={closePagePeek}
       >
         <X size={16} />
@@ -157,7 +158,7 @@
         </div>
       {:else if error}
         <div class="flex flex-col items-center gap-2 py-16 text-center">
-          <p class="text-body-sm text-[var(--text-muted)]">Couldn't load this page.</p>
+          <p class="text-body-sm text-[var(--text-muted)]">{t("pages.peek.loadError")}</p>
           <p class="text-caption text-[var(--text-faint)]">{error}</p>
         </div>
       {:else if page}
@@ -180,7 +181,7 @@
         {#if page.content.trim()}
           <Markdown content={page.content} />
         {:else}
-          <p class="text-body-sm text-[var(--text-faint)] italic">This page is empty.</p>
+          <p class="text-body-sm text-[var(--text-faint)] italic">{t("pages.peek.empty")}</p>
         {/if}
       {/if}
     </div>
@@ -192,7 +193,7 @@
                bg-[var(--btn-success)] hover:bg-[var(--btn-success-hover)] transition-colors"
         onclick={openFull}
       >
-        Open full page
+        {t("pages.peek.openFull")}
         <ArrowUpRight size={14} />
       </button>
     </div>

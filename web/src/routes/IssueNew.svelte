@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { t } from "../lib/i18n";
+  import { priorityLabel, statusLabel } from "../lib/issues/grouping";
   import {
     listProjects,
     listModules,
@@ -108,19 +110,19 @@
   onDestroy(() => attach.destroy());
 
   const STATUSES = [
-    { value: "backlog", label: "Backlog" },
-    { value: "todo", label: "Todo" },
-    { value: "active", label: "Active" },
-    { value: "done", label: "Done" },
-    { value: "cancelled", label: "Cancelled" },
+    { value: "backlog", label: t("common.status.backlog") },
+    { value: "todo", label: t("common.status.todo") },
+    { value: "active", label: t("common.status.active") },
+    { value: "done", label: t("common.status.done") },
+    { value: "cancelled", label: t("common.status.cancelled") },
   ];
 
   const PRIORITIES = [
-    { value: "urgent", label: "Urgent" },
-    { value: "high", label: "High" },
-    { value: "medium", label: "Medium" },
-    { value: "low", label: "Low" },
-    { value: "none", label: "None" },
+    { value: "urgent", label: t("common.priority.urgent") },
+    { value: "high", label: t("common.priority.high") },
+    { value: "medium", label: t("common.priority.medium") },
+    { value: "low", label: t("common.priority.low") },
+    { value: "none", label: t("common.priority.none") },
   ];
 
   $effect(() => {
@@ -138,7 +140,7 @@
     }
     const found = projRes.data.find((p: Project) => p.identifier === identifier);
     if (!found) {
-      error = `Project ${identifier} not found`;
+      error = t("issueNew.projectNotFound", { project: identifier });
       loading = false;
       return;
     }
@@ -209,8 +211,8 @@
   }
 
   function moduleName(id: number | null): string {
-    if (!id) return "None";
-    return modules.find((m) => m.id === id)?.name ?? "Unknown";
+    if (!id) return t("common.none");
+    return modules.find((m) => m.id === id)?.name ?? t("issueNew.unknownModule");
   }
 
   function toggleLabel(name: string) {
@@ -246,31 +248,31 @@
     ></div>
   </div>
 {:else if !project}
-  <ErrorState title="Couldn't load this project" message={error}>
+  <ErrorState title={t("issueNew.loadFailed")} message={error}>
     <button
       class="text-body-sm font-medium text-[var(--btn-success-text)] bg-[var(--btn-success)] px-3 py-1.5 rounded-md hover:bg-[var(--btn-success-hover)] transition-colors"
       onclick={() => loadProject(projectIdentifier)}
     >
-      Try again
+      {t("common.retry")}
     </button>
     <button
       class="text-body-sm text-[var(--text-muted)] border border-[var(--border)] px-3 py-1.5 rounded-md hover:bg-[var(--bg-subtle)] transition-colors"
       onclick={() => navigate(`/${projectIdentifier}/issues`)}
     >
-      Back to issues
+      {t("issueNew.backToIssues")}
     </button>
   </ErrorState>
 {:else if !canEdit}
   <!-- LIF-234: viewer landed on the create form (stale link / manual URL). -->
   <ErrorState
-    title="You can't create issues here"
-    message="You're a viewer on this project. Only maintainers and leads can create issues. You can still read and comment."
+    title={t("issueNew.viewer.title")}
+    message={t("issueNew.viewer.body")}
   >
     <button
       class="text-body-sm font-medium text-[var(--btn-success-text)] bg-[var(--btn-success)] px-3 py-1.5 rounded-md hover:bg-[var(--btn-success-hover)] transition-colors"
       onclick={() => navigate(`/${projectIdentifier}/issues`)}
     >
-      Back to issues
+      {t("issueNew.backToIssues")}
     </button>
   </ErrorState>
 {:else}
@@ -291,7 +293,7 @@
                    bg-transparent border-none outline-none
                    text-[var(--text)] py-1 mb-4
                    placeholder:text-[var(--text-faint)]"
-            placeholder="Issue title"
+            placeholder={t("issueNew.titlePlaceholder")}
             autofocus
           />
 
@@ -306,7 +308,7 @@
                 class="w-full text-body leading-[1.7] text-[var(--text)]
                        bg-transparent border-none outline-none resize-none
                        p-0 m-0 font-[var(--font-body)] min-h-[120px]"
-                placeholder="Add a description... (markdown supported)"
+                placeholder={t("issueNew.descriptionPlaceholder")}
                 oninput={autoResize}
                 onkeydown={onDescriptionKeydown}
                 onpaste={(e) => attach.handlePaste(e)}
@@ -324,7 +326,7 @@
           <div class="issue-meta-aside">
             <!-- Status -->
             <div class="issue-meta-field">
-              {@render sidebarField("Status")}
+              {@render sidebarField(t("issues.field.status"))}
               <div class="relative">
                 <button
                   class="flex items-center gap-2 text-body-sm rounded-md
@@ -339,7 +341,7 @@
                   }}
                 >
                   <StatusIcon {status} size={14} />
-                  <span class="capitalize text-[var(--text)]">{status}</span>
+                  <span class="text-[var(--text)]">{statusLabel(status)}</span>
                 </button>
                 {#if statusOpen}
                   <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
@@ -369,7 +371,7 @@
 
             <!-- Priority -->
             <div class="issue-meta-field">
-              {@render sidebarField("Priority")}
+              {@render sidebarField(t("issues.field.priority"))}
               <div class="relative">
                 <button
                   class="flex items-center gap-2 text-body-sm rounded-md
@@ -385,7 +387,7 @@
                 >
                   <PriorityIcon {priority} />
                   <span class={priorityTextClass(priority)}>
-                    {priority === "none" ? "No priority" : priority.charAt(0).toUpperCase() + priority.slice(1)}
+                    {priority === "none" ? t("issues.peek.noPriority") : priorityLabel(priority)}
                   </span>
                 </button>
                 {#if priorityOpen}
@@ -417,7 +419,7 @@
             <!-- Module -->
             {#if modules.length > 0}
               <div class="issue-meta-field">
-                {@render sidebarField("Module")}
+                {@render sidebarField(t("issues.field.module"))}
                 <div class="relative">
                   <button
                     class="flex items-center gap-2 text-body-sm rounded-md
@@ -449,7 +451,7 @@
                                transition-colors"
                         onclick={() => { moduleId = null; moduleOpen = false; }}
                       >
-                        None
+                        {t("common.none")}
                       </button>
                       {#each modules as mod}
                         <button
@@ -473,7 +475,7 @@
                  shown — inline create lets you mint the project's first
                  label without leaving the new-issue form. -->
             <div class="issue-meta-field">
-              {@render sidebarField("Labels")}
+              {@render sidebarField(t("issueNew.labels"))}
               <LabelEditor
                 attached={selectedLabels}
                 all={labels}
@@ -504,11 +506,11 @@
         onclick={discard}
       >
         <ArrowLeft size={14} />
-        Issues
+        {t("issues.sidebar.issues")}
       </button>
       <span class="text-[var(--text-faint)]">/</span>
       <span class="text-body-sm text-[var(--text-muted)]">
-        New issue
+        {t("issues.topbar.newIssue")}
       </span>
     </div>
 
@@ -521,7 +523,7 @@
                rounded-md hover:bg-[var(--bg-subtle)] transition-colors"
         onclick={discard}
       >
-        Discard
+        {t("issueNew.discard")}
       </button>
       <button
         class="text-body-sm font-medium text-[var(--accent-text)]
@@ -531,7 +533,7 @@
         disabled={!canSave || saving}
         onclick={save}
       >
-        {saving ? "Creating..." : "Create issue"}
+        {saving ? t("issueNew.creating") : t("issueNew.create")}
       </button>
     </div>
   </div>
@@ -546,7 +548,7 @@
       onFiles={(files, source) => attach.enqueue(files, source)}
     />
     <span class="text-caption text-[var(--text-faint)]">
-      Markdown · drag, paste or attach files
+      {t("issueNew.descriptionHint")}
     </span>
   </div>
 {/snippet}

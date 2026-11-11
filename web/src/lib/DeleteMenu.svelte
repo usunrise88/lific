@@ -10,12 +10,13 @@
   // needed) or `false` on failure (we reset so the user can retry).
 
   import { Ellipsis, Trash2 } from "lucide-svelte";
+  import { t } from "./i18n";
 
   let {
     noun,
     label,
     onDelete,
-    confirmBody = "This can't be undone.",
+    confirmBody = t("app.deleteMenu.body"),
     align = "right",
   }: {
     /** Object kind shown in the menu item, e.g. "issue" / "page". */
@@ -54,7 +55,7 @@
     class="touch-target size-7 flex items-center justify-center rounded-md
            text-[var(--text-faint)] hover:text-[var(--text)]
            hover:bg-[var(--bg-subtle)] transition-colors"
-    title="More actions"
+    title={t("app.moreActions")}
     onclick={(e) => {
       e.stopPropagation();
       if (confirming) { confirming = false; menuOpen = false; }
@@ -79,7 +80,7 @@
         onclick={() => { confirming = true; }}
       >
         <Trash2 size={14} />
-        Delete {noun}
+        {t("app.deleteMenu.item", { noun })}
       </button>
     </div>
   {/if}
@@ -93,7 +94,7 @@
       onclick={(e) => e.stopPropagation()}
     >
       <p class="text-body-sm text-[var(--text)] mb-1 font-medium">
-        Delete {label}?
+        {t("app.deleteMenu.confirm", { label })}
       </p>
       <p class="text-caption text-[var(--text-muted)] mb-3">
         {confirmBody}
@@ -107,14 +108,14 @@
           disabled={deleting}
           onclick={run}
         >
-          {deleting ? "Deleting..." : "Delete"}
+          {deleting ? t("app.deleteMenu.deleting") : t("common.delete")}
         </button>
         <button
           class="text-body-sm text-[var(--text-muted)] px-3 py-1.5
                  rounded-md hover:bg-[var(--bg-subtle)] transition-colors"
           onclick={() => { confirming = false; menuOpen = false; }}
         >
-          Cancel
+          {t("common.cancel")}
         </button>
       </div>
     </div>

@@ -3,6 +3,7 @@
   import { contextMenuState, closeContextMenu, type ContextMenuItem } from "./contextMenuState.svelte";
   import { motionReduced } from "./theme";
   import { fade } from "svelte/transition";
+  import { t } from "./i18n";
 
   let menuEl = $state<HTMLDivElement | null>(null);
   let highlighted = $state(-1);
@@ -109,7 +110,7 @@
     data-context-menu
     role="menu"
     tabindex="-1"
-    aria-label="Context menu"
+    aria-label={t("app.contextMenu.label")}
     class="fixed z-[120] min-w-[180px] max-w-[calc(100vw-16px)] max-h-[calc(100dvh-16px)] overflow-y-auto py-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] shadow-lg outline-none"
     style="top: {menuPos.top}px; left: {menuPos.left}px;"
     transition:fade={{ duration: motionReduced() ? 0 : 100 }}
