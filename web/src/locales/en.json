@@ -2319,5 +2319,110 @@
       "one": "Top {count} matches — narrow the query for fewer results",
       "other": "Top {count} matches — narrow the query for fewer results"
     }
+  },
+  "flow": {
+    "filter.all": "All projects",
+    "filter.projects": "Projects",
+    "filter.period": "Period",
+    "filter.days": {
+      "one": "{count} day",
+      "other": "{count} days"
+    },
+    "filter.search": "Find a project",
+    "filter.noProjects": "No matching projects",
+    "system": "System",
+    "vsPrevious": {
+      "one": "Compared with the previous day",
+      "other": "Compared with the previous {count} days"
+    },
+    "closure.title": "Closure rate",
+    "closure.subtitle": {
+      "one": "Issues closed today, by who closed them",
+      "other": "Issues closed in the last {count} days, by who closed them"
+    },
+    "closure.grain": "Group by",
+    "closure.day": "Days",
+    "closure.week": "Weeks",
+    "closure.empty": "Nothing was opened or closed in this period.",
+    "closure.aria": "Issues closed per period, stacked by who closed them",
+    "closure.noneClosed": "Nothing closed",
+    "closure.cancelled": "Cancelled",
+    "closure.reopened": "Reopened",
+    "closure.created": "Created",
+    "kpi.closed": "Closed",
+    "kpi.perDay": "{value} a day",
+    "kpi.created": "Created",
+    "kpi.netUp": {
+      "one": "Open work grew by {count}",
+      "other": "Open work grew by {count}"
+    },
+    "kpi.netDown": {
+      "one": "Open work shrank by {count}",
+      "other": "Open work shrank by {count}"
+    },
+    "kpi.netFlat": "Open work held steady",
+    "kpi.rework": "Rework",
+    "kpi.reopened": {
+      "one": "{count} close reopened",
+      "other": "{count} closes reopened"
+    },
+    "kpi.evidence": "Evidence",
+    "kpi.evidenceSub": "Closed with a comment from the closer",
+    "kpi.lead": "Lead time",
+    "kpi.cycle": "Cycle time",
+    "kpi.p85": "85% within {value}",
+    "kpi.people": "With people",
+    "kpi.peopleSub": {
+      "one": "of the time; {count} issue waited",
+      "other": "of the time; {count} issues waited"
+    },
+    "kpi.skipped": "Skipped “In progress”",
+    "kpi.skippedSub": {
+      "one": "{count} issue went straight to done",
+      "other": "{count} issues went straight to done"
+    },
+    "table.actor": "Who",
+    "table.closed": "Closed",
+    "table.perDay": "Per day",
+    "table.rework": "Rework",
+    "table.reworkHint": "Share of their closes that were reopened",
+    "table.evidence": "Evidence",
+    "table.cycle": "Cycle",
+    "table.cycleHint": "Median time from In progress to done",
+    "table.active": "In progress",
+    "stages.title": "Time through the process",
+    "stages.subtitle": {
+      "one": "{count} issue closed in this period, from creation to done",
+      "other": "{count} issues closed in this period, from creation to done"
+    },
+    "stages.empty": "No closed issues with a status history in this period.",
+    "stages.share": "Where the time went",
+    "stages.shareAria": "Share of all lead time spent in each status",
+    "stages.peopleShare": "{value} of it with people",
+    "stages.legend": "Bar: median time in the status; faint tail: 85th percentile. The number is how many issues passed through it.",
+    "stages.distribution": "Lead time",
+    "stages.distributionAria": "How many issues closed within each lead time",
+    "stage.backlog": "Backlog",
+    "stage.todo": "Todo",
+    "stage.active": "In progress",
+    "stage.people": "With people",
+    "span.1h": "<1h",
+    "span.4h": "1–4h",
+    "span.1d": "4h–1d",
+    "span.3d": "1–3d",
+    "span.1w": "3–7d",
+    "span.4w": "1–4w",
+    "span.more": ">4w",
+    "list.active.title": "In progress now",
+    "list.active.hint": "Longest in progress first; amber means no activity for a day",
+    "list.active.empty": "Nothing is in progress.",
+    "list.active.stale": "No activity for over a day: the agent may have stopped",
+    "list.waiting.title": "Waiting on people",
+    "list.waiting.hint": "Marked for a person or waiting on one",
+    "list.waiting.median": "Waiting {value} at the median",
+    "list.waiting.empty": "Nobody is holding anything up.",
+    "list.slowest.title": "Slowest closes",
+    "list.slowest.hint": "Longest lead times in this period",
+    "list.slowest.empty": "Nothing closed yet."
   }
 }

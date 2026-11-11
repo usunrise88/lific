@@ -2319,5 +2319,110 @@
       "one": "Melhor correspondência ({count}) — refine a pesquisa para menos resultados",
       "other": "Melhores {count} correspondências — refine a pesquisa para menos resultados"
     }
+  },
+  "flow": {
+    "filter.all": "Todos os projetos",
+    "filter.projects": "Projetos",
+    "filter.period": "Período",
+    "filter.days": {
+      "one": "{count} dia",
+      "other": "{count} dias"
+    },
+    "filter.search": "Procurar um projeto",
+    "filter.noProjects": "Nenhum projeto corresponde",
+    "system": "Sistema",
+    "vsPrevious": {
+      "one": "Em comparação com o dia anterior",
+      "other": "Em comparação com os {count} dias anteriores"
+    },
+    "closure.title": "Ritmo de fecho",
+    "closure.subtitle": {
+      "one": "Tarefas fechadas hoje, por quem as fechou",
+      "other": "Tarefas fechadas nos últimos {count} dias, por quem as fechou"
+    },
+    "closure.grain": "Agrupar por",
+    "closure.day": "Dias",
+    "closure.week": "Semanas",
+    "closure.empty": "Nada foi aberto nem fechado neste período.",
+    "closure.aria": "Tarefas fechadas por período, empilhadas por quem as fechou",
+    "closure.noneClosed": "Nenhum fecho",
+    "closure.cancelled": "Canceladas",
+    "closure.reopened": "Reabertas",
+    "closure.created": "Criadas",
+    "kpi.closed": "Fechadas",
+    "kpi.perDay": "{value} por dia",
+    "kpi.created": "Criadas",
+    "kpi.netUp": {
+      "one": "O trabalho em aberto aumentou {count}",
+      "other": "O trabalho em aberto aumentou {count}"
+    },
+    "kpi.netDown": {
+      "one": "O trabalho em aberto diminuiu {count}",
+      "other": "O trabalho em aberto diminuiu {count}"
+    },
+    "kpi.netFlat": "O trabalho em aberto manteve-se estável",
+    "kpi.rework": "Retrabalho",
+    "kpi.reopened": {
+      "one": "{count} reabertura",
+      "other": "{count} reaberturas"
+    },
+    "kpi.evidence": "Provas",
+    "kpi.evidenceSub": "Fechadas com um comentário de quem as fechou",
+    "kpi.lead": "Tempo de entrega",
+    "kpi.cycle": "Tempo de ciclo",
+    "kpi.p85": "85% até {value}",
+    "kpi.people": "Com pessoas",
+    "kpi.peopleSub": {
+      "one": "do tempo; {count} tarefa esperou",
+      "other": "do tempo; {count} tarefas esperaram"
+    },
+    "kpi.skipped": "Sem passar por “Em curso”",
+    "kpi.skippedSub": {
+      "one": "{count} tarefa passou diretamente a “Concluído”",
+      "other": "{count} tarefas passaram diretamente a “Concluído”"
+    },
+    "table.actor": "Quem",
+    "table.closed": "Fechadas",
+    "table.perDay": "Por dia",
+    "table.rework": "Retrabalho",
+    "table.reworkHint": "Percentagem dos seus fechos que foram reabertos",
+    "table.evidence": "Provas",
+    "table.cycle": "Ciclo",
+    "table.cycleHint": "Tempo mediano de “Em curso” a “Concluído”",
+    "table.active": "Em curso",
+    "stages.title": "Tempo ao longo do processo",
+    "stages.subtitle": {
+      "one": "{count} tarefa fechada neste período, da criação à conclusão",
+      "other": "{count} tarefas fechadas neste período, da criação à conclusão"
+    },
+    "stages.empty": "Nenhuma tarefa fechada com histórico de estados neste período.",
+    "stages.share": "Para onde foi o tempo",
+    "stages.shareAria": "Parte do tempo de entrega total passada em cada estado",
+    "stages.peopleShare": "dos quais {value} com pessoas",
+    "stages.legend": "Barra: tempo mediano no estado; cauda clara: percentil 85. O número indica quantas tarefas passaram por ele.",
+    "stages.distribution": "Tempo de entrega",
+    "stages.distributionAria": "Quantas tarefas foram fechadas em cada intervalo de tempo de entrega",
+    "stage.backlog": "Backlog",
+    "stage.todo": "Por fazer",
+    "stage.active": "Em curso",
+    "stage.people": "Com pessoas",
+    "span.1h": "<1 h",
+    "span.4h": "1–4 h",
+    "span.1d": "4 h–1 d",
+    "span.3d": "1–3 d",
+    "span.1w": "3–7 d",
+    "span.4w": "1–4 sem",
+    "span.more": ">4 sem",
+    "list.active.title": "Em curso agora",
+    "list.active.hint": "Primeiro as que estão há mais tempo em curso; âmbar indica um dia sem atividade",
+    "list.active.empty": "Nada está em curso.",
+    "list.active.stale": "Sem atividade há mais de um dia: o agente pode ter parado",
+    "list.waiting.title": "À espera de pessoas",
+    "list.waiting.hint": "Marcadas para uma pessoa ou à espera de uma",
+    "list.waiting.median": "Espera mediana: {value}",
+    "list.waiting.empty": "Ninguém está a atrasar nada.",
+    "list.slowest.title": "Fechos mais lentos",
+    "list.slowest.hint": "Os tempos de entrega mais longos neste período",
+    "list.slowest.empty": "Ainda nada fechado."
   }
 }

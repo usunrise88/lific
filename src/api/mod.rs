@@ -167,6 +167,7 @@ fn router_impl(
         )
         .route("/api/issues/attention", get(issues::my_attention))
         .route("/api/home/overview", get(home::home_overview))
+        .route("/api/home/flow", get(home::home_flow))
         // Fork: cross-project activity feed (the Feed page), filtered to
         // visible projects like the home overview.
         .route("/api/feed", get(feed::feed))

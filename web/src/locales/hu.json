@@ -2319,5 +2319,110 @@
       "one": "Legjobb {count} találat — szűkítsd a keresést a kevesebb találatért",
       "other": "Legjobb {count} találat — szűkítsd a keresést a kevesebb találatért"
     }
+  },
+  "flow": {
+    "filter.all": "Minden projekt",
+    "filter.projects": "Projektek",
+    "filter.period": "Időszak",
+    "filter.days": {
+      "one": "{count} nap",
+      "other": "{count} nap"
+    },
+    "filter.search": "Projekt keresése",
+    "filter.noProjects": "Nincs egyező projekt",
+    "system": "Rendszer",
+    "vsPrevious": {
+      "one": "Az előző naphoz képest",
+      "other": "Az előző {count} naphoz képest"
+    },
+    "closure.title": "Lezárási arány",
+    "closure.subtitle": {
+      "one": "Ma lezárt feladatok, lezáró szerint",
+      "other": "Az elmúlt {count} napban lezárt feladatok, lezáró szerint"
+    },
+    "closure.grain": "Csoportosítás",
+    "closure.day": "Napok",
+    "closure.week": "Hetek",
+    "closure.empty": "Ebben az időszakban semmit sem nyitottak meg vagy zártak le.",
+    "closure.aria": "Időszakonként lezárt feladatok, lezáró szerint halmozva",
+    "closure.noneClosed": "Semmi sincs lezárva",
+    "closure.cancelled": "Megszakítva",
+    "closure.reopened": "Újranyitva",
+    "closure.created": "Létrehozva",
+    "kpi.closed": "Lezárva",
+    "kpi.perDay": "napi {value}",
+    "kpi.created": "Létrehozva",
+    "kpi.netUp": {
+      "one": "A nyitott munka {count} feladattal nőtt",
+      "other": "A nyitott munka {count} feladattal nőtt"
+    },
+    "kpi.netDown": {
+      "one": "A nyitott munka {count} feladattal csökkent",
+      "other": "A nyitott munka {count} feladattal csökkent"
+    },
+    "kpi.netFlat": "A nyitott munka nem változott",
+    "kpi.rework": "Újranyitás",
+    "kpi.reopened": {
+      "one": "{count} lezárás újranyitva",
+      "other": "{count} lezárás újranyitva"
+    },
+    "kpi.evidence": "Bizonyíték",
+    "kpi.evidenceSub": "A lezáró hozzászólásával lezárva",
+    "kpi.lead": "Átfutási idő",
+    "kpi.cycle": "Ciklusidő",
+    "kpi.p85": "85% {value} alatt",
+    "kpi.people": "Embereknél",
+    "kpi.peopleSub": {
+      "one": "az időből; {count} feladat várt",
+      "other": "az időből; {count} feladat várt"
+    },
+    "kpi.skipped": "„Folyamatban” kihagyva",
+    "kpi.skippedSub": {
+      "one": "{count} feladat egyből kész lett",
+      "other": "{count} feladat egyből kész lett"
+    },
+    "table.actor": "Ki",
+    "table.closed": "Lezárva",
+    "table.perDay": "Naponta",
+    "table.rework": "Újranyitás",
+    "table.reworkHint": "Lezárásaik közül az újranyitottak aránya",
+    "table.evidence": "Bizonyíték",
+    "table.cycle": "Ciklus",
+    "table.cycleHint": "Medián idő a Folyamatban állapottól a Kész állapotig",
+    "table.active": "Folyamatban",
+    "stages.title": "Átfutás a folyamaton",
+    "stages.subtitle": {
+      "one": "{count} feladat lezárva ebben az időszakban, létrehozástól befejezésig",
+      "other": "{count} feladat lezárva ebben az időszakban, létrehozástól befejezésig"
+    },
+    "stages.empty": "Ebben az időszakban nincs lezárt feladat állapotelőzménnyel.",
+    "stages.share": "Hová ment az idő",
+    "stages.shareAria": "A teljes átfutási idő megoszlása állapotonként",
+    "stages.peopleShare": "ebből {value} embereknél",
+    "stages.legend": "Sáv: medián idő az állapotban; halvány vége: 85. percentilis. A szám azt mutatja, hány feladat haladt át rajta.",
+    "stages.distribution": "Átfutási idő",
+    "stages.distributionAria": "Hány feladat zárult le az egyes átfutási időkön belül",
+    "stage.backlog": "Várólista",
+    "stage.todo": "Teendő",
+    "stage.active": "Folyamatban",
+    "stage.people": "Embereknél",
+    "span.1h": "<1 ó",
+    "span.4h": "1–4 ó",
+    "span.1d": "4 ó–1 n",
+    "span.3d": "1–3 n",
+    "span.1w": "3–7 n",
+    "span.4w": "1–4 hét",
+    "span.more": ">4 hét",
+    "list.active.title": "Most folyamatban",
+    "list.active.hint": "A legrégebb óta folyamatban lévők elöl; sárga: egy napja nincs tevékenység",
+    "list.active.empty": "Semmi sincs folyamatban.",
+    "list.active.stale": "Több mint egy napja nincs tevékenység: lehet, hogy az ügynök leállt",
+    "list.waiting.title": "Emberekre vár",
+    "list.waiting.hint": "Személynek jelölve vagy valakire vár",
+    "list.waiting.median": "Medián várakozás: {value}",
+    "list.waiting.empty": "Senki sem tart fel semmit.",
+    "list.slowest.title": "Leglassabb lezárások",
+    "list.slowest.hint": "A leghosszabb átfutási idők ebben az időszakban",
+    "list.slowest.empty": "Még semmi sincs lezárva."
   }
 }

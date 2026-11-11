@@ -2319,5 +2319,110 @@
       "one": "{count} meilleur résultat — affinez la requête pour en avoir moins",
       "other": "{count} meilleurs résultats — affinez la requête pour en avoir moins"
     }
+  },
+  "flow": {
+    "filter.all": "Tous les projets",
+    "filter.projects": "Projets",
+    "filter.period": "Période",
+    "filter.days": {
+      "one": "{count} jour",
+      "other": "{count} jours"
+    },
+    "filter.search": "Rechercher un projet",
+    "filter.noProjects": "Aucun projet correspondant",
+    "system": "Système",
+    "vsPrevious": {
+      "one": "Par rapport au jour précédent",
+      "other": "Par rapport aux {count} jours précédents"
+    },
+    "closure.title": "Rythme de fermeture",
+    "closure.subtitle": {
+      "one": "Tickets fermés aujourd’hui, selon qui les a fermés",
+      "other": "Tickets fermés ces {count} derniers jours, selon qui les a fermés"
+    },
+    "closure.grain": "Grouper par",
+    "closure.day": "Jours",
+    "closure.week": "Semaines",
+    "closure.empty": "Rien n’a été ouvert ni fermé sur cette période.",
+    "closure.aria": "Tickets fermés par période, empilés selon qui les a fermés",
+    "closure.noneClosed": "Aucune fermeture",
+    "closure.cancelled": "Annulés",
+    "closure.reopened": "Rouverts",
+    "closure.created": "Créés",
+    "kpi.closed": "Fermés",
+    "kpi.perDay": "{value} par jour",
+    "kpi.created": "Créés",
+    "kpi.netUp": {
+      "one": "Le travail ouvert a augmenté de {count}",
+      "other": "Le travail ouvert a augmenté de {count}"
+    },
+    "kpi.netDown": {
+      "one": "Le travail ouvert a diminué de {count}",
+      "other": "Le travail ouvert a diminué de {count}"
+    },
+    "kpi.netFlat": "Le travail ouvert est resté stable",
+    "kpi.rework": "Reprises",
+    "kpi.reopened": {
+      "one": "{count} réouverture",
+      "other": "{count} réouvertures"
+    },
+    "kpi.evidence": "Preuves",
+    "kpi.evidenceSub": "Fermés avec un commentaire de qui les a fermés",
+    "kpi.lead": "Délai total",
+    "kpi.cycle": "Temps de cycle",
+    "kpi.p85": "85 % en moins de {value}",
+    "kpi.people": "Chez les personnes",
+    "kpi.peopleSub": {
+      "one": "du temps ; {count} ticket a attendu",
+      "other": "du temps ; {count} tickets ont attendu"
+    },
+    "kpi.skipped": "Sans passer par « En cours »",
+    "kpi.skippedSub": {
+      "one": "{count} ticket est passé directement à « Terminé »",
+      "other": "{count} tickets sont passés directement à « Terminé »"
+    },
+    "table.actor": "Qui",
+    "table.closed": "Fermés",
+    "table.perDay": "Par jour",
+    "table.rework": "Reprises",
+    "table.reworkHint": "Part de ses fermetures qui ont été rouvertes",
+    "table.evidence": "Preuves",
+    "table.cycle": "Cycle",
+    "table.cycleHint": "Temps médian entre « En cours » et « Terminé »",
+    "table.active": "En cours",
+    "stages.title": "Temps passé dans le processus",
+    "stages.subtitle": {
+      "one": "{count} ticket fermé sur cette période, de la création à la clôture",
+      "other": "{count} tickets fermés sur cette période, de la création à la clôture"
+    },
+    "stages.empty": "Aucun ticket fermé avec un historique de statut sur cette période.",
+    "stages.share": "Où le temps est passé",
+    "stages.shareAria": "Part du délai total passée dans chaque statut",
+    "stages.peopleShare": "dont {value} chez les personnes",
+    "stages.legend": "Barre : temps médian dans le statut ; traîne pâle : 85e centile. Le nombre indique combien de tickets y sont passés.",
+    "stages.distribution": "Délai total",
+    "stages.distributionAria": "Nombre de tickets fermés dans chaque tranche de délai total",
+    "stage.backlog": "Backlog",
+    "stage.todo": "À faire",
+    "stage.active": "En cours",
+    "stage.people": "Chez les personnes",
+    "span.1h": "<1 h",
+    "span.4h": "1–4 h",
+    "span.1d": "4 h–1 j",
+    "span.3d": "1–3 j",
+    "span.1w": "3–7 j",
+    "span.4w": "1–4 sem",
+    "span.more": ">4 sem",
+    "list.active.title": "En cours en ce moment",
+    "list.active.hint": "Les plus longtemps en cours d’abord ; ambre : aucune activité depuis un jour",
+    "list.active.empty": "Rien n’est en cours.",
+    "list.active.stale": "Aucune activité depuis plus d’un jour : l’agent s’est peut-être arrêté",
+    "list.waiting.title": "En attente de personnes",
+    "list.waiting.hint": "Marqués pour une personne ou en attente d’une personne",
+    "list.waiting.median": "Attente médiane : {value}",
+    "list.waiting.empty": "Personne ne bloque quoi que ce soit.",
+    "list.slowest.title": "Fermetures les plus lentes",
+    "list.slowest.hint": "Délais totaux les plus longs sur cette période",
+    "list.slowest.empty": "Rien de fermé pour l’instant."
   }
 }

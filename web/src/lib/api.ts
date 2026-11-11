@@ -2659,10 +2659,121 @@ export interface HomeOverview {
   my_done: DayCount[];
 }
 
-export async function getHomeOverview(since: string | null) {
+/** `projects` narrows Home to those projects (fork); undefined = all. */
+export async function getHomeOverview(since: string | null, projects?: number[]) {
   const params = new URLSearchParams({ tz: String(-new Date().getTimezoneOffset()) });
   if (since) params.set("since", since);
+  if (projects) params.set("projects", projects.join(","));
   return request<HomeOverview>(`/home/overview?${params}`);
+}
+
+// ── Home flow report (fork) ──────────────────────────────────
+
+export interface FlowActor {
+  id: number;
+  username: string;
+  display_name: string;
+  is_bot: boolean;
+  owner_id: number | null;
+}
+
+export interface FlowDay {
+  date: string;
+  done: number;
+  cancelled: number;
+  reopened: number;
+  created_by_agents: number;
+  created_by_people: number;
+}
+
+export interface FlowActorDay {
+  date: string;
+  actor_id: number | null;
+  done: number;
+}
+
+export interface FlowActorRow {
+  actor_id: number | null;
+  done: number;
+  cancelled: number;
+  reopened: number;
+  with_evidence: number;
+  cycle_p50: number | null;
+  lead_p50: number | null;
+  active_now: number;
+  last_close: string | null;
+}
+
+export interface FlowTotals {
+  done: number;
+  cancelled: number;
+  reopened: number;
+  created: number;
+  with_evidence: number;
+  lead_p50: number | null;
+  cycle_p50: number | null;
+}
+
+export interface FlowSpread {
+  count: number;
+  p50: number | null;
+  p85: number | null;
+  mean: number | null;
+}
+
+export type FlowStage = "backlog" | "todo" | "active" | "people";
+
+export interface FlowStageStat {
+  stage: FlowStage;
+  issues: number;
+  p50: number | null;
+  p85: number | null;
+  total: number;
+}
+
+export interface FlowIssue {
+  issue_id: number;
+  project_id: number;
+  identifier: string;
+  title: string;
+  status: string;
+  /** Lead time, time in active or time with people, in seconds. */
+  seconds: number;
+  actor_id: number | null;
+  last_activity: string | null;
+}
+
+export interface FlowReport {
+  days: number;
+  from: string;
+  to: string;
+  actors: FlowActor[];
+  daily: FlowDay[];
+  closures: FlowActorDay[];
+  per_actor: FlowActorRow[];
+  current: FlowTotals;
+  previous: FlowTotals;
+  stages: FlowStageStat[];
+  lead: FlowSpread;
+  cycle: FlowSpread;
+  timed: number;
+  skipped_active: number;
+  lead_histogram: { key: string; count: number }[];
+  slowest: FlowIssue[];
+  active: FlowIssue[];
+  active_total: number;
+  waiting: FlowIssue[];
+  waiting_total: number;
+  waiting_p50: number | null;
+}
+
+export async function getHomeFlow(days: number, projects?: number[]) {
+  const params = new URLSearchParams({
+    days: String(days),
+    tz: String(-new Date().getTimezoneOffset()),
+  });
+  if (projects) params.set("projects", projects.join(","));
+  return request<FlowReport>(`/home/flow?${params}`);
 }
 
 // ── Insights (LIF-240) ───────────────────────────────────────

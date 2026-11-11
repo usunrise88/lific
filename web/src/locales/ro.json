@@ -2415,5 +2415,119 @@
       "few": "Primele {count} rezultate — restrânge căutarea pentru mai puține rezultate",
       "other": "Primele {count} rezultate — restrânge căutarea pentru mai puține rezultate"
     }
+  },
+  "flow": {
+    "filter.all": "Toate proiectele",
+    "filter.projects": "Proiecte",
+    "filter.period": "Perioadă",
+    "filter.days": {
+      "one": "{count} zi",
+      "few": "{count} zile",
+      "other": "{count} de zile"
+    },
+    "filter.search": "Caută un proiect",
+    "filter.noProjects": "Niciun proiect potrivit",
+    "system": "Sistem",
+    "vsPrevious": {
+      "one": "Față de ziua precedentă",
+      "few": "Față de cele {count} zile precedente",
+      "other": "Față de cele {count} de zile precedente"
+    },
+    "closure.title": "Rata de închidere",
+    "closure.subtitle": {
+      "one": "Probleme închise azi, după cine le-a închis",
+      "few": "Probleme închise în ultimele {count} zile, după cine le-a închis",
+      "other": "Probleme închise în ultimele {count} de zile, după cine le-a închis"
+    },
+    "closure.grain": "Grupează după",
+    "closure.day": "Zile",
+    "closure.week": "Săptămâni",
+    "closure.empty": "Nimic nu a fost deschis sau închis în această perioadă.",
+    "closure.aria": "Probleme închise pe perioadă, stivuite după cine le-a închis",
+    "closure.noneClosed": "Nimic închis",
+    "closure.cancelled": "Anulate",
+    "closure.reopened": "Redeschise",
+    "closure.created": "Create",
+    "kpi.closed": "Închise",
+    "kpi.perDay": "{value} pe zi",
+    "kpi.created": "Create",
+    "kpi.netUp": {
+      "one": "Munca deschisă a crescut cu {count}",
+      "few": "Munca deschisă a crescut cu {count}",
+      "other": "Munca deschisă a crescut cu {count}"
+    },
+    "kpi.netDown": {
+      "one": "Munca deschisă a scăzut cu {count}",
+      "few": "Munca deschisă a scăzut cu {count}",
+      "other": "Munca deschisă a scăzut cu {count}"
+    },
+    "kpi.netFlat": "Munca deschisă a rămas constantă",
+    "kpi.rework": "Redeschideri",
+    "kpi.reopened": {
+      "one": "{count} închidere redeschisă",
+      "few": "{count} închideri redeschise",
+      "other": "{count} de închideri redeschise"
+    },
+    "kpi.evidence": "Dovezi",
+    "kpi.evidenceSub": "Închise cu un comentariu de la cine le-a închis",
+    "kpi.lead": "Timp total",
+    "kpi.cycle": "Timp de ciclu",
+    "kpi.p85": "85% în cel mult {value}",
+    "kpi.people": "La oameni",
+    "kpi.peopleSub": {
+      "one": "din timp; {count} problemă a așteptat",
+      "few": "din timp; {count} probleme au așteptat",
+      "other": "din timp; {count} de probleme au așteptat"
+    },
+    "kpi.skipped": "„Activ” omis",
+    "kpi.skippedSub": {
+      "one": "{count} problemă a fost finalizată direct",
+      "few": "{count} probleme au fost finalizate direct",
+      "other": "{count} de probleme au fost finalizate direct"
+    },
+    "table.actor": "Cine",
+    "table.closed": "Închise",
+    "table.perDay": "Pe zi",
+    "table.rework": "Redeschideri",
+    "table.reworkHint": "Ponderea închiderilor sale care au fost redeschise",
+    "table.evidence": "Dovezi",
+    "table.cycle": "Ciclu",
+    "table.cycleHint": "Timpul median de la „Activ” la „Finalizat”",
+    "table.active": "Activ",
+    "stages.title": "Timpul în proces",
+    "stages.subtitle": {
+      "one": "{count} problemă închisă în această perioadă, de la creare la finalizare",
+      "few": "{count} probleme închise în această perioadă, de la creare la finalizare",
+      "other": "{count} de probleme închise în această perioadă, de la creare la finalizare"
+    },
+    "stages.empty": "Nicio problemă închisă cu istoric de stări în această perioadă.",
+    "stages.share": "Unde s-a dus timpul",
+    "stages.shareAria": "Ponderea timpului total petrecut în fiecare stare",
+    "stages.peopleShare": "din care {value} la oameni",
+    "stages.legend": "Bară: timpul median în stare; coada estompată: percentila 85. Numărul arată câte probleme au trecut prin ea.",
+    "stages.distribution": "Timp total",
+    "stages.distributionAria": "Câte probleme s-au închis în fiecare interval de timp total",
+    "stage.backlog": "Backlog",
+    "stage.todo": "De făcut",
+    "stage.active": "Activ",
+    "stage.people": "La oameni",
+    "span.1h": "<1 h",
+    "span.4h": "1–4 h",
+    "span.1d": "4 h–1 z",
+    "span.3d": "1–3 z",
+    "span.1w": "3–7 z",
+    "span.4w": "1–4 săpt.",
+    "span.more": ">4 săpt.",
+    "list.active.title": "Active acum",
+    "list.active.hint": "Cele mai vechi active primele; galben înseamnă nicio activitate de o zi",
+    "list.active.empty": "Nimic nu este activ.",
+    "list.active.stale": "Nicio activitate de peste o zi: este posibil ca agentul să se fi oprit",
+    "list.waiting.title": "Așteaptă oameni",
+    "list.waiting.hint": "Marcate pentru o persoană sau care așteaptă una",
+    "list.waiting.median": "Așteptare mediană: {value}",
+    "list.waiting.empty": "Nimeni nu blochează nimic.",
+    "list.slowest.title": "Cele mai lente închideri",
+    "list.slowest.hint": "Cei mai lungi timpi totali din această perioadă",
+    "list.slowest.empty": "Nimic închis încă."
   }
 }

@@ -8,6 +8,10 @@
   // sitting, a quiet 90-day open count, and which projects are going stale.
   // The aggregates come from one cross-project read, `getHomeOverview`, so
   // they are not truncated by the list endpoint's row cap.
+  //
+  // Fork: a scope bar (project groups and projects, plus a period) narrows
+  // every widget, and two flow reports sit under the open-work chart:
+  // closure rate per day/week and per actor, and time through each stage.
 
   import {
     me,
@@ -17,7 +21,11 @@
     listProjectActivity,
     getAttention,
     getHomeOverview,
+    getHomeFlow,
+    listProjectGroups,
     type Attention,
+    type FlowReport,
+    type ProjectGroup,
     type AuthUser,
     type HomeOverview,
     type Project,
@@ -41,6 +49,10 @@
   import DoneHeatmap from "../lib/home/DoneHeatmap.svelte";
   import HeatBar from "../lib/home/HeatBar.svelte";
   import { recordHomeVisit } from "../lib/home/lastVisit";
+  import HomeFilterBar from "../lib/home/HomeFilterBar.svelte";
+  import ClosureRate from "../lib/home/ClosureRate.svelte";
+  import FlowStages from "../lib/home/FlowStages.svelte";
+  import { inScope, loadHomeFilters, saveHomeFilters, scopeIds, type HomeFilters } from "../lib/home/flow";
   import { ageLabel, daysSince, heat, importanceScore } from "../lib/issues/importance";
   import {
     Plus,
@@ -58,7 +70,7 @@
     ArrowRight,
   } from "lucide-svelte";
   import { projectCodeOf } from "../lib/references";
-  import { getContext } from "svelte";
+  import { getContext, untrack } from "svelte";
   import { startAutoRefresh } from "../lib/autoRefresh.svelte";
   import { t, locale } from "../lib/i18n";
 
@@ -89,7 +101,15 @@
   const sinceIso = visitSince === null ? null : new Date(visitSince).toISOString();
 
   let user = $state<AuthUser | null>(null);
-  let projects = $state<Project[]>([]);
+  /** Every project the caller can see; `projects` is the scoped subset. */
+  let allProjects = $state<Project[]>([]);
+  let groups = $state<ProjectGroup[]>([]);
+  let filters = $state<HomeFilters>(loadHomeFilters());
+  let flowReport = $state<FlowReport | null>(null);
+  /** Scope and period of the data on screen, so a filter change reloads once. */
+  let loadedKey = $state<string | null>(null);
+  let scope = $derived(scopeIds(filters, groups));
+  let projects = $derived(scope ? allProjects.filter((p) => scope!.includes(p.id)) : allProjects);
   /** LIF-506: what needs the signed-in person. Null until loaded or when
    *  the request fails, which hides the lane rather than the dashboard. */
   let attention = $state<Attention | null>(null);
@@ -134,7 +154,7 @@
       error = "";
     }
 
-    const [meRes, projRes] = await Promise.all([me(), listProjects()]);
+    const [meRes, projRes, groupRes] = await Promise.all([me(), listProjects(), listProjectGroups()]);
     if (!meRes.ok) {
       if (initial) {
         error = meRes.error;
@@ -144,20 +164,32 @@
     }
     error = "";
     user = meRes.data;
-    if (projRes.ok) projects = projRes.data;
+    if (projRes.ok) allProjects = projRes.data;
+    if (groupRes.ok) groups = groupRes.data;
+    const f = untrack(() => filters);
+    const ids = scopeIds(f, groupRes.ok ? groupRes.data : []);
+    loadedKey = scopeKey(ids, f.days);
 
     // The pool is ordered by priority server-side, so the 500-row cap can
     // only ever drop the least pressing issues before ranking.
-    const [attentionRes, overviewRes, poolRes, pagesRes] = await Promise.all([
+    const [attentionRes, overviewRes, poolRes, pagesRes, flowRes] = await Promise.all([
       getAttention(),
-      getHomeOverview(sinceIso),
+      getHomeOverview(sinceIso, ids),
       listIssues({ workable: true, assignee: "none", order_by: "priority", limit: 500 }),
       listAllPages(),
+      getHomeFlow(f.days, ids),
     ]);
-    attention = attentionRes.ok ? attentionRes.data : null;
+    attention = attentionRes.ok
+      ? {
+          assigned: inScope(attentionRes.data.assigned, ids),
+          human: inScope(attentionRes.data.human, ids),
+          waiting: inScope(attentionRes.data.waiting, ids),
+        }
+      : null;
     overview = overviewRes.ok ? overviewRes.data : null;
-    agentPool = poolRes.ok ? poolRes.data : [];
-    allPages = pagesRes.ok ? pagesRes.data : [];
+    agentPool = poolRes.ok ? inScope(poolRes.data, ids) : [];
+    allPages = pagesRes.ok ? inScope(pagesRes.data, ids) : [];
+    flowReport = flowRes.ok ? flowRes.data : null;
 
     // There is no cross-project activity feed: merge the three most
     // recently active projects' feeds client-side.
@@ -169,6 +201,23 @@
     activityItems = combined.slice(0, 8);
 
     if (initial) loading = false;
+  }
+
+  function scopeKey(ids: number[] | undefined, days: number): string {
+    return `${ids?.join(",") ?? "*"}|${days}`;
+  }
+
+  // A filter change reloads in place, without the skeleton.
+  $effect(() => {
+    const key = scopeKey(scope, filters.days);
+    if (loadedKey !== null && key !== loadedKey && !untrack(() => loading)) {
+      untrack(() => loadData(false));
+    }
+  });
+
+  function setFilters(next: HomeFilters) {
+    filters = next;
+    saveHomeFilters(next);
   }
 
   /** Visible projects, most recently active first. */
@@ -545,6 +594,9 @@
           {/if}
         </div>
 
+        <!-- ── SCOPE (fork) ─────────────────────────────────── -->
+        <HomeFilterBar {filters} {groups} projects={allProjects} onchange={setFilters} />
+
         <!-- ── OPEN WORK BY AGE ─────────────────────────────── -->
         {#if overview}
           <section
@@ -580,6 +632,12 @@
               </div>
             </div>
           </section>
+        {/if}
+
+        <!-- ── FLOW REPORTS (fork) ──────────────────────────── -->
+        {#if flowReport}
+          <ClosureRate report={flowReport} />
+          <FlowStages report={flowReport} {navigate} />
         {/if}
 
         <!-- ── THE TWO LANES ─────────────────────────────────── -->

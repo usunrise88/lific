@@ -2415,5 +2415,119 @@
       "few": "Najbolja poklapanja: {count} — suzi upit za manje rezultata",
       "other": "Najbolja poklapanja: {count} — suzi upit za manje rezultata"
     }
+  },
+  "flow": {
+    "filter.all": "Svi projekti",
+    "filter.projects": "Projekti",
+    "filter.period": "Period",
+    "filter.days": {
+      "one": "{count} dan",
+      "few": "{count} dana",
+      "other": "{count} dana"
+    },
+    "filter.search": "Pronađi projekat",
+    "filter.noProjects": "Nema odgovarajućih projekata",
+    "system": "Sistem",
+    "vsPrevious": {
+      "one": "U odnosu na prethodni {count} dan",
+      "few": "U odnosu na prethodna {count} dana",
+      "other": "U odnosu na prethodnih {count} dana"
+    },
+    "closure.title": "Stopa zatvaranja",
+    "closure.subtitle": {
+      "one": "Zadaci zatvoreni za poslednji {count} dan, po tome ko ih je zatvorio",
+      "few": "Zadaci zatvoreni za poslednja {count} dana, po tome ko ih je zatvorio",
+      "other": "Zadaci zatvoreni za poslednjih {count} dana, po tome ko ih je zatvorio"
+    },
+    "closure.grain": "Grupiši po",
+    "closure.day": "Dani",
+    "closure.week": "Nedelje",
+    "closure.empty": "U ovom periodu ništa nije otvoreno ni zatvoreno.",
+    "closure.aria": "Zatvoreni zadaci po periodu, raspoređeni po tome ko ih je zatvorio",
+    "closure.noneClosed": "Ništa nije zatvoreno",
+    "closure.cancelled": "Otkazano",
+    "closure.reopened": "Ponovo otvoreno",
+    "closure.created": "Napravljeno",
+    "kpi.closed": "Zatvoreno",
+    "kpi.perDay": "{value} dnevno",
+    "kpi.created": "Napravljeno",
+    "kpi.netUp": {
+      "one": "Otvoren posao je porastao za {count}",
+      "few": "Otvoren posao je porastao za {count}",
+      "other": "Otvoren posao je porastao za {count}"
+    },
+    "kpi.netDown": {
+      "one": "Otvoren posao se smanjio za {count}",
+      "few": "Otvoren posao se smanjio za {count}",
+      "other": "Otvoren posao se smanjio za {count}"
+    },
+    "kpi.netFlat": "Otvoren posao je ostao isti",
+    "kpi.rework": "Dorada",
+    "kpi.reopened": {
+      "one": "{count} zatvaranje ponovo otvoreno",
+      "few": "{count} zatvaranja ponovo otvorena",
+      "other": "{count} zatvaranja ponovo otvoreno"
+    },
+    "kpi.evidence": "Obrazloženje",
+    "kpi.evidenceSub": "Zatvoreno uz komentar onoga ko je zatvorio",
+    "kpi.lead": "Vreme izvršenja",
+    "kpi.cycle": "Vreme ciklusa",
+    "kpi.p85": "85% u roku od {value}",
+    "kpi.people": "Kod ljudi",
+    "kpi.peopleSub": {
+      "one": "vremena; {count} zadatak je čekao",
+      "few": "vremena; {count} zadatka su čekala",
+      "other": "vremena; {count} zadataka je čekalo"
+    },
+    "kpi.skipped": "Preskočeno „U toku“",
+    "kpi.skippedSub": {
+      "one": "{count} zadatak je otišao pravo u „Završeno“",
+      "few": "{count} zadatka su otišla pravo u „Završeno“",
+      "other": "{count} zadataka je otišlo pravo u „Završeno“"
+    },
+    "table.actor": "Ko",
+    "table.closed": "Zatvoreno",
+    "table.perDay": "Dnevno",
+    "table.rework": "Dorada",
+    "table.reworkHint": "Udeo njihovih zatvaranja koja su ponovo otvorena",
+    "table.evidence": "Obrazloženje",
+    "table.cycle": "Ciklus",
+    "table.cycleHint": "Medijana vremena od „U toku“ do „Završeno“",
+    "table.active": "U toku",
+    "stages.title": "Vreme kroz proces",
+    "stages.subtitle": {
+      "one": "{count} zadatak zatvoren u ovom periodu, od pravljenja do završetka",
+      "few": "{count} zadatka zatvorena u ovom periodu, od pravljenja do završetka",
+      "other": "{count} zadataka zatvoreno u ovom periodu, od pravljenja do završetka"
+    },
+    "stages.empty": "U ovom periodu nema zatvorenih zadataka sa istorijom statusa.",
+    "stages.share": "Gde je otišlo vreme",
+    "stages.shareAria": "Udeo ukupnog vremena izvršenja u svakom statusu",
+    "stages.peopleShare": "{value} od toga kod ljudi",
+    "stages.legend": "Traka: medijana vremena u statusu; bledi rep: 85. percentil. Broj pokazuje koliko je zadataka prošlo kroz status.",
+    "stages.distribution": "Vreme izvršenja",
+    "stages.distributionAria": "Koliko je zadataka zatvoreno u svakom opsegu vremena izvršenja",
+    "stage.backlog": "Backlog",
+    "stage.todo": "Za uraditi",
+    "stage.active": "U toku",
+    "stage.people": "Kod ljudi",
+    "span.1h": "<1 h",
+    "span.4h": "1–4 h",
+    "span.1d": "4 h–1 d",
+    "span.3d": "1–3 d",
+    "span.1w": "3–7 d",
+    "span.4w": "1–4 ned",
+    "span.more": ">4 ned",
+    "list.active.title": "Trenutno u toku",
+    "list.active.hint": "Prvo najduže u toku; žuto znači da dan nije bilo aktivnosti",
+    "list.active.empty": "Ništa nije u toku.",
+    "list.active.stale": "Nema aktivnosti duže od jednog dana: agent je možda stao",
+    "list.waiting.title": "Čeka na ljude",
+    "list.waiting.hint": "Označeno za osobu ili čeka na nju",
+    "list.waiting.median": "Medijana čekanja: {value}",
+    "list.waiting.empty": "Niko ništa ne zadržava.",
+    "list.slowest.title": "Najsporija zatvaranja",
+    "list.slowest.hint": "Najduža vremena izvršenja u ovom periodu",
+    "list.slowest.empty": "Još ništa nije zatvoreno."
   }
 }

@@ -2319,5 +2319,110 @@
       "one": "Top {count} Treffer — Suche eingrenzen für weniger Ergebnisse",
       "other": "Top {count} Treffer — Suche eingrenzen für weniger Ergebnisse"
     }
+  },
+  "flow": {
+    "filter.all": "Alle Projekte",
+    "filter.projects": "Projekte",
+    "filter.period": "Zeitraum",
+    "filter.days": {
+      "one": "{count} Tag",
+      "other": "{count} Tage"
+    },
+    "filter.search": "Projekt suchen",
+    "filter.noProjects": "Keine passenden Projekte",
+    "system": "System",
+    "vsPrevious": {
+      "one": "Im Vergleich zum Vortag",
+      "other": "Im Vergleich zu den vorherigen {count} Tagen"
+    },
+    "closure.title": "Abschlussrate",
+    "closure.subtitle": {
+      "one": "Heute geschlossene Aufgaben, danach, wer sie geschlossen hat",
+      "other": "In den letzten {count} Tagen geschlossene Aufgaben, danach, wer sie geschlossen hat"
+    },
+    "closure.grain": "Gruppieren nach",
+    "closure.day": "Tage",
+    "closure.week": "Wochen",
+    "closure.empty": "In diesem Zeitraum wurde nichts geöffnet oder geschlossen.",
+    "closure.aria": "Geschlossene Aufgaben pro Zeitraum, gestapelt danach, wer sie geschlossen hat",
+    "closure.noneClosed": "Nichts geschlossen",
+    "closure.cancelled": "Abgebrochen",
+    "closure.reopened": "Wieder geöffnet",
+    "closure.created": "Erstellt",
+    "kpi.closed": "Geschlossen",
+    "kpi.perDay": "{value} pro Tag",
+    "kpi.created": "Erstellt",
+    "kpi.netUp": {
+      "one": "Offene Arbeit um {count} gewachsen",
+      "other": "Offene Arbeit um {count} gewachsen"
+    },
+    "kpi.netDown": {
+      "one": "Offene Arbeit um {count} geschrumpft",
+      "other": "Offene Arbeit um {count} geschrumpft"
+    },
+    "kpi.netFlat": "Offene Arbeit unverändert",
+    "kpi.rework": "Nacharbeit",
+    "kpi.reopened": {
+      "one": "{count} Abschluss wieder geöffnet",
+      "other": "{count} Abschlüsse wieder geöffnet"
+    },
+    "kpi.evidence": "Nachweis",
+    "kpi.evidenceSub": "Mit Kommentar der schließenden Person geschlossen",
+    "kpi.lead": "Durchlaufzeit",
+    "kpi.cycle": "Zykluszeit",
+    "kpi.p85": "85 % innerhalb von {value}",
+    "kpi.people": "Bei Personen",
+    "kpi.peopleSub": {
+      "one": "der Zeit; {count} Aufgabe wartete",
+      "other": "der Zeit; {count} Aufgaben warteten"
+    },
+    "kpi.skipped": "„Aktiv“ übersprungen",
+    "kpi.skippedSub": {
+      "one": "{count} Aufgabe wurde direkt erledigt",
+      "other": "{count} Aufgaben wurden direkt erledigt"
+    },
+    "table.actor": "Wer",
+    "table.closed": "Geschlossen",
+    "table.perDay": "Pro Tag",
+    "table.rework": "Nacharbeit",
+    "table.reworkHint": "Anteil ihrer Abschlüsse, die wieder geöffnet wurden",
+    "table.evidence": "Nachweis",
+    "table.cycle": "Zyklus",
+    "table.cycleHint": "Median der Zeit von „Aktiv“ bis „Erledigt“",
+    "table.active": "Aktiv",
+    "stages.title": "Zeit im Prozess",
+    "stages.subtitle": {
+      "one": "{count} Aufgabe in diesem Zeitraum geschlossen, von der Erstellung bis zum Abschluss",
+      "other": "{count} Aufgaben in diesem Zeitraum geschlossen, von der Erstellung bis zum Abschluss"
+    },
+    "stages.empty": "Keine geschlossenen Aufgaben mit Statusverlauf in diesem Zeitraum.",
+    "stages.share": "Wohin die Zeit ging",
+    "stages.shareAria": "Anteil der gesamten Durchlaufzeit je Status",
+    "stages.peopleShare": "davon {value} bei Personen",
+    "stages.legend": "Balken: Median der Zeit im Status; blasser Ausläufer: 85. Perzentil. Die Zahl zeigt, wie viele Aufgaben ihn durchlaufen haben.",
+    "stages.distribution": "Durchlaufzeit",
+    "stages.distributionAria": "Wie viele Aufgaben innerhalb welcher Durchlaufzeit geschlossen wurden",
+    "stage.backlog": "Backlog",
+    "stage.todo": "Offen",
+    "stage.active": "Aktiv",
+    "stage.people": "Bei Personen",
+    "span.1h": "<1 h",
+    "span.4h": "1–4 h",
+    "span.1d": "4 h–1 Tg.",
+    "span.3d": "1–3 Tg.",
+    "span.1w": "3–7 Tg.",
+    "span.4w": "1–4 Wo.",
+    "span.more": ">4 Wo.",
+    "list.active.title": "Gerade aktiv",
+    "list.active.hint": "Am längsten aktive zuerst; gelb heißt seit einem Tag keine Aktivität",
+    "list.active.empty": "Nichts ist aktiv.",
+    "list.active.stale": "Seit über einem Tag keine Aktivität: Der Agent hat eventuell aufgehört",
+    "list.waiting.title": "Wartet auf Personen",
+    "list.waiting.hint": "Für eine Person markiert oder wartet auf eine",
+    "list.waiting.median": "Wartet im Median {value}",
+    "list.waiting.empty": "Niemand hält etwas auf.",
+    "list.slowest.title": "Langsamste Abschlüsse",
+    "list.slowest.hint": "Längste Durchlaufzeiten in diesem Zeitraum",
+    "list.slowest.empty": "Noch nichts geschlossen."
   }
 }

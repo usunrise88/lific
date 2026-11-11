@@ -2319,5 +2319,110 @@
       "one": "Primeras {count} coincidencias — acota la búsqueda para ver menos resultados",
       "other": "Primeras {count} coincidencias — acota la búsqueda para ver menos resultados"
     }
+  },
+  "flow": {
+    "filter.all": "Todos los proyectos",
+    "filter.projects": "Proyectos",
+    "filter.period": "Periodo",
+    "filter.days": {
+      "one": "{count} día",
+      "other": "{count} días"
+    },
+    "filter.search": "Buscar un proyecto",
+    "filter.noProjects": "No hay proyectos que coincidan",
+    "system": "Sistema",
+    "vsPrevious": {
+      "one": "Comparado con el día anterior",
+      "other": "Comparado con los {count} días anteriores"
+    },
+    "closure.title": "Ritmo de cierre",
+    "closure.subtitle": {
+      "one": "Incidencias cerradas hoy, según quién las cerró",
+      "other": "Incidencias cerradas en los últimos {count} días, según quién las cerró"
+    },
+    "closure.grain": "Agrupar por",
+    "closure.day": "Días",
+    "closure.week": "Semanas",
+    "closure.empty": "No se abrió ni cerró nada en este periodo.",
+    "closure.aria": "Incidencias cerradas por periodo, apiladas según quién las cerró",
+    "closure.noneClosed": "Ningún cierre",
+    "closure.cancelled": "Canceladas",
+    "closure.reopened": "Reabiertas",
+    "closure.created": "Creadas",
+    "kpi.closed": "Cerradas",
+    "kpi.perDay": "{value} al día",
+    "kpi.created": "Creadas",
+    "kpi.netUp": {
+      "one": "El trabajo abierto creció en {count}",
+      "other": "El trabajo abierto creció en {count}"
+    },
+    "kpi.netDown": {
+      "one": "El trabajo abierto bajó en {count}",
+      "other": "El trabajo abierto bajó en {count}"
+    },
+    "kpi.netFlat": "El trabajo abierto se mantuvo estable",
+    "kpi.rework": "Retrabajo",
+    "kpi.reopened": {
+      "one": "{count} reapertura",
+      "other": "{count} reaperturas"
+    },
+    "kpi.evidence": "Evidencia",
+    "kpi.evidenceSub": "Cerradas con un comentario de quien las cerró",
+    "kpi.lead": "Tiempo de entrega",
+    "kpi.cycle": "Tiempo de ciclo",
+    "kpi.p85": "85% en {value} como máximo",
+    "kpi.people": "Con personas",
+    "kpi.peopleSub": {
+      "one": "del tiempo; {count} incidencia esperó",
+      "other": "del tiempo; {count} incidencias esperaron"
+    },
+    "kpi.skipped": "Sin pasar por “Activo”",
+    "kpi.skippedSub": {
+      "one": "{count} incidencia pasó directamente a “Hecho”",
+      "other": "{count} incidencias pasaron directamente a “Hecho”"
+    },
+    "table.actor": "Quién",
+    "table.closed": "Cerradas",
+    "table.perDay": "Por día",
+    "table.rework": "Retrabajo",
+    "table.reworkHint": "Porcentaje de sus cierres que se reabrieron",
+    "table.evidence": "Evidencia",
+    "table.cycle": "Ciclo",
+    "table.cycleHint": "Tiempo mediano de “Activo” a “Hecho”",
+    "table.active": "Activo",
+    "stages.title": "Tiempo a lo largo del proceso",
+    "stages.subtitle": {
+      "one": "{count} incidencia cerrada en este periodo, de la creación al cierre",
+      "other": "{count} incidencias cerradas en este periodo, de la creación al cierre"
+    },
+    "stages.empty": "No hay incidencias cerradas con historial de estado en este periodo.",
+    "stages.share": "Adónde se fue el tiempo",
+    "stages.shareAria": "Proporción del tiempo de entrega total en cada estado",
+    "stages.peopleShare": "de ello, {value} con personas",
+    "stages.legend": "Barra: tiempo mediano en el estado; cola tenue: percentil 85. El número indica cuántas incidencias pasaron por él.",
+    "stages.distribution": "Tiempo de entrega",
+    "stages.distributionAria": "Cuántas incidencias se cerraron en cada tramo de tiempo de entrega",
+    "stage.backlog": "Backlog",
+    "stage.todo": "Por hacer",
+    "stage.active": "Activo",
+    "stage.people": "Con personas",
+    "span.1h": "<1 h",
+    "span.4h": "1–4 h",
+    "span.1d": "4 h–1 d",
+    "span.3d": "1–3 d",
+    "span.1w": "3–7 d",
+    "span.4w": "1–4 sem",
+    "span.more": ">4 sem",
+    "list.active.title": "Activas ahora",
+    "list.active.hint": "Primero las que llevan más tiempo activas; ámbar indica un día sin actividad",
+    "list.active.empty": "No hay nada activo.",
+    "list.active.stale": "Sin actividad desde hace más de un día: puede que el agente se haya detenido",
+    "list.waiting.title": "Esperando a personas",
+    "list.waiting.hint": "Marcadas para una persona o esperando a una",
+    "list.waiting.median": "Espera mediana: {value}",
+    "list.waiting.empty": "Nadie está frenando nada.",
+    "list.slowest.title": "Cierres más lentos",
+    "list.slowest.hint": "Los tiempos de entrega más largos de este periodo",
+    "list.slowest.empty": "Aún no se ha cerrado nada."
   }
 }

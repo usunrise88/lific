@@ -2319,5 +2319,110 @@
       "one": "Beste {count} treffer — verfijn de zoekopdracht voor minder resultaten",
       "other": "Beste {count} treffers — verfijn de zoekopdracht voor minder resultaten"
     }
+  },
+  "flow": {
+    "filter.all": "Alle projecten",
+    "filter.projects": "Projecten",
+    "filter.period": "Periode",
+    "filter.days": {
+      "one": "{count} dag",
+      "other": "{count} dagen"
+    },
+    "filter.search": "Project zoeken",
+    "filter.noProjects": "Geen overeenkomende projecten",
+    "system": "Systeem",
+    "vsPrevious": {
+      "one": "Vergeleken met de vorige dag",
+      "other": "Vergeleken met de vorige {count} dagen"
+    },
+    "closure.title": "Sluittempo",
+    "closure.subtitle": {
+      "one": "Issues gesloten vandaag, naar wie ze sloot",
+      "other": "Issues gesloten in de afgelopen {count} dagen, naar wie ze sloot"
+    },
+    "closure.grain": "Groeperen op",
+    "closure.day": "Dagen",
+    "closure.week": "Weken",
+    "closure.empty": "Er is in deze periode niets geopend of gesloten.",
+    "closure.aria": "Gesloten issues per periode, gestapeld naar wie ze sloot",
+    "closure.noneClosed": "Niets gesloten",
+    "closure.cancelled": "Geannuleerd",
+    "closure.reopened": "Heropend",
+    "closure.created": "Aangemaakt",
+    "kpi.closed": "Gesloten",
+    "kpi.perDay": "{value} per dag",
+    "kpi.created": "Aangemaakt",
+    "kpi.netUp": {
+      "one": "Open werk groeide met {count}",
+      "other": "Open werk groeide met {count}"
+    },
+    "kpi.netDown": {
+      "one": "Open werk kromp met {count}",
+      "other": "Open werk kromp met {count}"
+    },
+    "kpi.netFlat": "Open werk bleef gelijk",
+    "kpi.rework": "Herwerk",
+    "kpi.reopened": {
+      "one": "{count} heropening",
+      "other": "{count} heropeningen"
+    },
+    "kpi.evidence": "Bewijs",
+    "kpi.evidenceSub": "Gesloten met een reactie van degene die sloot",
+    "kpi.lead": "Doorlooptijd",
+    "kpi.cycle": "Cyclustijd",
+    "kpi.p85": "85% binnen {value}",
+    "kpi.people": "Bij personen",
+    "kpi.peopleSub": {
+      "one": "van de tijd; {count} issue wachtte",
+      "other": "van de tijd; {count} issues wachtten"
+    },
+    "kpi.skipped": "“Actief” overgeslagen",
+    "kpi.skippedSub": {
+      "one": "{count} issue ging direct naar “Klaar”",
+      "other": "{count} issues gingen direct naar “Klaar”"
+    },
+    "table.actor": "Wie",
+    "table.closed": "Gesloten",
+    "table.perDay": "Per dag",
+    "table.rework": "Herwerk",
+    "table.reworkHint": "Aandeel van hun sluitingen dat heropend werd",
+    "table.evidence": "Bewijs",
+    "table.cycle": "Cyclus",
+    "table.cycleHint": "Mediane tijd van “Actief” tot “Klaar”",
+    "table.active": "Actief",
+    "stages.title": "Tijd door het proces",
+    "stages.subtitle": {
+      "one": "{count} issue gesloten in deze periode, van aanmaken tot klaar",
+      "other": "{count} issues gesloten in deze periode, van aanmaken tot klaar"
+    },
+    "stages.empty": "Geen gesloten issues met statusgeschiedenis in deze periode.",
+    "stages.share": "Waar de tijd bleef",
+    "stages.shareAria": "Aandeel van de totale doorlooptijd per status",
+    "stages.peopleShare": "waarvan {value} bij personen",
+    "stages.legend": "Balk: mediane tijd in de status; vage staart: 85e percentiel. Het getal is hoeveel issues erdoorheen gingen.",
+    "stages.distribution": "Doorlooptijd",
+    "stages.distributionAria": "Hoeveel issues binnen elke doorlooptijd gesloten werden",
+    "stage.backlog": "Backlog",
+    "stage.todo": "Te doen",
+    "stage.active": "Actief",
+    "stage.people": "Bij personen",
+    "span.1h": "<1 u",
+    "span.4h": "1–4 u",
+    "span.1d": "4 u–1 d",
+    "span.3d": "1–3 d",
+    "span.1w": "3–7 d",
+    "span.4w": "1–4 wk",
+    "span.more": ">4 wk",
+    "list.active.title": "Nu actief",
+    "list.active.hint": "Langst actief eerst; amber betekent een dag geen activiteit",
+    "list.active.empty": "Er is niets actief.",
+    "list.active.stale": "Meer dan een dag geen activiteit: de agent is misschien gestopt",
+    "list.waiting.title": "Wacht op personen",
+    "list.waiting.hint": "Gemarkeerd voor een persoon of wachtend op een persoon",
+    "list.waiting.median": "Mediane wachttijd: {value}",
+    "list.waiting.empty": "Niemand houdt iets op.",
+    "list.slowest.title": "Traagste sluitingen",
+    "list.slowest.hint": "Langste doorlooptijden in deze periode",
+    "list.slowest.empty": "Nog niets gesloten."
   }
 }
