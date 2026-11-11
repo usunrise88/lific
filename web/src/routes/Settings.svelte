@@ -34,6 +34,8 @@
     getMotionPreference, setMotionPreference, type MotionPreference,
   } from "../lib/theme";
   import { ACCENT_PRESETS } from "../lib/appearance/presets";
+  import LanguagePicker from "../lib/LanguagePicker.svelte";
+  import { t } from "../lib/i18n";
   import { RADIX_THEMES, type ThemeSwatch } from "../lib/appearance/themes";
   import {
     Plug, Check, Copy, X, AlertTriangle, Sun, Moon, Monitor,
@@ -650,6 +652,12 @@
               {label}
             </button>
           {/each}
+        </div>
+
+        <!-- Language (fork) -->
+        <div class="mt-5 pt-5 border-t border-[var(--border)]">
+          <span class="block text-micro font-semibold uppercase tracking-widest text-[var(--text-faint)] mb-2.5">{t("common.language")}</span>
+          <LanguagePicker />
         </div>
 
         <!-- Theme (fork): Classic or a Radix Colors palette. Each card previews

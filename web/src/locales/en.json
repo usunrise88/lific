@@ -1,0 +1,61 @@
+{
+  "common": {
+    "time.justNow": "just now",
+    "time.minutesAgo": {
+      "one": "{count}m ago",
+      "other": "{count}m ago"
+    },
+    "time.hoursAgo": {
+      "one": "{count}h ago",
+      "other": "{count}h ago"
+    },
+    "time.daysAgo": {
+      "one": "{count}d ago",
+      "other": "{count}d ago"
+    },
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "close": "Close",
+    "open": "Open",
+    "retry": "Try again",
+    "reload": "Reload",
+    "loading": "Loading…",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "edit": "Edit",
+    "remove": "Remove",
+    "add": "Add",
+    "create": "Create",
+    "copy": "Copy",
+    "copied": "Copied",
+    "back": "Back",
+    "search": "Search",
+    "reset": "Reset",
+    "done": "Done",
+    "undo": "Undo",
+    "send": "Send",
+    "sending": "Sending…",
+    "yes": "Yes",
+    "no": "No",
+    "none": "None",
+    "all": "All",
+    "more": "More",
+    "less": "Less",
+    "showMore": "Show more",
+    "showLess": "Show less",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "language": "Language",
+    "status.backlog": "Backlog",
+    "status.todo": "Todo",
+    "status.active": "Active",
+    "status.done": "Done",
+    "status.cancelled": "Cancelled",
+    "priority.urgent": "Urgent",
+    "priority.high": "High",
+    "priority.medium": "Medium",
+    "priority.low": "Low",
+    "priority.none": "None"
+  }
+}

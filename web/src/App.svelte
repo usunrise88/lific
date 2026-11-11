@@ -4,6 +4,7 @@
   import Home from "./routes/Home.svelte";
   import Feed from "./routes/Feed.svelte";
   import ForMe from "./routes/ForMe.svelte";
+  import { locale as currentLocale, onLocaleChange } from "./lib/i18n";
   import Settings from "./routes/Settings.svelte";
   import InstanceSettings from "./routes/InstanceSettings.svelte";
   import IssueList from "./routes/IssueList.svelte";
@@ -98,6 +99,9 @@
   // anything under the new route mounts and starts fetching.
   setPublicProject(publicProjectOf(initialRoute));
   let route = $state(initialRoute);
+
+  let localeKey = $state(currentLocale());
+  $effect(() => onLocaleChange((code) => (localeKey = code)));
   function applyRoute(next: string) {
     setPublicProject(publicProjectOf(next));
     route = next;
@@ -780,6 +784,9 @@
   }
 </script>
 
+<!-- Fork: a language switch re-renders the interface in place (state in
+     this script, like the route and the realtime socket, survives). -->
+{#key localeKey}
 {#if parsed.type === "public-redirect"}
   <!-- Replaced by the effect above before the next frame. -->
 {:else if parsed.type === "public"}
@@ -995,3 +1002,4 @@
 <!-- LIF-243: single global toast host, outside the route branches so it
      survives navigation and renders on auth screens too. -->
 <Toaster />
+{/key}

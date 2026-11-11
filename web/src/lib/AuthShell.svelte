@@ -1,4 +1,5 @@
 <script lang="ts">
+  import LanguagePicker from "./LanguagePicker.svelte";
   // LIF-203 v6: the auth screen IS Lific, signed out. It wears the real
   // application chrome so you feel like you are already inside the product:
   //
@@ -132,6 +133,11 @@
     </div>
 
     <div class="flex-1"></div>
+
+    <!-- Fork: pick the language before signing in. -->
+    <div class="px-3 pb-2">
+      <LanguagePicker compact />
+    </div>
 
     <!-- Footer: signed-out identity placeholder + theme cycle. -->
     <div class="p-2 flex items-center gap-1">
