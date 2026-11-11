@@ -19,6 +19,11 @@ import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const radix = require("@radix-ui/colors");
 
+/** How far the neutral scale leans toward the accent's hue: 0 is Radix's gray
+ *  as is, 1 is the accent scale itself. Backgrounds and borders use it at
+ *  full strength, text at a third of it so it stays easy to read. */
+const TINT = 0.7;
+
 /** [id, label, gray, accent]. Radix's recommended natural pairings. */
 const THEMES = [
   ["indigo", "Indigo", "slate", "indigo"],
@@ -79,33 +84,53 @@ function tokens(gray, accent, dark) {
   const orange = scale("orange", dark);
   const t = {};
 
+  // The neutral scale: Radix's gray leaning toward the accent, so floors,
+  // cards, borders and the in-between tones all carry the theme's hue
+  // (graphite stays pure gray). Steps follow Radix's roles: 1-2 app and
+  // subtle backgrounds, 3-5 component backgrounds (normal, hover, active),
+  // 6-8 borders, 9-10 solid, 11-12 text.
+  const tint = accent === "gray" ? 0 : TINT;
+  const n = (step) => mix(g(step), a(step), tint);
+  const nText = (step) => mix(g(step), a(step), tint / 3);
+
   // Surfaces: recessed content floor, raised cards, the chrome shell.
   if (dark) {
-    t.bg = g(1);
-    t.chrome = g(2);
-    t.surface = g(3);
-    t["bg-subtle"] = g(2);
+    t.bg = n(1);
+    t.chrome = n(2);
+    t.surface = n(3);
+    t["bg-subtle"] = n(2);
   } else {
-    t.bg = g(3);
-    t.chrome = g(1);
-    t.surface = g(1);
-    t["bg-subtle"] = g(4);
+    t.bg = n(3);
+    t.chrome = n(2);
+    t.surface = n(1);
+    t["bg-subtle"] = n(4);
   }
-  t.border = g(6);
-  t.text = g(12);
-  t["text-faint"] = g(11);
-  t["text-muted"] = mix(g(11), g(12), 0.3);
+  t.border = n(6);
+  t.text = nText(12);
+  t["text-faint"] = nText(11);
+  t["text-muted"] = mix(nText(11), nText(12), 0.3);
+
+  // Sidebar tones (the shell's hover, selection, search box, guide lines):
+  // explicit steps instead of mixes with the text color.
+  const sidebar = {
+    "sidebar-selected": a(4),
+    "sidebar-hover": n(4),
+    "sidebar-command": dark ? n(1) : n(3),
+    "sidebar-guide": n(5),
+  };
 
   // Accent: step 11 is Radix's accessible accent text; filled controls use
   // the same token, so it must also carry --accent-text. Monochrome uses 12.
-  const accentText = dark ? g(1) : "#ffffff";
+  const accentText = dark ? n(1) : "#ffffff";
   const base = accent === "gray" ? a(12) : a(11);
   const subtle = a(3);
   const ok = (c) =>
     contrast(c, accentText) >= 4.5 &&
     contrast(c, t.bg) >= 4.5 &&
     contrast(c, t.surface) >= 4.5 &&
-    contrast(c, subtle) >= 4.5;
+    contrast(c, subtle) >= 4.5 &&
+    contrast(c, sidebar["sidebar-selected"]) >= 4.5 &&
+    contrast(c, t.chrome) >= 4.5;
   t.accent = settle(base, a(12), [ok]);
   if (!t.accent) throw new Error(`${gray}/${accent} ${dark ? "dark" : "light"}: no accessible accent`);
   t["accent-hover"] = mix(t.accent, a(12), 0.35);
@@ -114,7 +139,7 @@ function tokens(gray, accent, dark) {
 
   t.error = red(11);
   t["error-bg"] = red(3);
-  t["error-text"] = dark ? g(1) : "#ffffff";
+  t["error-text"] = dark ? n(1) : "#ffffff";
   t.success = grass(11);
   t["success-bg"] = grass(3);
   t["btn-success"] = grass(9);
@@ -127,11 +152,11 @@ function tokens(gray, accent, dark) {
     (c) => contrast(c, warnFill) >= 4.5 && contrast(c, t.surface) >= 4.5,
   ]);
 
-  t["panel-bg"] = dark ? g(3) : g(12);
-  t["panel-text"] = dark ? g(12) : g(1);
-  t["panel-muted"] = dark ? g(10) : g(8);
+  t["panel-bg"] = dark ? n(2) : n(12);
+  t["panel-text"] = dark ? n(12) : n(1);
+  t["panel-muted"] = dark ? n(10) : n(8);
   t["shadow-recess"] = dark ? "rgba(0, 0, 0, 0.22)" : "rgba(0, 0, 0, 0.06)";
-  return t;
+  return { vars: t, sidebar };
 }
 
 /** Text pairs that must clear AA in every theme and mode. */
@@ -140,8 +165,13 @@ const CHECKS = [
   ["text-faint", "surface"], ["text-faint", "bg"], ["text-faint", "chrome"],
   ["accent", "bg"], ["accent", "surface"], ["accent-text", "accent"], ["accent", "accent-subtle"],
   ["error", "surface"], ["success", "surface"], ["btn-success-text", "btn-success"],
-  ["panel-text", "panel-bg"], ["warn-text", "surface"],
+  ["panel-text", "panel-bg"], ["warn-text", "surface"], ["text-muted", "bg-subtle"],
+  ["text-faint", "bg-subtle"], ["text", "bg-subtle"],
 ];
+
+// Borders and surfaces must stay distinguishable from what they separate
+// (not a text pair, so a lower bar than AA).
+const SEPARATION = [["border", "surface", 1.12], ["border", "bg", 1.08], ["bg", "surface", 1.04], ["chrome", "bg", 1.02]];
 
 // ── output ──────────────────────────────────────────────
 
@@ -153,12 +183,16 @@ const meta = [];
 const report = [];
 
 for (const [id, label, gray, accent] of THEMES) {
-  const light = tokens(gray, accent, false);
-  const dark = tokens(gray, accent, true);
+  const { vars: light, sidebar: lightSidebar } = tokens(gray, accent, false);
+  const { vars: dark, sidebar: darkSidebar } = tokens(gray, accent, true);
   for (const [mode, t] of [["light", light], ["dark", dark]]) {
     for (const [fg, bg] of CHECKS) {
       const r = contrast(t[fg], t[bg]);
       if (r < 4.5) report.push(`${id} ${mode}: ${fg} on ${bg} ${r.toFixed(2)}`);
+    }
+    for (const [x, y, min] of SEPARATION) {
+      const r = contrast(t[x], t[y]);
+      if (r < min) report.push(`${id} ${mode}: ${x} vs ${y} ${r.toFixed(3)} (< ${min})`);
     }
   }
   const block = (sel, t) =>
@@ -166,6 +200,10 @@ for (const [id, label, gray, accent] of THEMES) {
   css += `\n/* ${label}: ${gray} + ${accent} */\n`;
   css += block(`html[data-theme-preset="${id}"]`, light);
   css += block(`html.dark[data-theme-preset="${id}"]`, dark);
+  // .sidebar-theme sets its tones on the aside itself, which beats anything
+  // inherited from <html>, so the theme has to name it.
+  css += block(`html[data-theme-preset="${id}"] .sidebar-theme`, lightSidebar);
+  css += block(`html.dark[data-theme-preset="${id}"] .sidebar-theme`, darkSidebar);
   meta.push({
     id,
     label,

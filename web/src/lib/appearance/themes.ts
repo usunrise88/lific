@@ -24,16 +24,16 @@ export const RADIX_THEMES: RadixTheme[] = [
     "gray": "slate",
     "accent": "indigo",
     "light": {
-      "bg": "#f0f0f3",
-      "surface": "#fcfcfd",
+      "bg": "#eef1fb",
+      "surface": "#fdfdfe",
       "accent": "#3a5bc7",
-      "text": "#1c2024"
+      "text": "#1d2331"
     },
     "dark": {
-      "bg": "#111113",
-      "surface": "#212225",
+      "bg": "#11121b",
+      "surface": "#1b233e",
       "accent": "#9eb1ff",
-      "text": "#edeef0"
+      "text": "#e8ebf3"
     }
   },
   {
@@ -42,16 +42,16 @@ export const RADIX_THEMES: RadixTheme[] = [
     "gray": "slate",
     "accent": "blue",
     "light": {
-      "bg": "#f0f0f3",
-      "surface": "#fcfcfd",
-      "accent": "#0d6dc3",
-      "text": "#1c2024"
+      "bg": "#e9f3fb",
+      "surface": "#fbfdfe",
+      "accent": "#0e6abe",
+      "text": "#192433"
     },
     "dark": {
-      "bg": "#111113",
-      "surface": "#212225",
+      "bg": "#0e141c",
+      "surface": "#13263d",
       "accent": "#70b8ff",
-      "text": "#edeef0"
+      "text": "#e3ecf3"
     }
   },
   {
@@ -60,16 +60,16 @@ export const RADIX_THEMES: RadixTheme[] = [
     "gray": "slate",
     "accent": "cyan",
     "light": {
-      "bg": "#f0f0f3",
-      "surface": "#fcfcfd",
-      "accent": "#107690",
-      "text": "#1c2024"
+      "bg": "#e3f5f7",
+      "surface": "#fbfdfe",
+      "accent": "#10738c",
+      "text": "#19272c"
     },
     "dark": {
-      "bg": "#111113",
-      "surface": "#212225",
+      "bg": "#0d1418",
+      "surface": "#102931",
       "accent": "#4ccce6",
-      "text": "#edeef0"
+      "text": "#e0eef2"
     }
   },
   {
@@ -78,16 +78,16 @@ export const RADIX_THEMES: RadixTheme[] = [
     "gray": "mauve",
     "accent": "violet",
     "light": {
-      "bg": "#f2eff3",
-      "surface": "#fdfcfd",
+      "bg": "#f3f0fb",
+      "surface": "#fdfcfe",
       "accent": "#6550b9",
-      "text": "#211f26"
+      "text": "#242133"
     },
     "dark": {
-      "bg": "#121113",
-      "surface": "#232225",
+      "bg": "#13121b",
+      "surface": "#27203a",
       "accent": "#baa7ff",
-      "text": "#eeeef0"
+      "text": "#ebeaf3"
     }
   },
   {
@@ -96,16 +96,16 @@ export const RADIX_THEMES: RadixTheme[] = [
     "gray": "mauve",
     "accent": "crimson",
     "light": {
-      "bg": "#f2eff3",
-      "surface": "#fdfcfd",
-      "accent": "#cb1d63",
-      "text": "#211f26"
+      "bg": "#fbebf1",
+      "surface": "#fefcfd",
+      "accent": "#c11c5f",
+      "text": "#301d2a"
     },
     "dark": {
-      "bg": "#121113",
-      "surface": "#232225",
+      "bg": "#171114",
+      "surface": "#321925",
       "accent": "#ff92ad",
-      "text": "#eeeef0"
+      "text": "#f2e8ee"
     }
   },
   {
@@ -114,16 +114,16 @@ export const RADIX_THEMES: RadixTheme[] = [
     "gray": "mauve",
     "accent": "plum",
     "light": {
-      "bg": "#f2eff3",
-      "surface": "#fdfcfd",
+      "bg": "#f8ecf9",
+      "surface": "#fefcfe",
       "accent": "#953ea3",
-      "text": "#211f26"
+      "text": "#2d1e33"
     },
     "dark": {
-      "bg": "#121113",
-      "surface": "#232225",
+      "bg": "#161116",
+      "surface": "#301c30",
       "accent": "#e796f3",
-      "text": "#eeeef0"
+      "text": "#efe8f1"
     }
   },
   {
@@ -132,16 +132,16 @@ export const RADIX_THEMES: RadixTheme[] = [
     "gray": "sage",
     "accent": "jade",
     "light": {
-      "bg": "#eef1f0",
-      "surface": "#fbfdfc",
-      "accent": "#207860",
-      "text": "#1a211e"
+      "bg": "#e8f5ee",
+      "surface": "#fbfefd",
+      "accent": "#1f755d",
+      "text": "#1b2722"
     },
     "dark": {
-      "bg": "#101211",
-      "surface": "#202221",
+      "bg": "#0e1412",
+      "surface": "#142a22",
       "accent": "#1fd8a4",
-      "text": "#eceeed"
+      "text": "#ddeee7"
     }
   },
   {
@@ -150,16 +150,16 @@ export const RADIX_THEMES: RadixTheme[] = [
     "gray": "sage",
     "accent": "teal",
     "light": {
-      "bg": "#eef1f0",
-      "surface": "#fbfdfc",
-      "accent": "#027a6a",
-      "text": "#1a211e"
+      "bg": "#e4f6f2",
+      "surface": "#fafefd",
+      "accent": "#037767",
+      "text": "#172824"
     },
     "dark": {
-      "bg": "#101211",
-      "surface": "#202221",
+      "bg": "#0e1413",
+      "surface": "#132a27",
       "accent": "#0bd8b6",
-      "text": "#eceeed"
+      "text": "#ddeee9"
     }
   },
   {
@@ -168,16 +168,16 @@ export const RADIX_THEMES: RadixTheme[] = [
     "gray": "olive",
     "accent": "grass",
     "light": {
-      "bg": "#eff1ef",
-      "surface": "#fcfdfc",
-      "accent": "#2a7b3a",
-      "text": "#1d211c"
+      "bg": "#ebf5eb",
+      "surface": "#fbfefb",
+      "accent": "#297739",
+      "text": "#1e271e"
     },
     "dark": {
-      "bg": "#111210",
-      "surface": "#212220",
+      "bg": "#0f1411",
+      "surface": "#1d281f",
       "accent": "#71d083",
-      "text": "#eceeec"
+      "text": "#e2eee2"
     }
   },
   {
@@ -186,16 +186,16 @@ export const RADIX_THEMES: RadixTheme[] = [
     "gray": "sand",
     "accent": "amber",
     "light": {
-      "bg": "#f1f0ef",
-      "surface": "#fdfdfc",
-      "accent": "#9d5d05",
-      "text": "#21201c"
+      "bg": "#fbf5d0",
+      "surface": "#fefdfb",
+      "accent": "#995a07",
+      "text": "#2c251d"
     },
     "dark": {
-      "bg": "#111110",
-      "surface": "#222221",
+      "bg": "#14120d",
+      "surface": "#2c2110",
       "accent": "#ffca16",
-      "text": "#eeeeec"
+      "text": "#f2ecdf"
     }
   },
   {
@@ -204,16 +204,16 @@ export const RADIX_THEMES: RadixTheme[] = [
     "gray": "sand",
     "accent": "orange",
     "light": {
-      "bg": "#f1f0ef",
-      "surface": "#fdfdfc",
-      "accent": "#bb4904",
-      "text": "#21201c"
+      "bg": "#fbefde",
+      "surface": "#fefcfb",
+      "accent": "#a94409",
+      "text": "#2e231c"
     },
     "dark": {
-      "bg": "#111110",
-      "surface": "#222221",
+      "bg": "#15120f",
+      "surface": "#2e1f12",
       "accent": "#ffa057",
-      "text": "#eeeeec"
+      "text": "#f2ebe2"
     }
   },
   {
