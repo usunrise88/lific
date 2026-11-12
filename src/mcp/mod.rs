@@ -626,7 +626,14 @@ impl ServerHandler for LificMcp {
     fn get_info(&self) -> ServerInfo {
         // Pin to 2025-03-26: rmcp defaults to 2025-06-18 which many clients
         // (including Zed) skipped, going straight from 2025-03-26 to 2025-11-25.
-        let info = ServerInfo::new(ServerCapabilities::builder().enable_tools().build())
+        // Fork: prompts carry the agent manifest (`/mcp__lific__manifest` in
+        // Claude Code), see [`MANIFEST_PROMPT`].
+        let info = ServerInfo::new(
+            ServerCapabilities::builder()
+                .enable_tools()
+                .enable_prompts()
+                .build(),
+        )
             .with_protocol_version(ProtocolVersion::V_2025_03_26)
             // Identify as lific, not rmcp's build-env default — this name is
             // what connected clients (and `lific doctor`) display.
@@ -724,6 +731,91 @@ impl ServerHandler for LificMcp {
 
     fn get_tool(&self, name: &str) -> Option<rmcp::model::Tool> {
         self.tool_router.get(name).cloned()
+    }
+
+    fn list_prompts(
+        &self,
+        _request: Option<rmcp::model::PaginatedRequestParams>,
+        _context: rmcp::service::RequestContext<rmcp::service::RoleServer>,
+    ) -> impl std::future::Future<Output = Result<rmcp::model::ListPromptsResult, rmcp::ErrorData>>
+    + rmcp::service::MaybeSendFuture
+    + '_ {
+        std::future::ready(Ok(rmcp::model::ListPromptsResult::with_all_items(vec![
+            manifest_prompt(),
+        ])))
+    }
+
+    fn get_prompt(
+        &self,
+        request: rmcp::model::GetPromptRequestParams,
+        _context: rmcp::service::RequestContext<rmcp::service::RoleServer>,
+    ) -> impl std::future::Future<Output = Result<rmcp::model::GetPromptResult, rmcp::ErrorData>>
+    + rmcp::service::MaybeSendFuture
+    + '_ {
+        std::future::ready(self.manifest_prompt_result(&request))
+    }
+}
+
+/// Fork: the one MCP prompt. Claude Code lists it as `/mcp__lific__manifest`;
+/// other clients show it in their prompt picker.
+const MANIFEST_PROMPT: &str = "manifest";
+
+fn manifest_prompt() -> rmcp::model::Prompt {
+    rmcp::model::Prompt::new(
+        MANIFEST_PROMPT,
+        Some(
+            "Install or refresh this Lific instance's agent manifest (its working rules for \
+             agents) in the repository's AGENTS.md or CLAUDE.md",
+        ),
+        Some(vec![
+            rmcp::model::PromptArgument::new("project")
+                .with_description("Project identifier to fill in, e.g. LIF (default: the bound project)")
+                .with_required(false),
+        ]),
+    )
+    .with_title("Lific agent manifest")
+}
+
+impl LificMcp {
+    fn manifest_prompt_result(
+        &self,
+        request: &rmcp::model::GetPromptRequestParams,
+    ) -> Result<rmcp::model::GetPromptResult, rmcp::ErrorData> {
+        use rmcp::model::{GetPromptResult, PromptMessage, PromptMessageRole};
+        if request.name != MANIFEST_PROMPT {
+            return Err(rmcp::ErrorData::invalid_params(
+                format!("unknown prompt '{}'; the only one is '{MANIFEST_PROMPT}'", request.name),
+                None,
+            ));
+        }
+        let project = request
+            .arguments
+            .as_ref()
+            .and_then(|a| a.get("project"))
+            .and_then(|v| v.as_str());
+        let (block, version) = self
+            .manifest_block(project)
+            .map_err(|e| rmcp::ErrorData::internal_error(e, None))?;
+        let unbound = project.is_none_or(|p| p.trim().is_empty()) && self.bound_project.is_none();
+        let placeholder = if unbound && block.contains("APP") {
+            " The block uses the placeholder project APP: replace it with this repository's \
+             project identifier (`lific bind` in the repository prints it; list_resources(resource_type='project') lists them)."
+        } else {
+            ""
+        };
+        let text = format!(
+            "Install the Lific agent manifest (v={version}) into this repository's agent \
+             instructions. Use the file the agents here already read: AGENTS.md, CLAUDE.md, \
+             GEMINI.md or the harness's own rules file; create AGENTS.md if there is none. If the \
+             file has a block between <!-- lific:begin --> and <!-- lific:end -->, replace exactly \
+             that block; otherwise append this one at the end. Change nothing else in the file.\
+             {placeholder} Then show me the change.\n\n{block}"
+        );
+        Ok(GetPromptResult::new(vec![PromptMessage::new_text(
+            PromptMessageRole::User,
+            text,
+        )])
+        .with_description(format!("Lific agent manifest v={version}")))
     }
 }
 

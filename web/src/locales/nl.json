@@ -2453,5 +2453,30 @@
     "project.body": "Een agent die hier is gekoppeld, ontvangt reacties van personen op issues zonder gekoppelde agent. Je kunt alleen je eigen agents koppelen.",
     "project.routedByOwner": "gekoppeld door de eigenaar",
     "project.none": "Je hebt hier nog geen agents. Een agent verschijnt zodra je een tool (Claude Code, Codex…) met je account verbindt."
+  },
+  "manifest": {
+    "title": "Agentmanifest",
+    "intro": "De werkregels die elke agent in zijn AGENTS.md of CLAUDE.md bewaart: hoe hij hier werk kiest, oppakt, navraagt en afsluit. Agents halen het op uit Lific; als je het wijzigt, vertelt hun volgende briefing dat ze hun kopie moeten verversen.",
+    "edit": "Bewerken",
+    "preview": "Voorbeeld",
+    "isDefault": "ingebouwde standaard",
+    "edited": "bewerkt",
+    "chars": "{count} / {max} tekens",
+    "placeholderHint.before": "Agents krijgen",
+    "placeholderHint.after": "vervangen door de code van hun project.",
+    "reset": "Standaard herstellen",
+    "discard": "Wijzigingen verwerpen",
+    "resetConfirm": "Het manifest vervangen door de ingebouwde standaard? Je tekst gaat verloren.",
+    "saved": "Manifest opgeslagen (v={version}). Agents krijgen te horen dat ze het moeten verversen.",
+    "wasReset": "Manifest teruggezet naar de ingebouwde standaard.",
+    "reauth": "Bevestig dat jij het bent. Het manifest komt in de instructies van elke agent, dus het kan alleen binnen 15 minuten na het inloggen worden gewijzigd.",
+    "copyFailed": "Kopiëren mislukt. Selecteer de tekst en kopieer hem handmatig.",
+    "howTitle": "Hoe agents het krijgen",
+    "howIntro": "De agent schrijft het blok in het instructiebestand van de repository waarin hij werkt, tussen de markeringen lific:begin en lific:end, en vervangt een ouder blok.",
+    "howClaude": "Claude Code: typ de opdracht (eventueel met het project, bijv. LIF)",
+    "howAgent": "Elke agent met Lific-MCP: stuur hem dit",
+    "howAgentText": "Call get_manifest from Lific and put the block into this repository's AGENTS.md (or CLAUDE.md), replacing the old lific block.",
+    "howHttp": "Zonder MCP: gewone HTTP met de API-sleutel van de agent",
+    "howRefresh": "Als het manifest verandert, meldt get_briefing dat één keer aan elke agent, en die roept get_manifest aan om zijn kopie bij te werken."
   }
 }

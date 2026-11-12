@@ -34,6 +34,7 @@
   import { createSaveQueue } from "../lib/saveQueue";
   import { disposePatch, drainStep, takePending } from "../lib/pendingPatch";
   import SettingsTabs from "../lib/SettingsTabs.svelte";
+  import AgentManifestEditor from "../lib/AgentManifestEditor.svelte";
   import Skeleton from "../lib/Skeleton.svelte";
   import TimeAgo from "../lib/TimeAgo.svelte";
   import { toast } from "../lib/toast/toast.svelte";
@@ -1013,6 +1014,11 @@
             </p>
             {@render reauthForm(reauthFor)}
           </div>
+        {/if}
+
+        <!-- ── AGENT MANIFEST (fork) ──────────────────────── -->
+        {#if user}
+          <AgentManifestEditor userId={user.id} autoLogin={webAutoLogin} />
         {/if}
 
         <!-- ── MEMBERS ────────────────────────────────────── -->

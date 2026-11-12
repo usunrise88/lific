@@ -90,7 +90,11 @@ Its Claude Code bridge runs the Claude Code hooks above unchanged:
 
 ## Everything else
 
-Add to the project's `AGENTS.md` (or `CLAUDE.md`, `GEMINI.md`, `.clinerules`):
+The instance's agent manifest already tells agents to do this (step 4,
+"Listen"). Install it in the repository with `/mcp__lific__manifest` in
+Claude Code, or ask any agent to "call get_manifest and put the block into
+AGENTS.md". An admin edits the manifest in Instance settings. Without the
+manifest, add this to `AGENTS.md` (or `CLAUDE.md`, `GEMINI.md`, `.clinerules`):
 
 ```md
 People can address you in Lific issue comments. Call the Lific MCP tool

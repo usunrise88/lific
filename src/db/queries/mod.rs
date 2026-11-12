@@ -1,5 +1,6 @@
 pub(crate) mod activity;
 pub(crate) mod agent_inbox;
+pub(crate) mod agent_manifest;
 pub(crate) mod assignees;
 pub(crate) mod attachments;
 pub(crate) mod briefing;

@@ -2453,5 +2453,30 @@
     "project.body": "Az ide irányított ügynök megkapja az emberek hozzászólásait azokon a feladatokon, amelyekhez nem tartozik ügynök. Csak a saját ügynökeidet irányíthatod ide.",
     "project.routedByOwner": "a tulajdonosa irányította ide",
     "project.none": "Itt még nincsenek ügynökeid. Ügynök akkor jelenik meg, ha a fiókoddal összekapcsolsz egy eszközt (Claude Code, Codex…)."
+  },
+  "manifest": {
+    "title": "Ügynökmanifeszt",
+    "intro": "A munkaszabályok, amelyeket minden ügynök az AGENTS.md vagy CLAUDE.md fájljában tart: hogyan válasszon, vállaljon, kérdezzen és zárjon le munkát itt. Az ügynökök a Lificből kérik le; ha módosítod, a következő eligazítás szól nekik, hogy frissítsék a másolatukat.",
+    "edit": "Szerkesztés",
+    "preview": "Előnézet",
+    "isDefault": "beépített alapértelmezett",
+    "edited": "szerkesztve",
+    "chars": "{count} / {max} karakter",
+    "placeholderHint.before": "Az ügynökök a",
+    "placeholderHint.after": "helyén a projektjük azonosítóját kapják.",
+    "reset": "Alapértelmezett visszaállítása",
+    "discard": "Módosítások elvetése",
+    "resetConfirm": "Lecseréled a manifesztet a beépített alapértelmezettre? A szöveged elvész.",
+    "saved": "Manifeszt mentve (v={version}). Az ügynökök értesítést kapnak a frissítésről.",
+    "wasReset": "A manifeszt visszaállt a beépített alapértelmezettre.",
+    "reauth": "Erősítsd meg, hogy te vagy az. A manifeszt minden ügynök utasításaiba bekerül, ezért csak a bejelentkezés utáni 15 percben módosítható.",
+    "copyFailed": "A másolás nem sikerült. Jelöld ki a szöveget, és másold kézzel.",
+    "howTitle": "Így kapják meg az ügynökök",
+    "howIntro": "Az ügynök a blokkot annak a tárolónak az utasításfájljába írja, ahol dolgozik, a lific:begin és lific:end jelölők közé, lecserélve a régebbi blokkot.",
+    "howClaude": "Claude Code: írd be a parancsot (opcionálisan a projekttel, pl. LIF)",
+    "howAgent": "Bármely Lific MCP-vel rendelkező ügynök: küldd el neki ezt",
+    "howAgentText": "Call get_manifest from Lific and put the block into this repository's AGENTS.md (or CLAUDE.md), replacing the old lific block.",
+    "howHttp": "MCP nélkül: egyszerű HTTP az ügynök API-kulcsával",
+    "howRefresh": "Ha a manifeszt változik, a get_briefing ezt egyszer jelzi minden ügynöknek, az pedig a get_manifest hívással frissíti a másolatát."
   }
 }

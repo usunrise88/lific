@@ -2453,5 +2453,30 @@
     "project.body": "Un agent relié ici reçoit les commentaires des personnes sur les tickets auxquels aucun agent n’est rattaché. Vous ne pouvez relier que vos propres agents.",
     "project.routedByOwner": "relié par son propriétaire",
     "project.none": "Vous n’avez pas encore d’agent ici. Un agent apparaît quand vous connectez un outil (Claude Code, Codex…) avec votre compte."
+  },
+  "manifest": {
+    "title": "Manifeste des agents",
+    "intro": "Les règles de travail que chaque agent garde dans son AGENTS.md ou CLAUDE.md : comment choisir, prendre, questionner et clore le travail ici. Les agents le récupèrent depuis Lific ; après une modification, leur prochain briefing leur demande de rafraîchir leur copie.",
+    "edit": "Modifier",
+    "preview": "Aperçu",
+    "isDefault": "valeur intégrée par défaut",
+    "edited": "modifié",
+    "chars": "{count} / {max} caractères",
+    "placeholderHint.before": "Les agents reçoivent",
+    "placeholderHint.after": "remplacé par l'identifiant de leur projet.",
+    "reset": "Rétablir par défaut",
+    "discard": "Annuler les modifications",
+    "resetConfirm": "Remplacer le manifeste par la version intégrée ? Votre texte sera perdu.",
+    "saved": "Manifeste enregistré (v={version}). Les agents seront invités à le rafraîchir.",
+    "wasReset": "Manifeste rétabli à la version intégrée.",
+    "reauth": "Confirmez votre identité. Le manifeste entre dans les instructions de chaque agent : il ne peut donc être modifié que dans les 15 minutes suivant la connexion.",
+    "copyFailed": "Copie impossible. Sélectionnez le texte et copiez-le à la main.",
+    "howTitle": "Comment les agents l'obtiennent",
+    "howIntro": "L'agent écrit le bloc dans le fichier d'instructions du dépôt où il travaille, entre les marqueurs lific:begin et lific:end, en remplaçant un ancien bloc.",
+    "howClaude": "Claude Code : tapez la commande (avec le projet en option, ex. LIF)",
+    "howAgent": "Tout agent avec le MCP Lific : envoyez-lui ceci",
+    "howAgentText": "Call get_manifest from Lific and put the block into this repository's AGENTS.md (or CLAUDE.md), replacing the old lific block.",
+    "howHttp": "Sans MCP : HTTP simple avec la clé API de l'agent",
+    "howRefresh": "Quand le manifeste change, get_briefing le signale une fois à chaque agent, qui appelle get_manifest pour mettre sa copie à jour."
   }
 }

@@ -2558,5 +2558,30 @@
     "project.body": "Agent usmeren ovde prima komentare ljudi na zadacima na kojima nema agenta. Možeš da usmeriš samo svoje agente.",
     "project.routedByOwner": "usmerio ga je vlasnik",
     "project.none": "Ovde još nemaš agente. Agent se pojavljuje kada povežeš alat (Claude Code, Codex…) sa svojim nalogom."
+  },
+  "manifest": {
+    "title": "Manifest za agente",
+    "intro": "Pravila rada koja svaki agent čuva u svom AGENTS.md ili CLAUDE.md: kako ovde da bira, preuzima, pita i zatvara posao. Agenti ga preuzimaju iz Lifica, a kad ga promeniš, sledeći brifing im kaže da osveže svoju kopiju.",
+    "edit": "Uredi",
+    "preview": "Pregled",
+    "isDefault": "ugrađeni podrazumevani",
+    "edited": "izmenjeno",
+    "chars": "{count} / {max} znakova",
+    "placeholderHint.before": "Umesto",
+    "placeholderHint.after": "agenti dobijaju oznaku svog projekta.",
+    "reset": "Vrati na podrazumevano",
+    "discard": "Odbaci izmene",
+    "resetConfirm": "Zameniti manifest ugrađenim podrazumevanim? Tvoj tekst će biti izgubljen.",
+    "saved": "Manifest sačuvan (v={version}). Agentima će biti rečeno da ga osveže.",
+    "wasReset": "Manifest vraćen na ugrađeni podrazumevani.",
+    "reauth": "Potvrdi da si to ti. Manifest ulazi u uputstva svakog agenta, pa se može menjati samo u roku od 15 minuta od prijave.",
+    "copyFailed": "Kopiranje nije uspelo. Označi tekst i kopiraj ga ručno.",
+    "howTitle": "Kako ga agenti dobijaju",
+    "howIntro": "Agent upisuje blok u datoteku uputstava repozitorijuma u kom radi, između oznaka lific:begin i lific:end, zamenjujući stariji blok.",
+    "howClaude": "Claude Code: unesi komandu (po želji sa projektom, npr. LIF)",
+    "howAgent": "Bilo koji agent sa Lific MCP-om: pošalji mu ovo",
+    "howAgentText": "Call get_manifest from Lific and put the block into this repository's AGENTS.md (or CLAUDE.md), replacing the old lific block.",
+    "howHttp": "Bez MCP-a: obični HTTP sa API ključem agenta",
+    "howRefresh": "Kada se manifest promeni, get_briefing to jednom javi svakom agentu, a on poziva get_manifest da osveži svoju kopiju."
   }
 }

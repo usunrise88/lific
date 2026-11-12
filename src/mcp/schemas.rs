@@ -93,6 +93,14 @@ pub struct CheckInboxInput {
     pub limit: Option<i64>,
 }
 
+/// Fork: `get_manifest`.
+#[derive(Debug, Default, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct GetManifestInput {
+    #[schemars(description = "Project identifier to fill in (e.g. LIF); defaults to the bound project")]
+    pub project: Option<String>,
+}
+
 #[derive(Debug, Default, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct GetActivityInput {

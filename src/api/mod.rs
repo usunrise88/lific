@@ -13,6 +13,7 @@ mod feed;
 mod for_me;
 mod git_hook;
 mod agent_inbox;
+mod agent_manifest;
 pub(crate) use agent_inbox::render_for_agent as render_inbox_for_agent;
 mod home;
 mod insights;
@@ -177,6 +178,14 @@ fn router_impl(
         .route("/api/projects/{id}/agents", get(agent_inbox::project_agents))
         .route("/api/projects/{id}/agent-routes", get(agent_inbox::project_routes))
         .route("/api/issues/{id}/agents", get(agent_inbox::issue_agents))
+        // Fork: agent manifest (queries::agent_manifest).
+        .route("/api/agent/manifest", get(agent_manifest::get_rendered))
+        .route(
+            "/api/instance/agent-manifest",
+            get(agent_manifest::admin_get)
+                .put(agent_manifest::admin_put)
+                .delete(agent_manifest::admin_reset),
+        )
         // Fork: cross-project activity feed (the Feed page), filtered to
         // visible projects like the home overview.
         .route("/api/feed", get(feed::feed))

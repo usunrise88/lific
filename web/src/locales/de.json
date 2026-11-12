@@ -2453,5 +2453,30 @@
     "project.body": "Ein hierher geleiteter Agent empfängt Kommentare von Personen zu Aufgaben, an denen kein Agent beteiligt ist. Du kannst nur deine eigenen Agenten hierher leiten.",
     "project.routedByOwner": "vom Besitzer hierher geleitet",
     "project.none": "Du hast hier noch keine Agenten. Ein Agent erscheint, wenn du ein Tool (Claude Code, Codex…) mit deinem Konto verbindest."
+  },
+  "manifest": {
+    "title": "Agenten-Manifest",
+    "intro": "Die Arbeitsregeln, die jeder Agent in seiner AGENTS.md oder CLAUDE.md hält: wie er hier Arbeit auswählt, übernimmt, nachfragt und abschließt. Agenten holen es aus Lific; nachdem du es änderst, sagt ihnen ihr nächstes Briefing, dass sie ihre Kopie erneuern sollen.",
+    "edit": "Bearbeiten",
+    "preview": "Vorschau",
+    "isDefault": "eingebauter Standard",
+    "edited": "bearbeitet",
+    "chars": "{count} / {max} Zeichen",
+    "placeholderHint.before": "Agenten erhalten",
+    "placeholderHint.after": "ersetzt durch die Kennung ihres Projekts.",
+    "reset": "Auf Standard zurücksetzen",
+    "discard": "Änderungen verwerfen",
+    "resetConfirm": "Das Manifest durch den eingebauten Standard ersetzen? Dein Text geht verloren.",
+    "saved": "Manifest gespeichert (v={version}). Agenten werden aufgefordert, es zu erneuern.",
+    "wasReset": "Manifest auf den eingebauten Standard zurückgesetzt.",
+    "reauth": "Bestätige, dass du es bist. Das Manifest landet in den Anweisungen jedes Agenten und kann daher nur innerhalb von 15 Minuten nach der Anmeldung geändert werden.",
+    "copyFailed": "Kopieren fehlgeschlagen. Markiere den Text und kopiere ihn von Hand.",
+    "howTitle": "So erhalten Agenten es",
+    "howIntro": "Der Agent schreibt den Block in die Anweisungsdatei des Repositorys, in dem er arbeitet, zwischen die Markierungen lific:begin und lific:end und ersetzt einen älteren Block.",
+    "howClaude": "Claude Code: Befehl eingeben (optional mit Projekt, z. B. LIF)",
+    "howAgent": "Jeder Agent mit Lific-MCP: schick ihm das",
+    "howAgentText": "Call get_manifest from Lific and put the block into this repository's AGENTS.md (or CLAUDE.md), replacing the old lific block.",
+    "howHttp": "Ohne MCP: einfaches HTTP mit dem API-Schlüssel des Agenten",
+    "howRefresh": "Ändert sich das Manifest, sagt get_briefing es jedem Agenten einmal, und er ruft get_manifest auf, um seine Kopie zu erneuern."
   }
 }

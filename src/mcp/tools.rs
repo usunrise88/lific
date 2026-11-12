@@ -1133,6 +1133,7 @@ impl LificMcp {
     /// | `get_board` | resolvable | omission is an error today |
     /// | `create_plan` | resolvable | omission is an error today |
     /// | `get_briefing` | resolvable | omission is an error without a binding |
+    /// | `get_manifest` (fork) | resolvable | omission renders a placeholder identifier |
     /// | `list_resources` (issue, plan, module, label, folder) | resolvable | omission is an error today |
     /// | `list_resources` (page) | meaning-preserved | omission lists pages across every project |
     /// | `list_resources` (project) | meaning-preserved | `project` is ignored for this type |
@@ -1167,7 +1168,8 @@ const FALLBACK_RESOURCE_TYPES: [&str; 5] = ["issue", "plan", "module", "label", 
 /// machine, and has nothing but the tool name and arguments to go on.
 pub(crate) fn project_fallback_applies(tool: &str, resource_type: Option<&str>) -> bool {
     match tool {
-        "list_issues" | "create_issue" | "get_board" | "create_plan" | "get_briefing" => true,
+        "list_issues" | "create_issue" | "get_board" | "create_plan" | "get_briefing"
+        | "get_manifest" => true,
         "list_resources" => {
             resource_type.is_some_and(|kind| FALLBACK_RESOURCE_TYPES.contains(&kind))
         }
@@ -1977,6 +1979,38 @@ impl LificMcp {
             return Ok("Inbox empty: nothing new addressed to you.".into());
         }
         Ok(crate::api::render_inbox_for_agent(&items, pending, 40_000))
+    }
+
+    #[tool(
+        description = "This instance's working rules for agents, as a block for AGENTS.md or CLAUDE.md. Put it between the lific:begin and lific:end markers there, replacing the old block."
+    )]
+    fn get_manifest(&self, Parameters(input): Parameters<GetManifestInput>) -> String {
+        self.get_manifest_inner(input).unwrap_or_else(error_response)
+    }
+
+    pub(crate) fn get_manifest_inner(&self, input: GetManifestInput) -> Result<String, String> {
+        let (block, version) = self.manifest_block(input.project.as_deref())?;
+        Ok(format!(
+            "Agent manifest v={version}. Write the block below into the instructions file \
+             agents read in this repository (AGENTS.md, CLAUDE.md or your harness's own). \
+             If the file already has a lific:begin ... lific:end block, replace exactly that \
+             block; otherwise append it. Leave the rest of the file as it is.\n\n{block}"
+        ))
+    }
+
+    /// The rendered manifest for `project` (or the bound project), and its
+    /// version. The identifier is only filled into the text, never looked
+    /// up, so this says nothing about which projects exist.
+    pub(crate) fn manifest_block(&self, project: Option<&str>) -> Result<(String, String), String> {
+        let ident = project
+            .map(str::trim)
+            .filter(|p| !p.is_empty())
+            .or(self.bound_project.as_deref())
+            .map(str::to_uppercase);
+        self.read(|conn| {
+            let m = queries::agent_manifest::get(conn)?;
+            Ok((queries::agent_manifest::render(&m, ident.as_deref()), m.version))
+        })
     }
 
     #[tool(
@@ -5948,6 +5982,10 @@ mod tests_page_reads;
 #[cfg(test)]
 #[path = "tests_waits.rs"]
 mod tests_waits;
+
+#[cfg(test)]
+#[path = "tests_manifest.rs"]
+mod tests_manifest;
 
 #[cfg(test)]
 #[path = "tests_assignees.rs"]

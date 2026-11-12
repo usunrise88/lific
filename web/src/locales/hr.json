@@ -2558,5 +2558,30 @@
     "project.body": "Agent usmjeren ovamo prima komentare ljudi na zadacima uz koje nije vezan nijedan agent. Možeš usmjeriti samo svoje agente.",
     "project.routedByOwner": "usmjerio ga je vlasnik",
     "project.none": "Ovdje još nemaš agenata. Agent se pojavi kad povežeš alat (Claude Code, Codex…) sa svojim računom."
+  },
+  "manifest": {
+    "title": "Manifest za agente",
+    "intro": "Pravila rada koja svaki agent drži u svom AGENTS.md ili CLAUDE.md: kako ovdje birati, preuzimati, pitati i zatvarati posao. Agenti ga dohvaćaju iz Lifica, a nakon što ga promijeniš, sljedeći brifing kaže im da osvježe svoju kopiju.",
+    "edit": "Uredi",
+    "preview": "Pregled",
+    "isDefault": "ugrađeni zadani",
+    "edited": "uređeno",
+    "chars": "{count} / {max} znakova",
+    "placeholderHint.before": "Umjesto",
+    "placeholderHint.after": "agenti dobivaju oznaku svog projekta.",
+    "reset": "Vrati na zadano",
+    "discard": "Odbaci izmjene",
+    "resetConfirm": "Zamijeniti manifest ugrađenim zadanim? Tvoj će tekst biti izgubljen.",
+    "saved": "Manifest spremljen (v={version}). Agentima će biti rečeno da ga osvježe.",
+    "wasReset": "Manifest vraćen na ugrađeni zadani.",
+    "reauth": "Potvrdi da si to ti. Manifest ulazi u upute svakog agenta, pa se može mijenjati samo unutar 15 minuta od prijave.",
+    "copyFailed": "Kopiranje nije uspjelo. Označi tekst i kopiraj ga ručno.",
+    "howTitle": "Kako ga agenti dobivaju",
+    "howIntro": "Agent upisuje blok u datoteku uputa repozitorija u kojem radi, između oznaka lific:begin i lific:end, zamjenjujući stariji blok.",
+    "howClaude": "Claude Code: upiši naredbu (po želji s projektom, npr. LIF)",
+    "howAgent": "Bilo koji agent s Lific MCP-om: pošalji mu ovo",
+    "howAgentText": "Call get_manifest from Lific and put the block into this repository's AGENTS.md (or CLAUDE.md), replacing the old lific block.",
+    "howHttp": "Bez MCP-a: obični HTTP s API ključem agenta",
+    "howRefresh": "Kad se manifest promijeni, get_briefing to jednom javi svakom agentu, a on poziva get_manifest da osvježi svoju kopiju."
   }
 }

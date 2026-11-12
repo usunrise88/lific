@@ -383,6 +383,10 @@ fn rest_manifest() -> HashMap<(&'static str, &'static str), Classification> {
         (("GET", "/api/home/overview"), Filtered),
         (("GET", "/api/home/flow"), Filtered),
         (("GET", "/api/agent/inbox"), Exempt("the calling agent's own inbox; routing already checked visibility")),
+        (("GET", "/api/agent/manifest"), Exempt(NOT_PROJECT_SCOPED)),
+        (("GET", "/api/instance/agent-manifest"), Exempt(NOT_PROJECT_SCOPED)),
+        (("PUT", "/api/instance/agent-manifest"), Exempt(NOT_PROJECT_SCOPED)),
+        (("DELETE", "/api/instance/agent-manifest"), Exempt(NOT_PROJECT_SCOPED)),
         (("GET", "/api/agent/inbox/hook"), Exempt("the calling agent's own inbox; routing already checked visibility")),
         (("PUT", "/api/agent/routes"), Gated(Viewer)),
         (("GET", "/api/projects/{id}/agents"), Gated(Viewer)),
@@ -618,6 +622,8 @@ fn mcp_manifest() -> HashMap<&'static str, Classification> {
         ("get_activity", Gated(Viewer)),
         // Fork: only the calling agent's own messages, routed by visibility.
         ("check_inbox", Filtered),
+        // Fork: the instance's agent manifest, the same text for every caller.
+        ("get_manifest", Exempt("instance-wide text, no project data")),
         ("get_briefing", Gated(Viewer)),
         ("list_issues", Gated(Viewer)),
         ("get_issue", Gated(Viewer)),

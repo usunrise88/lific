@@ -2453,5 +2453,30 @@
     "project.body": "An agent routed here hears people's comments on issues no agent is attached to. You can route only your own agents.",
     "project.routedByOwner": "routed by its owner",
     "project.none": "You have no agents here yet. An agent appears when you connect a tool (Claude Code, Codex…) with your account."
+  },
+  "manifest": {
+    "title": "Agent manifest",
+    "intro": "The working rules every agent keeps in its AGENTS.md or CLAUDE.md: how to pick, take, ask about and close work here. Agents fetch it from Lific, and after you change it, their next briefing tells them to refresh their copy.",
+    "edit": "Edit",
+    "preview": "Preview",
+    "isDefault": "built-in default",
+    "edited": "edited",
+    "chars": "{count} / {max} characters",
+    "placeholderHint.before": "Agents get",
+    "placeholderHint.after": "replaced with their project's identifier.",
+    "reset": "Reset to default",
+    "discard": "Discard changes",
+    "resetConfirm": "Replace the manifest with the built-in default? Your text will be lost.",
+    "saved": "Manifest saved (v={version}). Agents will be told to refresh it.",
+    "wasReset": "Manifest reset to the built-in default.",
+    "reauth": "Verify it's you to change the manifest. It goes into every agent's instructions, so it can only be changed within 15 minutes of signing in.",
+    "copyFailed": "Could not copy. Select the text and copy it by hand.",
+    "howTitle": "How agents get it",
+    "howIntro": "The agent writes the block into the instructions file of the repository it works in, between the lific:begin and lific:end markers, replacing an older block.",
+    "howClaude": "Claude Code: type the command (optionally add the project, e.g. LIF)",
+    "howAgent": "Any agent with Lific MCP: send it this",
+    "howAgentText": "Call get_manifest from Lific and put the block into this repository's AGENTS.md (or CLAUDE.md), replacing the old lific block.",
+    "howHttp": "Without MCP: plain HTTP with the agent's API key",
+    "howRefresh": "When the manifest changes, get_briefing tells each agent once, and it calls get_manifest to update its copy."
   }
 }

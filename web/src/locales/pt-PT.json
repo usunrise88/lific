@@ -2453,5 +2453,30 @@
     "project.body": "Um agente ligado aqui recebe os comentários das pessoas em tarefas sem nenhum agente associado. Só pode ligar os seus próprios agentes.",
     "project.routedByOwner": "ligado pelo proprietário",
     "project.none": "Ainda não tem agentes aqui. Um agente aparece quando liga uma ferramenta (Claude Code, Codex…) à sua conta."
+  },
+  "manifest": {
+    "title": "Manifesto dos agentes",
+    "intro": "As regras de trabalho que cada agente guarda no seu AGENTS.md ou CLAUDE.md: como escolher, assumir, perguntar e fechar trabalho aqui. Os agentes obtêm-no do Lific e, depois de uma alteração, o próximo briefing pede-lhes que atualizem a sua cópia.",
+    "edit": "Editar",
+    "preview": "Pré-visualizar",
+    "isDefault": "predefinição incorporada",
+    "edited": "editado",
+    "chars": "{count} / {max} caracteres",
+    "placeholderHint.before": "Os agentes recebem",
+    "placeholderHint.after": "substituído pelo identificador do seu projeto.",
+    "reset": "Repor predefinição",
+    "discard": "Descartar alterações",
+    "resetConfirm": "Substituir o manifesto pela predefinição incorporada? O seu texto será perdido.",
+    "saved": "Manifesto guardado (v={version}). Os agentes serão avisados para o atualizar.",
+    "wasReset": "Manifesto reposto na predefinição incorporada.",
+    "reauth": "Confirme que é você. O manifesto entra nas instruções de todos os agentes, por isso só pode ser alterado nos 15 minutos após o início de sessão.",
+    "copyFailed": "Não foi possível copiar. Selecione o texto e copie-o manualmente.",
+    "howTitle": "Como os agentes o obtêm",
+    "howIntro": "O agente escreve o bloco no ficheiro de instruções do repositório onde trabalha, entre os marcadores lific:begin e lific:end, substituindo um bloco anterior.",
+    "howClaude": "Claude Code: escreva o comando (opcionalmente com o projeto, p. ex. LIF)",
+    "howAgent": "Qualquer agente com o MCP do Lific: envie-lhe isto",
+    "howAgentText": "Call get_manifest from Lific and put the block into this repository's AGENTS.md (or CLAUDE.md), replacing the old lific block.",
+    "howHttp": "Sem MCP: HTTP simples com a chave API do agente",
+    "howRefresh": "Quando o manifesto muda, o get_briefing avisa cada agente uma vez, e este chama get_manifest para atualizar a sua cópia."
   }
 }

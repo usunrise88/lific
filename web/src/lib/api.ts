@@ -317,6 +317,35 @@ export interface InstanceSettingsPatch {
   logo_target?: LogoTarget;
 }
 
+// Fork: the agent manifest (src/db/queries/agent_manifest.rs).
+export interface AgentManifest {
+  /** The template as stored; `{{project}}` is filled in per project. */
+  content: string;
+  is_default: boolean;
+  updated_at: string | null;
+  version: string;
+  /** The built-in manifest, for "reset" and comparison. */
+  default: string;
+  max_chars: number;
+  /** The block an agent gets, rendered without a project. */
+  preview: string;
+}
+
+export async function getAgentManifest() {
+  return request<AgentManifest>("/instance/agent-manifest");
+}
+
+export async function saveAgentManifest(content: string) {
+  return request<AgentManifest>("/instance/agent-manifest", {
+    method: "PUT",
+    body: JSON.stringify({ content }),
+  });
+}
+
+export async function resetAgentManifest() {
+  return request<AgentManifest>("/instance/agent-manifest", { method: "DELETE" });
+}
+
 export async function getInstanceSettings() {
   return request<InstanceSettings>("/instance/settings");
 }

@@ -2558,5 +2558,30 @@
     "project.body": "Un agent direcționat aici primește comentariile persoanelor la problemele la care nu e atașat niciun agent. Poți direcționa doar agenții tăi.",
     "project.routedByOwner": "direcționat de proprietarul său",
     "project.none": "Încă nu ai agenți aici. Un agent apare când conectezi un instrument (Claude Code, Codex…) cu contul tău."
+  },
+  "manifest": {
+    "title": "Manifestul agenților",
+    "intro": "Regulile de lucru pe care fiecare agent le păstrează în AGENTS.md sau CLAUDE.md: cum alege, preia, întreabă și închide munca aici. Agenții îl preiau din Lific, iar după ce îl modifici, următorul briefing le cere să-și reîmprospăteze copia.",
+    "edit": "Editare",
+    "preview": "Previzualizare",
+    "isDefault": "implicit integrat",
+    "edited": "editat",
+    "chars": "{count} / {max} caractere",
+    "placeholderHint.before": "Agenții primesc",
+    "placeholderHint.after": "înlocuit cu identificatorul proiectului lor.",
+    "reset": "Revino la implicit",
+    "discard": "Renunță la modificări",
+    "resetConfirm": "Înlocuiești manifestul cu cel implicit integrat? Textul tău se va pierde.",
+    "saved": "Manifest salvat (v={version}). Agenții vor fi anunțați să-l reîmprospăteze.",
+    "wasReset": "Manifestul a revenit la cel implicit integrat.",
+    "reauth": "Confirmă că ești tu. Manifestul intră în instrucțiunile fiecărui agent, așa că poate fi modificat doar în 15 minute de la autentificare.",
+    "copyFailed": "Copierea nu a reușit. Selectează textul și copiază-l manual.",
+    "howTitle": "Cum îl primesc agenții",
+    "howIntro": "Agentul scrie blocul în fișierul de instrucțiuni al depozitului în care lucrează, între marcajele lific:begin și lific:end, înlocuind un bloc mai vechi.",
+    "howClaude": "Claude Code: tastează comanda (opțional cu proiectul, ex. LIF)",
+    "howAgent": "Orice agent cu MCP Lific: trimite-i asta",
+    "howAgentText": "Call get_manifest from Lific and put the block into this repository's AGENTS.md (or CLAUDE.md), replacing the old lific block.",
+    "howHttp": "Fără MCP: HTTP simplu cu cheia API a agentului",
+    "howRefresh": "Când manifestul se schimbă, get_briefing îi spune o dată fiecărui agent, iar acesta apelează get_manifest pentru a-și actualiza copia."
   }
 }

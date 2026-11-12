@@ -48,6 +48,38 @@ fn write(conn: &Connection, key: &str, value: &str) -> Result<(), LificError> {
     Ok(())
 }
 
+/// A key's value and when it was last written, or `None` if never written.
+pub(crate) fn read_entry(
+    conn: &Connection,
+    key: &str,
+) -> Result<Option<(String, String)>, LificError> {
+    let result = conn
+        .query_row(
+            "SELECT value, updated_at FROM fork_settings WHERE key = ?1",
+            params![key],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .optional();
+    match result {
+        Ok(v) => Ok(v),
+        Err(rusqlite::Error::SqliteFailure(_, Some(msg))) if msg.contains("no such table") => {
+            Ok(None)
+        }
+        Err(e) => Err(e.into()),
+    }
+}
+
+pub(crate) fn write_value(conn: &Connection, key: &str, value: &str) -> Result<(), LificError> {
+    write(conn, key, value)
+}
+
+/// Forget a key, so reads fall back to the default again.
+pub(crate) fn remove(conn: &Connection, key: &str) -> Result<(), LificError> {
+    conn.execute(CREATE, [])?;
+    conn.execute("DELETE FROM fork_settings WHERE key = ?1", params![key])?;
+    Ok(())
+}
+
 pub fn logo_target(conn: &Connection) -> Result<String, LificError> {
     Ok(read(conn, LOGO_TARGET)?
         .filter(|v| LOGO_TARGETS.contains(&v.as_str()))

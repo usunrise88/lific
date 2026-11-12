@@ -160,6 +160,18 @@ impl LificMcp {
             cursor.format("%Y-%m-%dT%H:%M:%SZ"),
         );
 
+        // Fork: an agent that keeps the manifest in its instructions file
+        // learns here, once, that its copy is stale.
+        if let Some(since) = &since
+            && let Some(m) = self.read(|conn| queries::agent_manifest::changed_since(conn, since))?
+        {
+            let _ = writeln!(
+                header,
+                "The agent manifest changed (v={}): call get_manifest and replace the lific block in your instructions file.",
+                m.version
+            );
+        }
+
         let changes = match &since {
             Some(since) => {
                 let section = self.changes_section(context, project.id, ident, since)?;
