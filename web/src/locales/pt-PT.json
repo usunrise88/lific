@@ -519,7 +519,11 @@
     "topbar.newInStatus": "Novo no estado",
     "topbar.selectAllTooltip": "Selecionar todas as tarefas visíveis  ·  Ctrl+A",
     "topbar.allSelected": "Todas selecionadas",
-    "topbar.selectAll": "Selecionar tudo"
+    "topbar.selectAll": "Selecionar tudo",
+    "assignee.specificAgents": "Agentes específicos",
+    "assignee.specificAgentsHint": "Só este agente a assume, e os comentários da tarefa vão para ele.",
+    "assignee.agentOf": "de {owner}",
+    "assignee.assignSelected": "Atribuir {count}"
   },
   "attachments": {
     "alt.placeholder": "Descreva esta imagem, Enter para aplicar, Esc para ignorar",
@@ -1909,7 +1913,13 @@
     "connect.persist.mac": "Executa-se na shell atual. Para o tornar permanente, adicione a linha a ~/.zshrc (a shell predefinida do macOS).",
     "connect.persist.linux": "Executa-se na shell atual. Para o tornar permanente, adicione a linha a ~/.bashrc ou ~/.profile.",
     "connect.persist.windows": "O setx aplica-se a novos terminais, não ao atual. Volte a abrir o terminal (ou o Pi) depois de o executar.",
-    "connect.shownOnce": "A chave só é mostrada desta vez, por isso copie-a agora. Pode religar a qualquer momento para gerar uma nova."
+    "connect.shownOnce": "A chave só é mostrada desta vez, por isso copie-a agora. Pode religar a qualquer momento para gerar uma nova.",
+    "places.title": "Onde corre",
+    "places.removeHint": "Esquecer este local; volta quando uma sessão de lá se ligar outra vez",
+    "places.removeConfirm": "Esquecer {place}? Os comentários e o histórico são apagados com ele.",
+    "places.howTitle": "Um agente por repositório e máquina",
+    "places.howIntro": "Todas as sessões de uma ferramenta são um só agente até ela indicar onde corre. Acrescente headersHelper ao servidor MCP do Lific da ferramenta (nível de utilizador) e instale lific-inbox-hook: cada repositório e anfitrião passa a ter o seu agente, caixa de entrada e histórico, por exemplo Claude Code · forge@chamber.",
+    "places.howOther": "Outros clientes: envie o cabeçalho X-Lific-Workspace: repo@host na configuração MCP do repositório, ou defina LIFIC_WORKSPACE para lific mcp --remote."
   },
   "instance": {
     "title": "Instância",

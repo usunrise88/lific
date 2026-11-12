@@ -542,7 +542,11 @@
     "topbar.newInStatus": "Novi sa statusom",
     "topbar.selectAllTooltip": "Odaberi sve vidljive zadatke  ·  Ctrl+A",
     "topbar.allSelected": "Sve odabrano",
-    "topbar.selectAll": "Odaberi sve"
+    "topbar.selectAll": "Odaberi sve",
+    "assignee.specificAgents": "Određeni agenti",
+    "assignee.specificAgentsHint": "Samo ga ovaj agent preuzima, a komentari na zadatak idu njemu.",
+    "assignee.agentOf": "od {owner}",
+    "assignee.assignSelected": "Dodijeli: {count}"
   },
   "attachments": {
     "alt.placeholder": "Opiši ovu sliku, Enter za primjenu, Esc za preskakanje",
@@ -1996,7 +2000,13 @@
     "connect.persist.mac": "Izvršava se u trenutnoj ljusci. Za trajnost dodaj redak u ~/.zshrc (zadana ljuska na macOS-u).",
     "connect.persist.linux": "Izvršava se u trenutnoj ljusci. Za trajnost dodaj redak u ~/.bashrc ili ~/.profile.",
     "connect.persist.windows": "setx vrijedi za nove terminale, ne za trenutni. Nakon izvršavanja ponovno otvori terminal (ili Pi).",
-    "connect.shownOnce": "Ključ se prikazuje samo ovaj put, zato ga odmah kopiraj. Možeš se ponovno povezati bilo kada da izdaš novi."
+    "connect.shownOnce": "Ključ se prikazuje samo ovaj put, zato ga odmah kopiraj. Možeš se ponovno povezati bilo kada da izdaš novi.",
+    "places.title": "Gdje radi",
+    "places.removeHint": "Zaboravi ovo mjesto; vraća se kad se sesija odande ponovno spoji",
+    "places.removeConfirm": "Zaboraviti {place}? Njegovi komentari i povijest brišu se zajedno s njim.",
+    "places.howTitle": "Jedan agent po repozitoriju i računalu",
+    "places.howIntro": "Sve sesije jednog alata jedan su agent dok ne kaže gdje radi. Dodaj headersHelper Lific MCP poslužitelju tog alata (na razini korisnika) i instaliraj lific-inbox-hook: svaki repozitorij i host dobiva vlastitog agenta, pristiglo i povijest, npr. Claude Code · forge@chamber.",
+    "places.howOther": "Ostali klijenti: šalji zaglavlje X-Lific-Workspace: repo@host iz MCP konfiguracije repozitorija ili postavi LIFIC_WORKSPACE za lific mcp --remote."
   },
   "instance": {
     "title": "Instanca",

@@ -1,6 +1,7 @@
 <script lang="ts">
   // LIF-147: initials disc for a named assignee. Same vocabulary as the
   // member list and the sidebar's account avatar (accent fill, accent text).
+  import { Bot } from "lucide-svelte";
   import { initials, personName, type Person } from "./assignees";
 
   let {
@@ -23,9 +24,12 @@
 
 <span
   class="{SIZE[size]} shrink-0 rounded-full grid place-items-center font-semibold tracking-wide
-         select-none leading-none bg-[var(--accent)] text-[var(--accent-text)]
+         select-none leading-none
+         {person.is_bot
+    ? 'bg-[var(--bg-subtle)] text-[var(--text-muted)] border border-[var(--border)]'
+    : 'bg-[var(--accent)] text-[var(--accent-text)]'}
          {ring ? 'ring-2 ring-[var(--surface)]' : ''}"
   aria-hidden="true"
 >
-  {initials(personName(person))}
+  {#if person.is_bot}<Bot size={size === "xs" ? 11 : 14} />{:else}{initials(personName(person))}{/if}
 </span>

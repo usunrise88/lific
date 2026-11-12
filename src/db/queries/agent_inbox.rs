@@ -29,16 +29,24 @@ use serde::Serialize;
 
 use crate::error::LificError;
 
-const SCHEMA: &str = "
+const INBOX_TABLE: &str = "
 CREATE TABLE IF NOT EXISTS fork_agent_inbox (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
     agent_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    comment_id   INTEGER NOT NULL REFERENCES comments(id) ON DELETE CASCADE,
+    -- A comment addressed to the agent, or (comment_id NULL) a notice about
+    -- an issue, such as being assigned to it.
+    comment_id   INTEGER REFERENCES comments(id) ON DELETE CASCADE,
+    issue_id     INTEGER REFERENCES issues(id) ON DELETE CASCADE,
+    actor_id     INTEGER REFERENCES users(id) ON DELETE SET NULL,
     reason       TEXT    NOT NULL,
     created_at   TEXT    NOT NULL DEFAULT (datetime('now')),
     delivered_at TEXT,
-    UNIQUE (agent_id, comment_id)
+    UNIQUE (agent_id, comment_id),
+    CHECK (comment_id IS NOT NULL OR issue_id IS NOT NULL)
 );
+";
+
+const SCHEMA: &str = "
 CREATE INDEX IF NOT EXISTS fork_agent_inbox_pending
     ON fork_agent_inbox (agent_id, id) WHERE delivered_at IS NULL;
 CREATE INDEX IF NOT EXISTS fork_agent_inbox_comment ON fork_agent_inbox (comment_id);
@@ -58,7 +66,37 @@ CREATE UNIQUE INDEX IF NOT EXISTS fork_agent_routes_issue
 ";
 
 pub fn ensure_schema(conn: &Connection) -> Result<(), LificError> {
+    let has_inbox: bool = conn.query_row(
+        "SELECT EXISTS (SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'fork_agent_inbox')",
+        [],
+        |r| r.get(0),
+    )?;
+    let has_issue_col: bool = conn.query_row(
+        "SELECT EXISTS (SELECT 1 FROM pragma_table_info('fork_agent_inbox') WHERE name = 'issue_id')",
+        [],
+        |r| r.get(0),
+    )?;
+    if has_inbox && !has_issue_col {
+        // The first version kept comments only (comment_id NOT NULL). SQLite
+        // cannot relax a NOT NULL in place, so copy into the new shape.
+        conn.execute_batch(&format!(
+            "SAVEPOINT fork_inbox_v2;
+             ALTER TABLE fork_agent_inbox RENAME TO fork_agent_inbox_v1;
+             DROP INDEX IF EXISTS fork_agent_inbox_pending;
+             DROP INDEX IF EXISTS fork_agent_inbox_comment;
+             {INBOX_TABLE}
+             INSERT INTO fork_agent_inbox (id, agent_id, comment_id, reason, created_at, delivered_at)
+                  SELECT id, agent_id, comment_id, reason, created_at, delivered_at
+                    FROM fork_agent_inbox_v1
+                   WHERE agent_id IN (SELECT id FROM users)
+                     AND comment_id IN (SELECT id FROM comments);
+             DROP TABLE fork_agent_inbox_v1;
+             RELEASE fork_inbox_v2;"
+        ))?;
+    }
+    conn.execute_batch(INBOX_TABLE)?;
     conn.execute_batch(SCHEMA)?;
+    conn.execute_batch(super::agent_workspaces::SCHEMA)?;
     Ok(())
 }
 
@@ -69,6 +107,8 @@ pub mod reason {
     pub const ATTACHED: &str = "attached";
     pub const ISSUE_ROUTE: &str = "issue_route";
     pub const PROJECT_ROUTE: &str = "project_route";
+    /// A notice, not a comment: a person assigned the agent to the issue.
+    pub const ASSIGNED: &str = "assigned";
 }
 
 /// An agent as people see it: the bot and whose it is.
@@ -137,13 +177,17 @@ fn issue_project(conn: &Connection, issue_id: i64) -> Result<Option<i64>, LificE
 
 /// Agents attached to an issue by what they did on it, with the reasons.
 /// Keys of the map are agent ids; values are short reason codes
-/// (`created`, `took`, `asked`, `waits`, `commented`, `routed`).
+/// (`assigned`, `created`, `took`, `asked`, `waits`, `commented`, `routed`).
 pub fn attached_agents(
     conn: &Connection,
     issue_id: i64,
 ) -> Result<BTreeMap<i64, Vec<&'static str>>, LificError> {
     let mut out: BTreeMap<i64, Vec<&'static str>> = BTreeMap::new();
-    let queries: [(&'static str, &str); 6] = [
+    let queries: [(&'static str, &str); 7] = [
+        (
+            "assigned",
+            "SELECT user_id FROM issue_assignees WHERE issue_id = ?1 AND user_id IS NOT NULL",
+        ),
         (
             "created",
             "SELECT DISTINCT a.actor_user_id FROM audit_log a
@@ -238,7 +282,13 @@ pub fn route_comment(
     // 2–3. Implicit, for people's comments only: agents talking to each
     // other must say who they mean.
     if targets.is_empty() && !is_bot(conn, author_id)? {
-        for (id, whys) in attached_agents(conn, issue_id)? {
+        let attached = attached_agents(conn, issue_id)?;
+        // An issue assigned to agents talks to them alone.
+        let assigned = attached.values().any(|whys| whys.contains(&"assigned"));
+        for (id, whys) in attached {
+            if assigned && !whys.contains(&"assigned") {
+                continue;
+            }
             if can_reach(id) {
                 let why = if whys == ["routed"] {
                     reason::ISSUE_ROUTE
@@ -331,15 +381,45 @@ pub fn deliveries_for_issue(
     Ok(out)
 }
 
-/// A message waiting for an agent.
+/// Tell an agent it was assigned to an issue. Nothing when it assigned
+/// itself or is not an agent.
+pub fn notify_assigned(
+    conn: &Connection,
+    agent_id: i64,
+    issue_id: i64,
+    actor_id: Option<i64>,
+) -> Result<(), LificError> {
+    if actor_id == Some(agent_id) || !is_bot(conn, agent_id)? {
+        return Ok(());
+    }
+    conn.execute(
+        "INSERT INTO fork_agent_inbox (agent_id, issue_id, actor_id, reason) VALUES (?1, ?2, ?3, ?4)",
+        params![agent_id, issue_id, actor_id, reason::ASSIGNED],
+    )?;
+    Ok(())
+}
+
+/// The agents whose inbox `agent_id` reads: its own, and for a workspace
+/// agent its parent's (messages addressed to the tool as a whole, which
+/// the first of its sessions to look takes).
+fn inbox_owners(conn: &Connection, agent_id: i64) -> Result<(i64, i64), LificError> {
+    Ok((
+        agent_id,
+        super::agent_workspaces::parent_of(conn, agent_id)?.unwrap_or(agent_id),
+    ))
+}
+
+/// A message waiting for an agent: a comment, or (`comment_id` `None`) a
+/// notice such as being assigned to the issue.
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct InboxItem {
     pub id: i64,
     pub reason: String,
     pub created_at: String,
-    pub comment_id: i64,
+    pub comment_id: Option<i64>,
+    /// The comment's text; empty for a notice.
     pub content: String,
-    pub author_id: i64,
+    pub author_id: Option<i64>,
     pub author_name: String,
     pub author_is_agent: bool,
     /// The author owns this agent: their word is an instruction, anyone
@@ -362,23 +442,26 @@ pub fn take(
     peek: bool,
 ) -> Result<Vec<InboxItem>, LificError> {
     let limit = limit.clamp(1, 50);
+    let (own, parent) = inbox_owners(conn, agent_id)?;
     let mut stmt = conn.prepare(
-        "SELECT f.id, f.reason, f.created_at, c.id, c.content, c.user_id,
-                COALESCE(NULLIF(u.display_name, ''), u.username), u.is_bot,
-                u.id = (SELECT owner_id FROM users WHERE id = f.agent_id),
+        "SELECT f.id, f.reason, f.created_at, f.comment_id, COALESCE(c.content, ''),
+                COALESCE(c.user_id, f.actor_id),
+                COALESCE(NULLIF(u.display_name, ''), u.username, 'someone'), COALESCE(u.is_bot, 0),
+                COALESCE(u.id = (SELECT owner_id FROM users WHERE id = ?1), 0),
                 i.id, p.identifier || '-' || i.sequence, i.title, i.status, p.identifier,
-                c.deleted_at IS NOT NULL OR i.deleted_at IS NOT NULL
+                (f.comment_id IS NOT NULL AND (c.id IS NULL OR c.deleted_at IS NOT NULL))
+                    OR i.deleted_at IS NOT NULL
            FROM fork_agent_inbox f
-           JOIN comments c ON c.id = f.comment_id
-           JOIN users u ON u.id = c.user_id
-           JOIN issues i ON i.id = c.issue_id
+           LEFT JOIN comments c ON c.id = f.comment_id
+           JOIN issues i ON i.id = COALESCE(c.issue_id, f.issue_id)
+           LEFT JOIN users u ON u.id = COALESCE(c.user_id, f.actor_id)
            JOIN projects p ON p.id = i.project_id
-          WHERE f.agent_id = ?1 AND f.delivered_at IS NULL
+          WHERE f.agent_id IN (?1, ?3) AND f.delivered_at IS NULL
           ORDER BY f.id
           LIMIT ?2",
     )?;
     let rows: Vec<(InboxItem, bool)> = stmt
-        .query_map(params![agent_id, limit], |r| {
+        .query_map(params![own, limit, parent], |r| {
             Ok((
                 InboxItem {
                     id: r.get(0)?,
@@ -415,11 +498,12 @@ pub fn take(
     Ok(items)
 }
 
-/// Messages still waiting for `agent_id`.
+/// Messages still waiting for `agent_id` (with its parent's, see [`take`]).
 pub fn pending_count(conn: &Connection, agent_id: i64) -> Result<i64, LificError> {
+    let (own, parent) = inbox_owners(conn, agent_id)?;
     Ok(conn.query_row(
-        "SELECT COUNT(*) FROM fork_agent_inbox WHERE agent_id = ?1 AND delivered_at IS NULL",
-        params![agent_id],
+        "SELECT COUNT(*) FROM fork_agent_inbox WHERE agent_id IN (?1, ?2) AND delivered_at IS NULL",
+        params![own, parent],
         |r| r.get(0),
     )?)
 }

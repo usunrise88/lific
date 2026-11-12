@@ -14,7 +14,7 @@
   import { t } from "../i18n";
   import { tick, untrack } from "svelte";
   import { Bot, User, Check, X, Search } from "lucide-svelte";
-  import { listMentionCandidates } from "../api";
+  import { listMentionCandidates, listProjectAgents } from "../api";
   import { currentUser } from "../userState";
   import { toast } from "../toast/toast.svelte";
   import PersonAvatar from "./PersonAvatar.svelte";
@@ -51,6 +51,8 @@
   const SEARCH_AT = 7;
 
   let candidates = $state<Person[] | null>(null);
+  /** Fork: agents whose owner can see the project; one can be named. */
+  let agentCandidates = $state<Person[]>([]);
   let loadedFor: number | null = null;
   let query = $state("");
   let selected = $state<string[]>([]);
@@ -67,8 +69,20 @@
         }
       : null,
   );
-  const people = $derived(candidates ? orderPeople(candidates, me) : []);
-  const visible = $derived(people.filter((p) => matchesPerson(p, query)));
+  const humans = $derived(candidates ? orderPeople(candidates, me) : []);
+  const agents = $derived(
+    [...agentCandidates].sort(
+      (a, b) =>
+        Number(b.owner_name === me?.display_name || b.owner_name === me?.username) -
+          Number(a.owner_name === me?.display_name || a.owner_name === me?.username) ||
+        personName(a).localeCompare(personName(b)),
+    ),
+  );
+  const people = $derived([...humans, ...agents]);
+  const visible = $derived(humans.filter((p) => matchesPerson(p, query)));
+  const visibleAgents = $derived(
+    agents.filter((p) => matchesPerson(p, query) || (p.owner_name ?? "").toLowerCase().includes(query.trim().toLowerCase())),
+  );
   const currentKind = $derived<AssignmentKind | null>(
     current === null
       ? null
@@ -98,8 +112,17 @@
   async function load() {
     if (loadedFor !== projectId) candidates = null;
     const pid = projectId;
-    const res = await listMentionCandidates(pid);
+    const [res, agentRes] = await Promise.all([listMentionCandidates(pid), listProjectAgents(pid)]);
     if (pid !== projectId) return;
+    agentCandidates = agentRes.ok
+      ? agentRes.data.map((a) => ({
+          user_id: a.id,
+          username: a.username,
+          display_name: a.display_name,
+          is_bot: true,
+          owner_name: a.owner_name,
+        }))
+      : [];
     if (!res.ok) {
       candidates ??= [];
       toast(t("issues.assignee.loadFailed", { error: res.error }), { kind: "error" });
@@ -147,8 +170,9 @@
   function onSearchKeydown(e: KeyboardEvent) {
     if (e.key !== "Enter") return;
     e.preventDefault();
-    if (query.trim() && visible.length === 1) {
-      toggle(visible[0].username);
+    const matches = [...visible, ...visibleAgents];
+    if (query.trim() && matches.length === 1) {
+      toggle(matches[0].username);
       query = "";
     } else if (changed) {
       choose(selected);
@@ -157,7 +181,12 @@
 
   const applyLabel = $derived.by(() => {
     if (selected.length === 0) return t("issues.assignee.assign");
-    if (selected.length > 1) return t("issues.assignee.assignPeople", { count: selected.length });
+    if (selected.length > 1) {
+      const anyAgent = selected.some((s) => agents.some((a) => a.username.toLowerCase() === s.toLowerCase()));
+      return anyAgent
+        ? t("issues.assignee.assignSelected", { count: selected.length })
+        : t("issues.assignee.assignPeople", { count: selected.length });
+    }
     const person = people.find((p) => p.username.toLowerCase() === selected[0].toLowerCase());
     return t("issues.assignee.assignName", { name: person ? personName(person) : `@${selected[0]}` });
   });
@@ -257,12 +286,30 @@
 
         {#if candidates === null}
           <p class="px-2.5 py-2 text-body-sm text-[var(--text-faint)]">{t("issues.assignee.loadingPeople")}</p>
-        {:else if people.length === 0}
+        {:else if humans.length === 0}
           <p class="px-2.5 py-2 text-body-sm text-[var(--text-faint)]">{t("issues.assignee.nobody")}</p>
         {:else if visible.length === 0}
           <p class="px-2.5 py-2 text-body-sm text-[var(--text-faint)]">{t("issues.assignee.noMatch", { query: query.trim() })}</p>
         {:else}
           {#each visible as person (person.user_id)}
+            {@render row(person)}
+          {/each}
+        {/if}
+
+        {#if candidates !== null && agents.length > 0}
+          <div class="px-2.5 pt-4 pb-0.5 text-micro uppercase tracking-widest font-semibold text-[var(--text-faint)]">
+            {t("issues.assignee.specificAgents")}
+          </div>
+          <p class="px-2.5 pb-1.5 text-caption text-[var(--text-faint)]">{t("issues.assignee.specificAgentsHint")}</p>
+          {#if visibleAgents.length === 0}
+            <p class="px-2.5 py-2 text-body-sm text-[var(--text-faint)]">{t("issues.assignee.noMatch", { query: query.trim() })}</p>
+          {/if}
+          {#each visibleAgents as person (person.user_id)}
+            {@render row(person)}
+          {/each}
+        {/if}
+
+        {#snippet row(person: Person)}
             {@const on = isSelected(person.username)}
             <button
               type="button"
@@ -278,6 +325,8 @@
                 <span class="text-body-sm font-medium text-[var(--text)] truncate">{personName(person)}</span>
                 {#if person.user_id === me?.user_id}
                   <span class="text-caption text-[var(--text-faint)] shrink-0">{t("issues.assignee.you")}</span>
+                {:else if person.is_bot && person.owner_name}
+                  <span class="text-caption text-[var(--text-faint)] truncate">{t("issues.assignee.agentOf", { owner: person.owner_name })}</span>
                 {:else if person.display_name && person.display_name !== person.username}
                   <span class="text-caption text-[var(--text-faint)] truncate">@{person.username}</span>
                 {/if}
@@ -291,8 +340,7 @@
                 {#if on}<Check size={11} strokeWidth={3} />{/if}
               </span>
             </button>
-          {/each}
-        {/if}
+        {/snippet}
       </div>
 
       <div

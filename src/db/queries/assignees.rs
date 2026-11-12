@@ -3,8 +3,10 @@
 //! See migration 058 for the three states (unassigned, human, named people)
 //! and how they are stored. The rules that live here rather than in SQL:
 //!
-//! * only active human accounts can be named; bots never can, because
-//!   unassigned already means "any agent";
+//! * active human accounts can be named, and (fork) one specific agent whose
+//!   owner can see the project: unassigned still means "any agent", a named
+//!   agent means "only this one". `needs_human` counts people only, so an
+//!   issue named for agents alone is not marked for a person;
 //! * a named person must be able to see the issue's project;
 //! * `human` and names are exclusive in one request;
 //! * a write replaces the whole set, touching only rows that change, so the
@@ -35,22 +37,33 @@ enum Target {
     People(BTreeSet<i64>),
 }
 
-const SELECT: &str = "SELECT a.issue_id, a.user_id, u.username, u.display_name
+const SELECT: &str = "SELECT a.issue_id, a.user_id, u.username, u.display_name, u.is_bot
        FROM issue_assignees a
        LEFT JOIN users u ON u.id = a.user_id";
 
-fn push_row(assignment: &mut Assignment, user: Option<(i64, String, Option<String>)>) {
-    assignment.needs_human = true;
-    if let Some((user_id, username, display_name)) = user {
-        assignment.assignees.push(IssueAssignee {
-            user_id,
-            username,
-            display_name: display_name.filter(|name| !name.is_empty()),
-        });
+/// Fork: SQL for "this assignment row is for a person" (the any-person mark
+/// or a human account), with `a` the `issue_assignees` alias.
+pub const PERSON_ROW: &str =
+    "(a.user_id IS NULL OR a.user_id IN (SELECT id FROM users WHERE is_bot = 0))";
+
+type User = (i64, String, Option<String>, bool);
+
+fn push_row(assignment: &mut Assignment, user: Option<User>) {
+    match user {
+        None => assignment.needs_human = true,
+        Some((user_id, username, display_name, is_bot)) => {
+            assignment.needs_human |= !is_bot;
+            assignment.assignees.push(IssueAssignee {
+                user_id,
+                username,
+                display_name: display_name.filter(|name| !name.is_empty()),
+                is_bot,
+            });
+        }
     }
 }
 
-type Row = (i64, Option<(i64, String, Option<String>)>);
+type Row = (i64, Option<User>);
 
 fn read_row(row: &rusqlite::Row) -> rusqlite::Result<Row> {
     let issue_id: i64 = row.get(0)?;
@@ -60,6 +73,7 @@ fn read_row(row: &rusqlite::Row) -> rusqlite::Result<Row> {
             id,
             row.get::<_, String>(2)?,
             row.get::<_, Option<String>>(3)?,
+            row.get::<_, Option<bool>>(4)?.unwrap_or(false),
         )),
         None => None,
     };
@@ -113,28 +127,28 @@ fn can_see_project(conn: &Connection, user_id: i64, project_id: i64) -> Result<b
     )?)
 }
 
-/// An active human account that can see the project, by username.
+/// An active account that can see the project, by username: a person, or
+/// (fork) an agent whose owner can see it.
 fn resolve_person(conn: &Connection, name: &str, project_id: i64) -> Result<i64, LificError> {
     let name = name.trim().trim_start_matches('@');
-    let found: Option<(i64, String, bool)> = conn
+    let found: Option<(i64, String, Option<i64>)> = conn
         .query_row(
-            "SELECT id, username, is_bot FROM users
-              WHERE username = ?1 COLLATE NOCASE AND is_active = 1",
+            "SELECT u.id, u.username, CASE WHEN u.is_bot = 1 THEN u.owner_id END FROM users u
+              LEFT JOIN users o ON o.id = u.owner_id
+              WHERE u.username = ?1 COLLATE NOCASE AND u.is_active = 1
+                AND (u.is_bot = 0 OR (o.id IS NOT NULL AND o.is_active = 1))",
             params![name],
             |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
         )
         .optional()?;
-    let (id, username, is_bot) =
+    let (id, username, owner) =
         found.ok_or_else(|| LificError::BadRequest(format!("no active user named '{name}'")))?;
-    if is_bot {
-        return Err(LificError::BadRequest(format!(
-            "@{username} is an agent account; only people can be assigned. Leave the issue unassigned for agents"
-        )));
-    }
-    if !can_see_project(conn, id, project_id)? {
-        return Err(LificError::BadRequest(format!(
-            "@{username} is not a member of this project"
-        )));
+    // An agent sees what its owner sees.
+    if !can_see_project(conn, owner.unwrap_or(id), project_id)? {
+        return Err(LificError::BadRequest(match owner {
+            Some(_) => format!("@{username} is an agent whose owner is not a member of this project"),
+            None => format!("@{username} is not a member of this project"),
+        }));
     }
     Ok(id)
 }
@@ -208,6 +222,8 @@ pub fn set_assignment(
             "INSERT INTO issue_assignees (issue_id, user_id, created_by) VALUES (?1, ?2, ?3)",
             params![issue_id, added, created_by],
         )?;
+        // Fork: a named agent hears about it in its inbox.
+        super::agent_inbox::notify_assigned(conn, *added, issue_id, created_by)?;
     }
     Ok(())
 }
@@ -260,7 +276,7 @@ pub fn filter_condition(
         return Ok((format!("NOT {exists})"), None));
     }
     if value.eq_ignore_ascii_case(HUMAN) {
-        return Ok((format!("{exists})"), None));
+        return Ok((format!("{exists} AND {})", PERSON_ROW.replace("a.", "fa.")), None));
     }
     let user_id = if value.eq_ignore_ascii_case("me") {
         caller_user_id.ok_or_else(|| {
@@ -356,9 +372,9 @@ pub fn attention(
 /// when unassigned.
 pub fn describe(needs_human: bool, assignees: &[IssueAssignee]) -> Option<String> {
     match (needs_human, assignees.is_empty()) {
-        (false, _) => None,
+        (false, true) => None,
         (true, true) => Some(HUMAN.to_string()),
-        (true, false) => Some(
+        (_, false) => Some(
             assignees
                 .iter()
                 .map(|a| format!("@{}", a.username))

@@ -258,6 +258,23 @@ impl Display for IssueRelations<'_> {
     }
 }
 
+/// Fork: who an issue is for, as an agent reads it: `you` when the issue
+/// names the calling agent, else the usual `human` / `@name` list.
+fn assignment_marker(issue: &models::Issue) -> Option<String> {
+    let me = crate::mcp::current_auth_user().map(|u| u.id);
+    // A workspace agent also owns what is assigned to its tool as a whole.
+    let parent = me.and_then(queries::agent_workspaces::cached_parent);
+    if me.is_some_and(|me| {
+        issue
+            .assignees
+            .iter()
+            .any(|a| a.is_bot && (a.user_id == me || Some(a.user_id) == parent))
+    }) {
+        return Some("you".into());
+    }
+    queries::assignees::describe(issue.needs_human, &issue.assignees)
+}
+
 struct IssueLine<'a> {
     issue: &'a models::Issue,
     /// Resolved module name, rendered as `(module: …)` after the labels.
@@ -311,7 +328,7 @@ impl Display for IssueLine<'_> {
             )
         })?;
         Display::fmt(&super::waits::WaitTokens(&issue.waits), formatter)?;
-        queries::assignees::describe(issue.needs_human, &issue.assignees).map_or(Ok(()), |who| {
+        assignment_marker(issue).map_or(Ok(()), |who| {
             write!(formatter, " for:{}", who.replace(", ", ","))
         })
     }
@@ -2179,7 +2196,7 @@ impl LificMcp {
     }
 
     #[tool(
-        description = "List a project's issues, or with members, issues across projects. A row with for: needs a person; agents take rows without it."
+        description = "List a project's issues, or with members, issues across projects. A row with for: is someone else's (a person or a named agent); agents take rows without it, and for:you is yours."
     )]
     fn list_issues(&self, Parameters(input): Parameters<ListIssuesInput>) -> String {
         self.list_issues_inner(input).unwrap_or_else(error_response)
@@ -2521,8 +2538,12 @@ No issues found."
             crate::checklist::checklist(&issue.description).map_or(Ok(()), |list| {
                 writeln!(output, "Checklist: {}/{} done", list.done, list.total)
             })?;
-            match queries::assignees::describe(issue.needs_human, &issue.assignees) {
-                Some(who) => writeln!(output, "Assigned: {who} (a person must do this)"),
+            match assignment_marker(&issue) {
+                Some(who) if who == "you" => writeln!(output, "Assigned: you (this issue is yours)"),
+                Some(who) if issue.needs_human => {
+                    writeln!(output, "Assigned: {who} (a person must do this)")
+                }
+                Some(who) => writeln!(output, "Assigned: {who} (only that agent works on it)"),
                 None => Ok(()),
             }?;
             [

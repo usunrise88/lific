@@ -23,6 +23,7 @@
     retryOnceAfterReauth,
   } from "../lib/reauth";
   import ToolIcon from "../lib/ToolIcon.svelte";
+  import TimeAgo from "../lib/TimeAgo.svelte";
   import SettingsTabs from "../lib/SettingsTabs.svelte";
   import Skeleton from "../lib/Skeleton.svelte";
   import {
@@ -81,7 +82,7 @@
 
   let connectionTemplates = $derived([
     ...TOOL_TEMPLATES,
-    ...bots.filter((b) => !TOOL_TEMPLATES.some((t) => t.id === connectionId(b)))
+    ...bots.filter((b) => b.parent_id == null && !TOOL_TEMPLATES.some((t) => t.id === connectionId(b)))
       .map((b) => genericTemplate(connectionId(b), b.display_name)),
   ]);
 
@@ -373,7 +374,14 @@
 
   function getToolBot(toolId: string): Bot | undefined {
     if (!user) return undefined;
-    return bots.find((b) => connectionId(b) === toolId);
+    return bots.find((b) => b.parent_id == null && connectionId(b) === toolId);
+  }
+  /** Fork: a tool's workspace agents, one per place it runs. */
+  function placesOf(bot: Bot | undefined): Bot[] {
+    if (!bot) return [];
+    return bots
+      .filter((b) => b.parent_id === bot.id)
+      .sort((a, b) => (b.last_seen_at ?? "").localeCompare(a.last_seen_at ?? ""));
   }
   function toolState(toolId: string): "connected" | "disconnected" | "none" {
     const bot = getToolBot(toolId);
@@ -850,9 +858,48 @@
                   </button>
                 {/if}
               </div>
+              {#if placesOf(bot).length}
+                <div class="basis-full min-w-0 border-t border-[var(--border)] pt-2.5" data-testid="tool-places">
+                  <p class="text-micro font-semibold uppercase tracking-widest text-[var(--text-faint)] mb-1">
+                    {t("settings.places.title")}
+                  </p>
+                  <ul class="flex flex-col">
+                    {#each placesOf(bot) as place (place.id)}
+                      <li class="flex items-center gap-2 min-w-0 py-1 text-body-sm">
+                        <span class="font-mono text-[var(--text)] truncate max-w-[70%] shrink-0">{place.workspace}</span>
+                        <span class="text-caption text-[var(--text-faint)] truncate min-w-0 hidden sm:inline">@{place.username}</span>
+                        {#if place.last_seen_at}
+                          <span class="ml-auto text-caption text-[var(--text-faint)] shrink-0"><TimeAgo date={place.last_seen_at} /></span>
+                        {/if}
+                        <button
+                          class="{place.last_seen_at ? '' : 'ml-auto'} shrink-0 text-caption text-[var(--text-faint)] hover:text-[var(--error)]
+                                 px-2 py-1 rounded-md hover:bg-[var(--error-bg)] transition-colors disabled:opacity-50"
+                          disabled={busyId === place.id}
+                          title={t("settings.places.removeHint")}
+                          onclick={() => {
+                            if (confirm(t("settings.places.removeConfirm", { place: place.workspace ?? "" }))) handleRemove(place.id);
+                          }}
+                        >
+                          {t("common.remove")}
+                        </button>
+                      </li>
+                    {/each}
+                  </ul>
+                </div>
+              {/if}
             </div>
           {/each}
         </div>
+        <details class="mt-4 text-body-sm text-[var(--text-muted)]" data-testid="places-howto">
+          <summary class="cursor-pointer text-[var(--text)]">{t("settings.places.howTitle")}</summary>
+          <p class="mt-2 leading-relaxed">{t("settings.places.howIntro")}</p>
+          <pre class="mt-2 p-3 rounded-lg bg-[var(--bg-subtle)] text-caption font-mono overflow-x-auto whitespace-pre">{`"lific": {
+  "type": "http",
+  "url": "${location.origin}/mcp",
+  "headersHelper": "lific-inbox-hook --headers"
+}`}</pre>
+          <p class="mt-2 leading-relaxed">{t("settings.places.howOther")}</p>
+        </details>
         <button class="mt-4 toolbar-pill" onclick={() => { customOpen = !customOpen; toolsError = ""; }} aria-expanded={customOpen}>
           {t("settings.custom.toggle")}
         </button>

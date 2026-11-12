@@ -519,7 +519,11 @@
     "topbar.newInStatus": "Új ebben az állapotban",
     "topbar.selectAllTooltip": "Az összes látható feladat kijelölése  ·  Ctrl+A",
     "topbar.allSelected": "Mind kijelölve",
-    "topbar.selectAll": "Összes kijelölése"
+    "topbar.selectAll": "Összes kijelölése",
+    "assignee.specificAgents": "Konkrét ügynökök",
+    "assignee.specificAgentsHint": "Csak ez az ügynök veszi fel, és a feladat hozzászólásai hozzá mennek.",
+    "assignee.agentOf": "{owner} ügynöke",
+    "assignee.assignSelected": "{count} hozzárendelése"
   },
   "attachments": {
     "alt.placeholder": "Írd le a képet, Enter: alkalmaz, Esc: kihagyás",
@@ -1909,7 +1913,13 @@
     "connect.persist.mac": "Az aktuális shellben fut. A tartóssá tételhez add a sort a ~/.zshrc fájlhoz (a macOS alapértelmezett shellje).",
     "connect.persist.linux": "Az aktuális shellben fut. A tartóssá tételhez add a sort a ~/.bashrc vagy ~/.profile fájlhoz.",
     "connect.persist.windows": "A setx az új terminálokra érvényes, nem az aktuálisra. A futtatás után nyisd újra a terminált (vagy a Pi-t).",
-    "connect.shownOnce": "A kulcs csak most látható, ezért másold ki azonnal. Bármikor újracsatlakoztathatsz, hogy újat hozz létre."
+    "connect.shownOnce": "A kulcs csak most látható, ezért másold ki azonnal. Bármikor újracsatlakoztathatsz, hogy újat hozz létre.",
+    "places.title": "Hol fut",
+    "places.removeHint": "Hely elfelejtése; visszajön, amint onnan újra csatlakozik egy munkamenet",
+    "places.removeConfirm": "Elfelejted: {place}? A hozzászólásai és az előzményei is törlődnek.",
+    "places.howTitle": "Repónként és gépenként külön ügynök",
+    "places.howIntro": "Egy eszköz minden munkamenete egyetlen ügynök, amíg meg nem mondja, hol fut. Add hozzá a headersHelper beállítást az eszköz Lific MCP-szerveréhez (felhasználói szinten), és telepítsd a lific-inbox-hook-ot: így minden repó és gép saját ügynököt, bejövő üzeneteket és előzményeket kap, például Claude Code · forge@chamber.",
+    "places.howOther": "Más kliensek: küldd az X-Lific-Workspace: repo@host fejlécet a repó MCP-konfigurációjából, vagy állítsd be a LIFIC_WORKSPACE változót a lific mcp --remote-hoz."
   },
   "instance": {
     "title": "Szerver",

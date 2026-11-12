@@ -519,7 +519,11 @@
     "topbar.newInStatus": "Nouveau dans le statut",
     "topbar.selectAllTooltip": "Sélectionner tous les tickets visibles  ·  Ctrl+A",
     "topbar.allSelected": "Tout sélectionné",
-    "topbar.selectAll": "Tout sélectionner"
+    "topbar.selectAll": "Tout sélectionner",
+    "assignee.specificAgents": "Agents précis",
+    "assignee.specificAgentsHint": "Seul cet agent la prend, et les commentaires du ticket lui sont envoyés.",
+    "assignee.agentOf": "de {owner}",
+    "assignee.assignSelected": "Assigner {count}"
   },
   "attachments": {
     "alt.placeholder": "Décrivez cette image, Entrée pour valider, Échap pour passer",
@@ -1909,7 +1913,13 @@
     "connect.persist.mac": "S’exécute dans le shell actuel. Pour la conserver, ajoutez la ligne à ~/.zshrc (le shell par défaut de macOS).",
     "connect.persist.linux": "S’exécute dans le shell actuel. Pour la conserver, ajoutez la ligne à ~/.bashrc ou ~/.profile.",
     "connect.persist.windows": "setx s’applique aux nouveaux terminaux, pas à l’actuel. Rouvrez votre terminal (ou Pi) après l’avoir exécuté.",
-    "connect.shownOnce": "La clé n’est affichée qu’une seule fois, copiez-la maintenant. Vous pouvez vous reconnecter à tout moment pour en générer une nouvelle."
+    "connect.shownOnce": "La clé n’est affichée qu’une seule fois, copiez-la maintenant. Vous pouvez vous reconnecter à tout moment pour en générer une nouvelle.",
+    "places.title": "Où il tourne",
+    "places.removeHint": "Oublier cet endroit ; il revient dès qu’une session s’y reconnecte",
+    "places.removeConfirm": "Oublier {place} ? Ses commentaires et son historique seront supprimés avec lui.",
+    "places.howTitle": "Un agent par dépôt et par machine",
+    "places.howIntro": "Toutes les sessions d’un outil forment un seul agent tant qu’il n’indique pas où il tourne. Ajoutez headersHelper au serveur MCP Lific de l’outil (niveau utilisateur) et installez lific-inbox-hook : chaque dépôt et chaque hôte auront leur propre agent, leur boîte de réception et leur historique, par exemple Claude Code · forge@chamber.",
+    "places.howOther": "Autres clients : envoyez l’en-tête X-Lific-Workspace: repo@host depuis la configuration MCP du dépôt, ou définissez LIFIC_WORKSPACE pour lific mcp --remote."
   },
   "instance": {
     "title": "Instance",

@@ -65,6 +65,32 @@ describe("assignment state", () => {
   });
 });
 
+describe("a specific agent (fork)", () => {
+  const codex: IssueAssignee = { user_id: 9, username: "anton-codex", display_name: "Codex", is_bot: true };
+  const forAgent = { needs_human: false, assignees: [codex] };
+
+  test("an issue named for an agent alone is named, not free and not for a person", () => {
+    expect(assignmentKind(forAgent)).toBe("people");
+    expect(assignmentNames(forAgent)).toEqual(["anton-codex"]);
+    expect(describeAssignment(forAgent)).toBe("Codex");
+    expect(matchesAssigneeFilter(forAgent, "none", null)).toBe(false);
+    expect(matchesAssigneeFilter(forAgent, "human", null)).toBe(false);
+    expect(matchesAssigneeFilter(forAgent, "@anton-codex", null)).toBe(true);
+  });
+
+  test("local fields mark a person only when a person is named", () => {
+    const roster = [
+      { user_id: 9, username: "anton-codex", display_name: "Codex", is_bot: true },
+      { user_id: 2, username: "alice" },
+    ];
+    expect(assignmentFields(["anton-codex"], roster)).toEqual({
+      needs_human: false,
+      assignees: [{ user_id: 9, username: "anton-codex", display_name: "Codex", is_bot: true }],
+    });
+    expect(assignmentFields(["anton-codex", "alice"], roster).needs_human).toBe(true);
+  });
+});
+
 describe("picker candidates", () => {
   test("puts the signed-in person first and adds them when missing", () => {
     const me = { user_id: 9, username: "zed" };

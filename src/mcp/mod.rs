@@ -331,7 +331,7 @@ pub(crate) fn issue_link_context_reads() -> usize {
 /// convention guidance appended after the discovery guidance is kept tight
 /// (imperative, no filler). Extracted as a const so it stays testable.
 const SERVER_INSTRUCTIONS: &str = "Lific is an issue tracker. On resume, call get_briefing(project='X', since='<last cursor>') first; omit since the first time. \
-     list_resources(resource_type='project') lists projects. list_issues filters issues; workable=true gives open issues with no open blocker. \
+     list_resources(resource_type='project') lists projects. list_issues filters issues; workable=true gives open issues with no open blocker; a row marked for: is someone else's, for:you is yours. \
      search finds text in issues and pages. \
      When you finish an issue, set status='done'. Keep each issue one self-contained change, filed in one of the project's modules. \
      For small text changes use edit_issue and edit_page, not full updates. \

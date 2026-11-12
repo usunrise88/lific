@@ -565,7 +565,11 @@
     "topbar.newInStatus": "Новая в статусе",
     "topbar.selectAllTooltip": "Выбрать все видимые задачи  ·  Ctrl+A",
     "topbar.allSelected": "Всё выбрано",
-    "topbar.selectAll": "Выбрать все"
+    "topbar.selectAll": "Выбрать все",
+    "assignee.specificAgents": "Конкретные агенты",
+    "assignee.specificAgentsHint": "Задачу берёт только этот агент, и комментарии к ней уходят ему.",
+    "assignee.agentOf": "агент: {owner}",
+    "assignee.assignSelected": "Назначить: {count}"
   },
   "attachments": {
     "alt.placeholder": "Опишите изображение, Enter — применить, Esc — пропустить",
@@ -2083,7 +2087,13 @@
     "connect.persist.mac": "Выполняется в текущей оболочке. Чтобы сохранить, добавьте строку в ~/.zshrc (оболочка macOS по умолчанию).",
     "connect.persist.linux": "Выполняется в текущей оболочке. Чтобы сохранить, добавьте строку в ~/.bashrc или ~/.profile.",
     "connect.persist.windows": "setx действует в новых терминалах, а не в текущем. После запуска откройте терминал (или Pi) заново.",
-    "connect.shownOnce": "Ключ показывается только один раз, поэтому скопируйте его сейчас. Позже можно подключиться заново и создать новый."
+    "connect.shownOnce": "Ключ показывается только один раз, поэтому скопируйте его сейчас. Позже можно подключиться заново и создать новый.",
+    "places.title": "Где работает",
+    "places.removeHint": "Забыть это место; оно вернётся, когда сессия оттуда снова подключится",
+    "places.removeConfirm": "Забыть {place}? Его комментарии и история удалятся вместе с ним.",
+    "places.howTitle": "Отдельный агент на каждый репозиторий и машину",
+    "places.howIntro": "Все сессии инструмента — один агент, пока он не сообщает, где работает. Добавьте headersHelper в MCP-сервер Lific этого инструмента (на уровне пользователя) и установите lific-inbox-hook: у каждого репозитория и хоста появится свой агент со своими входящими и историей, например Claude Code · forge@chamber.",
+    "places.howOther": "Другие клиенты: передавайте заголовок X-Lific-Workspace: repo@host в MCP-конфиге репозитория или задайте LIFIC_WORKSPACE для lific mcp --remote."
   },
   "instance": {
     "title": "Сервер",

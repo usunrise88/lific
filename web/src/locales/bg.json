@@ -519,7 +519,11 @@
     "topbar.newInStatus": "Нова със статус",
     "topbar.selectAllTooltip": "Избери всички видими задачи  ·  Ctrl+A",
     "topbar.allSelected": "Всички са избрани",
-    "topbar.selectAll": "Избери всички"
+    "topbar.selectAll": "Избери всички",
+    "assignee.specificAgents": "Конкретни агенти",
+    "assignee.specificAgentsHint": "Само този агент я поема и коментарите към нея отиват при него.",
+    "assignee.agentOf": "на {owner}",
+    "assignee.assignSelected": "Възложи: {count}"
   },
   "attachments": {
     "alt.placeholder": "Опиши изображението, Enter за прилагане, Esc за пропускане",
@@ -1909,7 +1913,13 @@
     "connect.persist.mac": "Работи в текущата обвивка. За да остане, добави реда в ~/.zshrc (обвивката по подразбиране в macOS).",
     "connect.persist.linux": "Работи в текущата обвивка. За да остане, добави реда в ~/.bashrc или ~/.profile.",
     "connect.persist.windows": "setx се прилага за новите терминали, не за текущия. Отвори терминала (или Pi) отново след изпълнението.",
-    "connect.shownOnce": "Ключът се показва само веднъж, затова го копирай сега. Можеш да се свържеш отново по всяко време, за да създадеш нов."
+    "connect.shownOnce": "Ключът се показва само веднъж, затова го копирай сега. Можеш да се свържеш отново по всяко време, за да създадеш нов.",
+    "places.title": "Къде работи",
+    "places.removeHint": "Забрави това място; то се връща, щом сесия оттам се свърже отново",
+    "places.removeConfirm": "Да забравиш {place}? Коментарите и историята му се изтриват заедно с него.",
+    "places.howTitle": "Отделен агент за всяко хранилище и машина",
+    "places.howIntro": "Всички сесии на един инструмент са един агент, докато не каже къде работи. Добави headersHelper към MCP сървъра на Lific за инструмента (на ниво потребител) и инсталирай lific-inbox-hook: всяко хранилище и хост получава свой агент, входящи и история, например Claude Code · forge@chamber.",
+    "places.howOther": "Други клиенти: изпращай заглавката X-Lific-Workspace: repo@host от MCP конфигурацията на хранилището или задай LIFIC_WORKSPACE за lific mcp --remote."
   },
   "instance": {
     "title": "Инстанция",

@@ -565,7 +565,11 @@
     "topbar.newInStatus": "Нове у статусі",
     "topbar.selectAllTooltip": "Вибрати всі видимі завдання  ·  Ctrl+A",
     "topbar.allSelected": "Усе вибрано",
-    "topbar.selectAll": "Вибрати все"
+    "topbar.selectAll": "Вибрати все",
+    "assignee.specificAgents": "Конкретні агенти",
+    "assignee.specificAgentsHint": "Задачу бере лише цей агент, і коментарі до неї йдуть йому.",
+    "assignee.agentOf": "агент: {owner}",
+    "assignee.assignSelected": "Призначити: {count}"
   },
   "attachments": {
     "alt.placeholder": "Опишіть зображення, Enter — застосувати, Esc — пропустити",
@@ -2083,7 +2087,13 @@
     "connect.persist.mac": "Виконується в поточній оболонці. Щоб зберегти, додайте рядок до ~/.zshrc (типова оболонка macOS).",
     "connect.persist.linux": "Виконується в поточній оболонці. Щоб зберегти, додайте рядок до ~/.bashrc або ~/.profile.",
     "connect.persist.windows": "setx діє для нових терміналів, а не для поточного. Після виконання перевідкрийте термінал (або Pi).",
-    "connect.shownOnce": "Ключ показується лише раз, тому скопіюйте його зараз. Ви можете підключитися знову будь-коли, щоб створити новий."
+    "connect.shownOnce": "Ключ показується лише раз, тому скопіюйте його зараз. Ви можете підключитися знову будь-коли, щоб створити новий.",
+    "places.title": "Де працює",
+    "places.removeHint": "Забути це місце; воно повернеться, коли сесія звідти знову підключиться",
+    "places.removeConfirm": "Забути {place}? Його коментарі та історія видаляться разом із ним.",
+    "places.howTitle": "Окремий агент на кожен репозиторій і машину",
+    "places.howIntro": "Усі сесії інструмента — один агент, доки він не повідомляє, де працює. Додайте headersHelper до MCP-сервера Lific цього інструмента (на рівні користувача) і встановіть lific-inbox-hook: кожен репозиторій і хост отримає власного агента з власними вхідними та історією, наприклад Claude Code · forge@chamber.",
+    "places.howOther": "Інші клієнти: передавайте заголовок X-Lific-Workspace: repo@host у MCP-конфігу репозиторію або задайте LIFIC_WORKSPACE для lific mcp --remote."
   },
   "instance": {
     "title": "Сервер",

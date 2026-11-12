@@ -537,6 +537,11 @@ export interface Bot {
   created_at: string;
   connected: boolean;
   tool_id: string | null;
+  /** Fork: a workspace agent (one per place a tool runs) acts through the
+   *  credential of `parent_id`; `workspace` is that place, e.g. forge@chamber. */
+  parent_id?: number;
+  workspace?: string;
+  last_seen_at?: string;
 }
 
 export interface CreateBotResponse {
@@ -959,6 +964,8 @@ export interface IssueAssignee {
   user_id: number;
   username: string;
   display_name?: string;
+  /** Fork: a specific agent; only it works the issue. */
+  is_bot?: boolean;
 }
 
 /** `GET /api/issues/attention` (LIF-506): open issues waiting on the caller

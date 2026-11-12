@@ -542,7 +542,11 @@
     "topbar.newInStatus": "Nouă în starea",
     "topbar.selectAllTooltip": "Selectează toate problemele vizibile  ·  Ctrl+A",
     "topbar.allSelected": "Toate selectate",
-    "topbar.selectAll": "Selectează tot"
+    "topbar.selectAll": "Selectează tot",
+    "assignee.specificAgents": "Agenți anume",
+    "assignee.specificAgentsHint": "Doar acest agent o preia, iar comentariile la sarcină ajung la el.",
+    "assignee.agentOf": "al lui {owner}",
+    "assignee.assignSelected": "Atribuie {count}"
   },
   "attachments": {
     "alt.placeholder": "Descrie această imagine, Enter pentru a aplica, Esc pentru a sări peste",
@@ -1996,7 +2000,13 @@
     "connect.persist.mac": "Rulează în shell-ul curent. Pentru a o păstra, adaugă linia în ~/.zshrc (shell-ul implicit pe macOS).",
     "connect.persist.linux": "Rulează în shell-ul curent. Pentru a o păstra, adaugă linia în ~/.bashrc sau ~/.profile.",
     "connect.persist.windows": "setx se aplică terminalelor noi, nu celui curent. Redeschide terminalul (sau Pi) după rulare.",
-    "connect.shownOnce": "Cheia este afișată o singură dată, așa că copiaz-o acum. Te poți reconecta oricând pentru a genera una nouă."
+    "connect.shownOnce": "Cheia este afișată o singură dată, așa că copiaz-o acum. Te poți reconecta oricând pentru a genera una nouă.",
+    "places.title": "Unde rulează",
+    "places.removeHint": "Uită acest loc; revine când o sesiune de acolo se conectează din nou",
+    "places.removeConfirm": "Uiți {place}? Comentariile și istoricul lui se șterg odată cu el.",
+    "places.howTitle": "Un agent pentru fiecare depozit și mașină",
+    "places.howIntro": "Toate sesiunile unui instrument sunt un singur agent până spune unde rulează. Adaugă headersHelper la serverul MCP Lific al instrumentului (la nivel de utilizator) și instalează lific-inbox-hook: fiecare depozit și gazdă primește propriul agent, inbox și istoric, de exemplu Claude Code · forge@chamber.",
+    "places.howOther": "Alți clienți: trimite antetul X-Lific-Workspace: repo@host din configurația MCP a depozitului sau setează LIFIC_WORKSPACE pentru lific mcp --remote."
   },
   "instance": {
     "title": "Instanță",

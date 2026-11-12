@@ -30,6 +30,29 @@ at most every `LIFIC_INBOX_INTERVAL` seconds (20 by default); at start and
 stop it always asks. Errors and timeouts print nothing, so the agent is
 never blocked by Lific being away.
 
+## One agent per repository and machine
+
+A tool connects as one agent per owner, so every Claude Code session you
+run, on any machine and in any repository, was the same agent with one
+inbox. A connection that sends `X-Lific-Workspace: <repo>@<host>` acts as
+that place's own agent instead (`Claude Code · forge@chamber`): created on
+first use, same owner and access, its own inbox and history, and it can be
+assigned issues by name. `lific-inbox-hook --headers` prints the header for
+the current directory; the hook sends it on its own requests too.
+
+Claude Code, user scope (`~/.claude.json`, `mcpServers.lific`):
+
+```json
+{ "type": "http", "url": "https://tasks.example.com/mcp",
+  "headers": { "Authorization": "Bearer lific_…" },
+  "headersHelper": "lific-inbox-hook --headers" }
+```
+
+`lific mcp --remote` sends it by itself. Anywhere else, put the header in
+that repository's MCP config, or set `LIFIC_WORKSPACE` (empty turns it off).
+Comments addressed to the tool as a whole still reach whichever of its
+sessions looks first. Settings → Connected tools lists the places.
+
 ## Claude Code
 
 `~/.claude/settings.json` (or the project's `.claude/settings.json`):

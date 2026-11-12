@@ -519,7 +519,11 @@
     "topbar.newInStatus": "New in status",
     "topbar.selectAllTooltip": "Select all visible issues  ·  Ctrl+A",
     "topbar.allSelected": "All selected",
-    "topbar.selectAll": "Select all"
+    "topbar.selectAll": "Select all",
+    "assignee.specificAgents": "Specific agents",
+    "assignee.specificAgentsHint": "Only this agent takes it, and comments on the issue go to it.",
+    "assignee.agentOf": "{owner}'s",
+    "assignee.assignSelected": "Assign {count}"
   },
   "attachments": {
     "alt.placeholder": "Describe this image, Enter to apply, Esc to skip",
@@ -1909,7 +1913,13 @@
     "connect.persist.mac": "Runs in the current shell. To persist it, add the line to ~/.zshrc (the default macOS shell).",
     "connect.persist.linux": "Runs in the current shell. To persist it, add the line to ~/.bashrc or ~/.profile.",
     "connect.persist.windows": "setx applies to new terminals, not the current one. Reopen your terminal (or Pi) after running it.",
-    "connect.shownOnce": "The key is shown only this once, so copy it now. You can reconnect any time to mint a fresh one."
+    "connect.shownOnce": "The key is shown only this once, so copy it now. You can reconnect any time to mint a fresh one.",
+    "places.title": "Where it runs",
+    "places.removeHint": "Forget this place; it comes back the next time a session there connects",
+    "places.removeConfirm": "Forget {place}? Its comments and history are deleted with it.",
+    "places.howTitle": "One agent per repository and machine",
+    "places.howIntro": "Every session of a tool is one agent until it says where it runs. Add headersHelper to the tool's Lific MCP server (user scope) and install lific-inbox-hook; each repository and host then gets its own agent, inbox and history, for example Claude Code · forge@chamber.",
+    "places.howOther": "Other clients: send the header X-Lific-Workspace: repo@host from that repository's MCP config, or set LIFIC_WORKSPACE for lific mcp --remote."
   },
   "instance": {
     "title": "Instance",

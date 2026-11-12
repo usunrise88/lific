@@ -542,7 +542,11 @@
     "topbar.newInStatus": "Novo u statusu",
     "topbar.selectAllTooltip": "Izaberi sve vidljive zadatke  ·  Ctrl+A",
     "topbar.allSelected": "Sve izabrano",
-    "topbar.selectAll": "Izaberi sve"
+    "topbar.selectAll": "Izaberi sve",
+    "assignee.specificAgents": "Određeni agenti",
+    "assignee.specificAgentsHint": "Samo ga ovaj agent preuzima, a komentari na zadatak idu njemu.",
+    "assignee.agentOf": "od {owner}",
+    "assignee.assignSelected": "Dodeli: {count}"
   },
   "attachments": {
     "alt.placeholder": "Opiši ovu sliku, Enter za primenu, Esc za preskakanje",
@@ -1996,7 +2000,13 @@
     "connect.persist.mac": "Izvršava se u trenutnoj ljusci. Da bi ostalo trajno, dodaj liniju u ~/.zshrc (podrazumevana macOS ljuska).",
     "connect.persist.linux": "Izvršava se u trenutnoj ljusci. Da bi ostalo trajno, dodaj liniju u ~/.bashrc ili ~/.profile.",
     "connect.persist.windows": "setx važi za nove terminale, ne za trenutni. Ponovo otvori terminal (ili Pi) posle izvršavanja.",
-    "connect.shownOnce": "Ključ se prikazuje samo ovaj put, zato ga kopiraj odmah. Možeš da se povežeš ponovo u bilo kom trenutku da napraviš novi."
+    "connect.shownOnce": "Ključ se prikazuje samo ovaj put, zato ga kopiraj odmah. Možeš da se povežeš ponovo u bilo kom trenutku da napraviš novi.",
+    "places.title": "Gde radi",
+    "places.removeHint": "Zaboravi ovo mesto; vraća se kad se sesija odande ponovo poveže",
+    "places.removeConfirm": "Zaboraviti {place}? Njegovi komentari i istorija brišu se zajedno s njim.",
+    "places.howTitle": "Jedan agent po repozitorijumu i računaru",
+    "places.howIntro": "Sve sesije jednog alata su jedan agent dok ne kaže gde radi. Dodaj headersHelper Lific MCP serveru tog alata (na nivou korisnika) i instaliraj lific-inbox-hook: svaki repozitorijum i host dobija svog agenta, prijemno sanduče i istoriju, npr. Claude Code · forge@chamber.",
+    "places.howOther": "Ostali klijenti: šalji zaglavlje X-Lific-Workspace: repo@host iz MCP konfiguracije repozitorijuma ili postavi LIFIC_WORKSPACE za lific mcp --remote."
   },
   "instance": {
     "title": "Instanca",

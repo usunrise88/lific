@@ -128,7 +128,7 @@ pub fn overview(conn: &Connection, input: &OverviewInput) -> Result<HomeOverview
     let today_text = super::waits::today_text();
     let mut stmt = conn.prepare(&format!(
         "SELECT i.project_id, i.priority, i.status, i.created_at,
-                EXISTS (SELECT 1 FROM issue_assignees a WHERE a.issue_id = i.id),
+                EXISTS (SELECT 1 FROM issue_assignees a WHERE a.issue_id = i.id AND {person}),
                 EXISTS (SELECT 1 FROM issue_relations ir
                           JOIN issues b ON b.id = ir.source_id
                          WHERE ir.target_id = i.id AND ir.relation_type = 'blocks'
@@ -137,7 +137,8 @@ pub fn overview(conn: &Connection, input: &OverviewInput) -> Result<HomeOverview
                             WHERE w.issue_id = i.id AND {})
            FROM issues i
           WHERE i.deleted_at IS NULL AND i.status NOT IN ('done', 'cancelled')",
-        super::waits::holding_predicate("?1")
+        super::waits::holding_predicate("?1"),
+        person = super::assignees::PERSON_ROW
     ))?;
     let rows = stmt.query_map(params![today_text], |row| {
         Ok((

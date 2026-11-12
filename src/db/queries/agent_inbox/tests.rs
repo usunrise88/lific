@@ -213,3 +213,73 @@ fn an_edit_that_adds_a_mention_delivers_to_the_new_agent() {
     assert_eq!(inbox(&conn, f.claude), ["mention:draft @claude-anton"]);
     let _ = f.yana;
 }
+
+#[test]
+fn the_first_inbox_shape_is_upgraded_in_place() {
+    let f = fixture();
+    let conn = f.pool.write().unwrap();
+    let i = issue(&conn, f.pid, f.claude);
+    let c = comment(&conn, &f, i, f.anton, "hello", &[]);
+    conn.execute_batch(&format!(
+        "DROP TABLE fork_agent_inbox;
+         CREATE TABLE fork_agent_inbox (
+             id INTEGER PRIMARY KEY AUTOINCREMENT,
+             agent_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+             comment_id INTEGER NOT NULL REFERENCES comments(id) ON DELETE CASCADE,
+             reason TEXT NOT NULL,
+             created_at TEXT NOT NULL DEFAULT (datetime('now')),
+             delivered_at TEXT,
+             UNIQUE (agent_id, comment_id));
+         CREATE INDEX fork_agent_inbox_pending ON fork_agent_inbox (agent_id, id) WHERE delivered_at IS NULL;
+         INSERT INTO fork_agent_inbox (agent_id, comment_id, reason) VALUES ({}, {c}, 'picked');
+         PRAGMA foreign_keys = OFF;
+         INSERT INTO fork_agent_inbox (agent_id, comment_id, reason) VALUES (9999, {c}, 'picked');
+         PRAGMA foreign_keys = ON;",
+        f.desktop
+    ))
+    .unwrap();
+    // Twice: the second run finds the new shape and changes nothing.
+    super::ensure_schema(&conn).unwrap();
+    super::ensure_schema(&conn).unwrap();
+    // The live row survives; the dangling one is dropped, not fatal.
+    assert_eq!(inbox(&conn, f.desktop), ["picked:hello"]);
+    let (rows, comment_notnull): (i64, i64) = conn
+        .query_row(
+            "SELECT (SELECT COUNT(*) FROM fork_agent_inbox),
+                    (SELECT \"notnull\" FROM pragma_table_info('fork_agent_inbox') WHERE name = 'comment_id')",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .unwrap();
+    assert_eq!((rows, comment_notnull), (1, 0));
+    let indexes: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND tbl_name = 'fork_agent_inbox'
+                AND name IN ('fork_agent_inbox_pending', 'fork_agent_inbox_comment')",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(indexes, 2);
+}
+
+#[test]
+fn a_workspace_agent_reads_its_own_inbox_and_its_tools() {
+    let f = fixture();
+    let conn = f.pool.write().unwrap();
+    let forge = crate::db::queries::agent_workspaces::ensure(&conn, f.claude, "forge@chamber")
+        .unwrap()
+        .unwrap();
+    let prism = crate::db::queries::agent_workspaces::ensure(&conn, f.claude, "prism@chamber")
+        .unwrap()
+        .unwrap();
+    // The forge session created the issue: replies go to it, not to prism.
+    let i = issue(&conn, f.pid, forge.id);
+    comment(&conn, &f, i, f.anton, "use staging", &[]);
+    assert!(inbox(&conn, prism.id).is_empty());
+    // A message for the tool as a whole goes to whichever session looks first.
+    comment(&conn, &f, i, f.anton, "everyone: stop", &[f.claude]);
+    assert_eq!(inbox(&conn, forge.id), ["attached:use staging", "picked:everyone: stop"]);
+    assert!(inbox(&conn, prism.id).is_empty());
+    assert!(inbox(&conn, f.claude).is_empty());
+}

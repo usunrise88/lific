@@ -220,7 +220,8 @@ pub fn list_for_me(conn: &Connection, f: &ForMeFilter) -> Result<ForMePage, Lifi
                          WHERE w.issue_id = i.id AND w.kind = 'user' AND w.user_id = ?1),
                 EXISTS (SELECT 1 FROM issue_assignees a WHERE a.issue_id = i.id AND a.user_id IS NULL),
                 EXISTS (SELECT 1 FROM issue_assignees a
-                         WHERE a.issue_id = i.id AND a.user_id IS NOT NULL AND a.user_id != ?1),
+                         WHERE a.issue_id = i.id AND a.user_id IS NOT NULL AND a.user_id != ?1
+                           AND {person}),
                 COALESCE((SELECT MAX(a.created_at) FROM issue_assignees a WHERE a.issue_id = i.id),
                          i.created_at) AS assigned_at,
                 (SELECT a.created_by FROM issue_assignees a WHERE a.issue_id = i.id
@@ -229,7 +230,7 @@ pub fn list_for_me(conn: &Connection, f: &ForMeFilter) -> Result<ForMePage, Lifi
                            WHERE a.issue_id = i.id ORDER BY a.created_at DESC, a.id DESC LIMIT 1), 0)
          FROM issues i
          WHERE {}
-           AND (EXISTS (SELECT 1 FROM issue_assignees a WHERE a.issue_id = i.id)
+           AND (EXISTS (SELECT 1 FROM issue_assignees a WHERE a.issue_id = i.id AND {person})
                 OR EXISTS (SELECT 1 FROM issue_waits w
                             WHERE w.issue_id = i.id AND w.kind = 'user' AND w.user_id = ?1))
          ORDER BY {}{}",
@@ -242,6 +243,7 @@ pub fn list_for_me(conn: &Connection, f: &ForMeFilter) -> Result<ForMePage, Lifi
             ""
         },
         f.sort.order_by(),
+        person = super::assignees::PERSON_ROW,
     );
     let refs: Vec<&dyn rusqlite::types::ToSql> = params.iter().map(|p| p.as_ref()).collect();
     let mut stmt = conn.prepare(&sql)?;

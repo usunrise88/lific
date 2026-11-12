@@ -152,7 +152,7 @@ pub struct CreateIssueInput {
     #[schemars(description = "Due date, YYYY-MM-DD")]
     pub target_date: Option<String>,
     #[schemars(
-        description = "Who must do it: [\"human\"] for any person, or usernames (\"me\" is you). Omit to leave it to agents"
+        description = "Who must do it: [\"human\"] for any person, or usernames of people or agents (\"me\" is you). Omit to leave it to any agent"
     )]
     pub assignees: Option<Vec<String>>,
     #[schemars(
@@ -219,7 +219,7 @@ pub struct UpdateIssueInput {
     )]
     pub expected_seq: Option<i64>,
     #[schemars(
-        description = "Replace who must do it: [] frees it for agents, [\"human\"] any person, or usernames (\"me\" is you)"
+        description = "Replace who must do it: [] frees it for any agent, [\"human\"] any person, or usernames of people or agents (\"me\" is you)"
     )]
     pub assignees: Option<Vec<String>>,
     #[schemars(

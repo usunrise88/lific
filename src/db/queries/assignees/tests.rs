@@ -192,10 +192,49 @@ fn an_unchanged_assignment_does_not_bump_seq() {
 }
 
 #[test]
-fn refuses_bots_strangers_mixtures_and_unknowns() {
+fn names_a_specific_agent_without_marking_the_issue_for_a_person() {
     let f = fixture();
-    let err = set(&f, &["blake-codex"]).unwrap_err().to_string();
-    assert!(err.contains("only people can be assigned"), "{err}");
+    set(&f, &["blake-codex"]).unwrap();
+    assert_eq!(read(&f), (false, names(&["blake-codex"])));
+    {
+        let conn = f.db.read().unwrap();
+        let issue = queries::get_issue(&conn, f.issue).unwrap();
+        assert!(issue.assignees[0].is_bot);
+        assert_eq!(describe(issue.needs_human, &issue.assignees).as_deref(), Some("@blake-codex"));
+        // The agent hears about it; a person-only filter does not count it.
+        let agent = user_id(&conn, "blake-codex");
+        let notices: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM fork_agent_inbox
+                  WHERE agent_id = ?1 AND issue_id = ?2 AND reason = 'assigned'",
+                [agent, f.issue],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(notices, 1);
+    }
+    assert!(listed(&f, "human", None).unwrap().is_empty());
+    assert!(listed(&f, "none", None).unwrap().is_empty());
+    assert_eq!(listed(&f, "@blake-codex", None).unwrap(), [f.issue]);
+    // A person and an agent together: a person must act.
+    set(&f, &["alice", "blake-codex"]).unwrap();
+    assert_eq!(read(&f), (true, names(&["alice", "blake-codex"])));
+    // An agent whose owner cannot see the project is refused.
+    f.db.write()
+        .unwrap()
+        .execute_batch(
+            "INSERT INTO users (username, email, password_hash, is_bot, owner_id)
+             VALUES ('carol-codex', 'cb@t.local', 'x', 1,
+                     (SELECT id FROM users WHERE username = 'carol'));",
+        )
+        .unwrap();
+    let err = set(&f, &["carol-codex"]).unwrap_err().to_string();
+    assert!(err.contains("owner is not a member"), "{err}");
+}
+
+#[test]
+fn refuses_strangers_mixtures_and_unknowns() {
+    let f = fixture();
     let err = set(&f, &["carol"]).unwrap_err().to_string();
     assert!(err.contains("not a member of this project"), "{err}");
     let err = set(&f, &["human", "alice"]).unwrap_err().to_string();
@@ -226,7 +265,6 @@ fn without_enforcement_anyone_active_and_human_can_be_named() {
         .unwrap();
     set(&f, &["carol"]).unwrap();
     assert_eq!(read(&f), (true, names(&["carol"])));
-    assert!(set(&f, &["blake-codex"]).is_err());
 }
 
 #[test]
@@ -363,6 +401,7 @@ fn describe_renders_each_state() {
         user_id: 1,
         username: name.into(),
         display_name: None,
+        is_bot: false,
     };
     assert_eq!(describe(false, &[]), None);
     assert_eq!(describe(true, &[]).as_deref(), Some("human"));

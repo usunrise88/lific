@@ -317,13 +317,16 @@ pub struct Issue {
     pub assignees: Vec<IssueAssignee>,
 }
 
-/// LIF-147: one named assignee. Always a human account.
+/// LIF-147: one named assignee. A person, or (fork) one specific agent.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct IssueAssignee {
     pub user_id: i64,
     pub username: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub display_name: Option<String>,
+    /// Fork: the assignee is an agent; only that agent works the issue.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub is_bot: bool,
 }
 
 /// LIF-484: what a wait is waiting on.
@@ -1004,6 +1007,15 @@ pub struct Bot {
     pub connected: bool,
     #[serde(default)]
     pub tool_id: Option<String>,
+    /// Fork: for a workspace agent, the bot whose credential it acts
+    /// through, the place it runs (`forge@chamber`) and when it was last
+    /// seen. `connected` is then its parent's.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parent_id: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub workspace: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_seen_at: Option<String>,
 }
 
 // ── API Key (user-facing) ────────────────────────────────────

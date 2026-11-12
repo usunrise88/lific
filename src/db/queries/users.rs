@@ -1321,11 +1321,12 @@ pub fn list_bots(
     let mut stmt = conn.prepare_cached(
         "SELECT u.id, u.username, u.display_name, u.owner_id, u.created_at,
                 EXISTS(
-                    SELECT 1 FROM api_keys k WHERE k.user_id = u.id AND k.revoked = 0
+                    SELECT 1 FROM api_keys k WHERE k.user_id = COALESCE(w.parent_id, u.id) AND k.revoked = 0
                     UNION
-                    SELECT 1 FROM oauth_tokens t WHERE t.user_id = u.id AND t.revoked = 0
-                ) as connected, u.tool_id
+                    SELECT 1 FROM oauth_tokens t WHERE t.user_id = COALESCE(w.parent_id, u.id) AND t.revoked = 0
+                ) as connected, u.tool_id, w.parent_id, w.workspace, w.last_seen_at
          FROM users u
+         LEFT JOIN fork_agent_workspaces w ON w.agent_id = u.id
          WHERE u.is_bot = 1 AND u.owner_id = ?1
          ORDER BY u.created_at DESC",
     )?;
@@ -1338,6 +1339,9 @@ pub fn list_bots(
             created_at: row.get(4)?,
             connected: row.get(5)?,
             tool_id: row.get(6)?,
+            parent_id: row.get(7)?,
+            workspace: row.get(8)?,
+            last_seen_at: row.get(9)?,
         })
     })?;
     rows.collect::<Result<Vec<_>, _>>().map_err(Into::into)
@@ -1418,6 +1422,11 @@ pub fn delete_bot(
     is_admin: bool,
 ) -> Result<(), LificError> {
     verify_bot_owner(conn, bot_id, requester_id, is_admin, "delete")?;
+
+    // Fork: its workspace agents exist only through it; they go with it.
+    for child in super::agent_workspaces::children(conn, bot_id)? {
+        delete_bot(conn, child, requester_id, is_admin)?;
+    }
 
     // Delete API keys first (FK constraint)
     conn.execute("DELETE FROM api_keys WHERE user_id = ?1", params![bot_id])?;

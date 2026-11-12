@@ -519,7 +519,11 @@
     "topbar.newInStatus": "Nieuw in status",
     "topbar.selectAllTooltip": "Alle zichtbare issues selecteren  ·  Ctrl+A",
     "topbar.allSelected": "Alles geselecteerd",
-    "topbar.selectAll": "Alles selecteren"
+    "topbar.selectAll": "Alles selecteren",
+    "assignee.specificAgents": "Specifieke agents",
+    "assignee.specificAgentsHint": "Alleen deze agent pakt het op, en reacties op het issue gaan naar hem.",
+    "assignee.agentOf": "van {owner}",
+    "assignee.assignSelected": "{count} toewijzen"
   },
   "attachments": {
     "alt.placeholder": "Beschrijf deze afbeelding, Enter om toe te passen, Esc om over te slaan",
@@ -1909,7 +1913,13 @@
     "connect.persist.mac": "Wordt uitgevoerd in de huidige shell. Voeg de regel toe aan ~/.zshrc (de standaardshell van macOS) om het blijvend te maken.",
     "connect.persist.linux": "Wordt uitgevoerd in de huidige shell. Voeg de regel toe aan ~/.bashrc of ~/.profile om het blijvend te maken.",
     "connect.persist.windows": "setx geldt voor nieuwe terminals, niet voor de huidige. Open je terminal (of Pi) opnieuw na het uitvoeren.",
-    "connect.shownOnce": "De sleutel wordt maar één keer getoond, dus kopieer hem nu. Je kunt altijd opnieuw verbinden om een nieuwe aan te maken."
+    "connect.shownOnce": "De sleutel wordt maar één keer getoond, dus kopieer hem nu. Je kunt altijd opnieuw verbinden om een nieuwe aan te maken.",
+    "places.title": "Waar hij draait",
+    "places.removeHint": "Deze plek vergeten; hij komt terug zodra een sessie daar weer verbindt",
+    "places.removeConfirm": "{place} vergeten? Zijn reacties en geschiedenis worden mee verwijderd.",
+    "places.howTitle": "Eén agent per repository en machine",
+    "places.howIntro": "Alle sessies van een tool zijn één agent totdat die zegt waar hij draait. Voeg headersHelper toe aan de Lific-MCP-server van de tool (gebruikersniveau) en installeer lific-inbox-hook: elke repository en host krijgt dan een eigen agent, inbox en geschiedenis, bijvoorbeeld Claude Code · forge@chamber.",
+    "places.howOther": "Andere clients: stuur de header X-Lific-Workspace: repo@host vanuit de MCP-config van de repository, of zet LIFIC_WORKSPACE voor lific mcp --remote."
   },
   "instance": {
     "title": "Instantie",

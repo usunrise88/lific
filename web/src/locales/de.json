@@ -519,7 +519,11 @@
     "topbar.newInStatus": "Neu im Status",
     "topbar.selectAllTooltip": "Alle sichtbaren Aufgaben auswählen  ·  Ctrl+A",
     "topbar.allSelected": "Alle ausgewählt",
-    "topbar.selectAll": "Alle auswählen"
+    "topbar.selectAll": "Alle auswählen",
+    "assignee.specificAgents": "Bestimmte Agenten",
+    "assignee.specificAgentsHint": "Nur dieser Agent übernimmt sie, und Kommentare dazu gehen an ihn.",
+    "assignee.agentOf": "von {owner}",
+    "assignee.assignSelected": "{count} zuweisen"
   },
   "attachments": {
     "alt.placeholder": "Bild beschreiben, Enter zum Übernehmen, Esc zum Überspringen",
@@ -1909,7 +1913,13 @@
     "connect.persist.mac": "Läuft in der aktuellen Shell. Füge die Zeile zu ~/.zshrc hinzu (der Standard-Shell von macOS), damit sie erhalten bleibt.",
     "connect.persist.linux": "Läuft in der aktuellen Shell. Füge die Zeile zu ~/.bashrc oder ~/.profile hinzu, damit sie erhalten bleibt.",
     "connect.persist.windows": "setx gilt für neue Terminals, nicht für das aktuelle. Öffne dein Terminal (oder Pi) nach der Ausführung neu.",
-    "connect.shownOnce": "Der Schlüssel wird nur dieses eine Mal angezeigt, also kopiere ihn jetzt. Du kannst jederzeit neu verbinden, um einen neuen zu erzeugen."
+    "connect.shownOnce": "Der Schlüssel wird nur dieses eine Mal angezeigt, also kopiere ihn jetzt. Du kannst jederzeit neu verbinden, um einen neuen zu erzeugen.",
+    "places.title": "Wo er läuft",
+    "places.removeHint": "Diesen Ort vergessen; er kommt zurück, sobald sich dort wieder eine Sitzung verbindet",
+    "places.removeConfirm": "{place} vergessen? Seine Kommentare und sein Verlauf werden mit gelöscht.",
+    "places.howTitle": "Ein Agent pro Repository und Rechner",
+    "places.howIntro": "Alle Sitzungen eines Tools sind ein Agent, bis es sagt, wo es läuft. Ergänze headersHelper beim Lific-MCP-Server des Tools (Benutzerebene) und installiere lific-inbox-hook: Jedes Repository und jeder Host bekommt dann einen eigenen Agenten mit eigenem Posteingang und Verlauf, etwa Claude Code · forge@chamber.",
+    "places.howOther": "Andere Clients: Sende den Header X-Lific-Workspace: repo@host aus der MCP-Konfiguration des Repositorys oder setze LIFIC_WORKSPACE für lific mcp --remote."
   },
   "instance": {
     "title": "Instanz",
