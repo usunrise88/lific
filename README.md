@@ -75,7 +75,7 @@ Each AI tool connects as its own bot under your account. The history says "OpenC
 | Plans | `create_plan` · `get_plan` · `edit_plan_step` · `update_plan_step` |
 | Comments | `add_comment` · `list_comments` · `edit_comment` · `delete_comment` |
 | Attachments | `upload_attachment` · `get_attachment` · `list_attachments` |
-| Search and history | `get_briefing` · `search` · `get_activity` |
+| Search and history | `get_briefing` · `search` · `get_activity` · `check_inbox` |
 | Structure | `list_resources` · `manage_resource` · `delete` |
 | Export | `export` |
 

@@ -336,7 +336,8 @@ const SERVER_INSTRUCTIONS: &str = "Lific is an issue tracker. On resume, call ge
      When you finish an issue, set status='done'. Keep each issue one self-contained change, filed in one of the project's modules. \
      For small text changes use edit_issue and edit_page, not full updates. \
      Use plans (create_plan) for multi-step or multi-session work; a step can mirror an issue. get_plan(plan='X-PLAN-1') gives a plan's full tree. \
-     Use pages for documentation and design notes.";
+     Use pages for documentation and design notes. \
+     People can address you in issue comments: call check_inbox between steps and when you finish a task; acknowledge what you will do with add_comment.";
 
 /// LIF-452: the one sentence a repository-bound stdio session appends to
 /// [`SERVER_INSTRUCTIONS`]. Kept to a single clause for the same reason the

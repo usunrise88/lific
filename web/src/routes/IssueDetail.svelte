@@ -64,6 +64,8 @@
   import { untrack, getContext } from "svelte";
   import { pageTitle, PAGE_TITLE_CONTEXT } from "../lib/pageTitle";
   import { inPublicScope } from "../lib/publicScope"; // LIF-471
+  import IssueAgentsPanel from "../lib/IssueAgentsPanel.svelte";
+  import { getIssueAgents, type IssueAgents } from "../lib/api";
 
   let {
     navigate,
@@ -393,7 +395,34 @@
 
   // Re-pull the timeline after any mutation so the user's own edit shows
   // up in Activity immediately (it was just audited server-side).
+  // Fork: agents on this issue (agent inbox): who comments reach, and
+  // whether they have read them.
+  let agentInfo = $state<IssueAgents | null>(null);
+
+  async function refreshAgents() {
+    const id = issue?.id;
+    if (id === undefined || inPublicScope()) return;
+    const res = await getIssueAgents(id);
+    if (issue?.id === id) agentInfo = res.ok ? res.data : null;
+  }
+
+  $effect(() => {
+    const id = issue?.id;
+    agentInfo = null;
+    if (id === undefined) return;
+    untrack(() => refreshAgents());
+    // Reading is not an event, so look again while something waits unread.
+    const timer = setInterval(() => {
+      const pending = Object.values(agentInfo?.deliveries ?? {}).some((list) =>
+        list.some((d) => d.delivered_at === null),
+      );
+      if (pending && document.visibilityState === "visible") refreshAgents();
+    }, 15_000);
+    return () => clearInterval(timer);
+  });
+
   async function refreshActivity() {
+    refreshAgents();
     if (!issue) return;
     const gen = loadGen;
     const res = await listIssueActivity(issue.id);
@@ -657,10 +686,10 @@
   // this edit; the next refresh captures the new one and reconciles normally.
   // A manual older page needs no such guard: it returns rows strictly below a
   // cursor these mutations never touch.
-  async function handleNewComment(content: string) {
+  async function handleNewComment(content: string, forAgents: number[] = []) {
     const parentId = issue?.id;
     if (parentId === undefined) return null;
-    const res = await createComment(parentId, content);
+    const res = await createComment(parentId, content, forAgents);
     if (!res.ok) {
       toast(t("issueDetail.toast.commentAddFailed", { error: res.error }), { kind: "error" });
       return null;
@@ -864,6 +893,7 @@
   {loadingOlderComments}
   onLoadOlderComments={loadOlderComments}
   commentParentKey={`issue:${issueIdentifier}`}
+  {agentInfo}
   mentionProjectId={issue?.project_id ?? null}
   {activity}
   {paletteActions}
@@ -1217,6 +1247,13 @@
           </div>
 
           <div class="border-t border-[var(--border)] -mx-5 px-5 py-0 my-1"></div>
+        {/if}
+
+        {#if agentInfo && agentInfo.available.length > 0}
+          <div class="issue-meta-field">
+            {@render sidebarField(t("agents.field"))}
+            <IssueAgentsPanel info={agentInfo} issueId={issue.id} projectId={issue.project_id} onchange={refreshAgents} />
+          </div>
         {/if}
 
         <div class="issue-meta-dates">

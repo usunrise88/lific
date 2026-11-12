@@ -382,6 +382,12 @@ fn rest_manifest() -> HashMap<(&'static str, &'static str), Classification> {
         (("GET", "/api/issues/attention"), Filtered),
         (("GET", "/api/home/overview"), Filtered),
         (("GET", "/api/home/flow"), Filtered),
+        (("GET", "/api/agent/inbox"), Exempt("the calling agent's own inbox; routing already checked visibility")),
+        (("GET", "/api/agent/inbox/hook"), Exempt("the calling agent's own inbox; routing already checked visibility")),
+        (("PUT", "/api/agent/routes"), Gated(Viewer)),
+        (("GET", "/api/projects/{id}/agents"), Gated(Viewer)),
+        (("GET", "/api/projects/{id}/agent-routes"), Gated(Viewer)),
+        (("GET", "/api/issues/{id}/agents"), Gated(Viewer)),
         (("GET", "/api/feed"), Filtered),
         (("GET", "/api/feed/actors"), Filtered),
         (("GET", "/api/for-me"), Filtered),
@@ -610,6 +616,8 @@ fn mcp_manifest() -> HashMap<&'static str, Classification> {
     HashMap::from([
         ("search", Filtered),
         ("get_activity", Gated(Viewer)),
+        // Fork: only the calling agent's own messages, routed by visibility.
+        ("check_inbox", Filtered),
         ("get_briefing", Gated(Viewer)),
         ("list_issues", Gated(Viewer)),
         ("get_issue", Gated(Viewer)),

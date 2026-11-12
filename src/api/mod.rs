@@ -12,6 +12,8 @@ mod export;
 mod feed;
 mod for_me;
 mod git_hook;
+mod agent_inbox;
+pub(crate) use agent_inbox::render_for_agent as render_inbox_for_agent;
 mod home;
 mod insights;
 mod issues;
@@ -168,6 +170,13 @@ fn router_impl(
         .route("/api/issues/attention", get(issues::my_attention))
         .route("/api/home/overview", get(home::home_overview))
         .route("/api/home/flow", get(home::home_flow))
+        // Fork: agent inbox (queries::agent_inbox).
+        .route("/api/agent/inbox", get(agent_inbox::get_inbox))
+        .route("/api/agent/inbox/hook", get(agent_inbox::hook))
+        .route("/api/agent/routes", axum::routing::put(agent_inbox::set_route))
+        .route("/api/projects/{id}/agents", get(agent_inbox::project_agents))
+        .route("/api/projects/{id}/agent-routes", get(agent_inbox::project_routes))
+        .route("/api/issues/{id}/agents", get(agent_inbox::issue_agents))
         // Fork: cross-project activity feed (the Feed page), filtered to
         // visible projects like the home overview.
         .route("/api/feed", get(feed::feed))

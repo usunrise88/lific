@@ -83,6 +83,16 @@ pub struct GetIssueInput {
     pub include_comments: Option<String>,
 }
 
+/// Fork: `check_inbox`.
+#[derive(Debug, Default, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct CheckInboxInput {
+    #[schemars(description = "Look without marking messages as read (default false)")]
+    pub peek: Option<bool>,
+    #[schemars(description = "Max messages (default 10, cap 50)")]
+    pub limit: Option<i64>,
+}
+
 #[derive(Debug, Default, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct GetActivityInput {

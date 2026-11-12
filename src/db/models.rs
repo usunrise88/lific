@@ -1082,6 +1082,10 @@ impl rusqlite::types::ToSql for CommentKind {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateComment {
     pub content: String,
+    /// Fork: agents (bot user ids) the comment is addressed to; see
+    /// `queries::agent_inbox`. Issue comments only.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub for_agents: Vec<i64>,
 }
 
 #[derive(Debug, Deserialize)]

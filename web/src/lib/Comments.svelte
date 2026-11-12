@@ -22,7 +22,10 @@
   } from "./api";
   import { fuzzyMatch } from "./fuzzy";
   import { MENTION_RE } from "./mentions";
-  import { MessageSquare, CornerDownLeft, MoreHorizontal } from "lucide-svelte";
+  import { MessageSquare, CornerDownLeft, MoreHorizontal, Bot, Check, Clock } from "lucide-svelte";
+  import AgentRecipients from "./AgentRecipients.svelte";
+  import { agentLabel } from "./agents";
+  import type { IssueAgents } from "./api";
   import { fly } from "svelte/transition";
   import { tick, onDestroy, onMount } from "svelte";
   import {
@@ -73,10 +76,14 @@
     // its budget on it, because two issues can hold the same number of
     // comments and a walk abandoned on one route must not resume on the next.
     parentKey = "",
+    // Fork: agents on this issue (agent inbox). When set, the composer can
+    // address agents, they join the @mention roster, and each comment shows
+    // which agents it reached and whether they have read it.
+    agentInfo = null,
   }: {
     comments: Comment[];
     editable?: boolean;
-    onSubmit: (content: string) => Promise<Comment | null>;
+    onSubmit: (content: string, forAgents?: number[]) => Promise<Comment | null>;
     currentUser?: { id: number } | null;
     onUpdate?: (id: number, content: string) => Promise<Comment | null>;
     onDelete?: (id: number) => Promise<boolean>;
@@ -87,7 +94,10 @@
     loadingOlder?: boolean;
     onLoadOlder?: (() => void) | undefined;
     parentKey?: string;
+    agentInfo?: IssueAgents | null;
   } = $props();
+
+  let agentPicks = $state<number[]>([]);
 
   // Only a partial thread may advertise itself as one.
   let showOlderControl = $derived(hasOlder && onLoadOlder !== undefined);
@@ -177,17 +187,24 @@
   // + display name, and is keyboard-first (↑/↓/Enter/Tab select, Esc
   // dismisses). Selecting replaces the active `@token` with `@username `.
 
-  let candidates = $state<MentionCandidate[]>([]);
+  let peopleCandidates = $state<MentionCandidate[]>([]);
+  // Fork: agents join the roster, so @agent autocompletes and renders as a mention.
+  let candidates = $derived<MentionCandidate[]>([
+    ...peopleCandidates,
+    ...(agentInfo?.available ?? [])
+      .filter((a) => !peopleCandidates.some((p) => p.user_id === a.id))
+      .map((a) => ({ user_id: a.id, username: a.username, display_name: agentLabel(a) })),
+  ]);
 
   $effect(() => {
     const pid = projectId;
     if (pid == null) {
-      candidates = [];
+      peopleCandidates = [];
       return;
     }
     let cancelled = false;
     listMentionCandidates(pid).then((r) => {
-      if (!cancelled && r.ok) candidates = r.data;
+      if (!cancelled && r.ok) peopleCandidates = r.data;
     });
     return () => {
       cancelled = true;
@@ -325,10 +342,11 @@
   async function submit() {
     if (!canSend) return;
     submitting = true;
-    const created = await onSubmit(draft.trim());
+    const created = await onSubmit(draft.trim(), agentPicks);
     submitting = false;
     if (created) {
       draft = "";
+      agentPicks = [];
       // The draft the alt-text chips point into is gone, so the offer goes
       // with it rather than lingering over an empty composer.
       attach.destroy();
@@ -611,6 +629,22 @@
                   <Markdown content={comment.content} mentions={candidates} class="text-sm" {mermaidBudget} />
                 {/key}
               </div>
+              {@const sent = agentInfo?.deliveries[String(comment.id)] ?? []}
+              {#if sent.length > 0}
+                <div class="cmt__agents" data-testid="comment-agents">
+                  {#each sent as d (d.agent.id)}
+                    <span
+                      class="cmt__agent"
+                      class:cmt__agent--read={d.delivered_at !== null}
+                      title={d.delivered_at ? t("agents.readAt", { time: d.delivered_at }) : t("agents.waiting")}
+                    >
+                      <Bot size={11} />
+                      {agentLabel(d.agent)}
+                      {#if d.delivered_at}<Check size={11} />{:else}<Clock size={11} />{/if}
+                    </span>
+                  {/each}
+                </div>
+              {/if}
             {/if}
           </div>
         </li>
@@ -676,6 +710,9 @@
         {/if}
         </div>
       </AttachComposer>
+      {#if agentInfo}
+        <AgentRecipients info={agentInfo} {draft} bind:picks={agentPicks} />
+      {/if}
     </div>
   {/if}
 </section>
@@ -1005,6 +1042,28 @@
   }
   .cmt__input::placeholder {
     color: var(--text-muted);
+  }
+
+  .cmt__agents {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin-top: 0.375rem;
+  }
+  .cmt__agent {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0 0.4375rem;
+    border-radius: 999px;
+    font-size: 0.6875rem;
+    line-height: 1.25rem;
+    color: var(--text-faint);
+    background: var(--bg-subtle);
+  }
+  .cmt__agent--read {
+    color: var(--success);
+    background: color-mix(in oklab, var(--success) 10%, transparent);
   }
 
   .cmt__toolbar {

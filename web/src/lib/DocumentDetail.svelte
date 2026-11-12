@@ -109,6 +109,8 @@
     // Route-scoped identity of whatever owns this thread, so the deep-link
     // walk in Comments cannot carry state across a navigation.
     commentParentKey = "",
+    // Fork: agents on the issue (agent inbox); see Comments.svelte.
+    agentInfo = null,
     // LIF-263: project id the comments belong to, used to fetch @mention
     // autocomplete candidates. Null for workspace pages (no member list).
     mentionProjectId = null,
@@ -180,7 +182,7 @@
     deleteConfirmBody?: string;
     onDelete?: () => Promise<boolean>;
     comments?: Comment[];
-    onNewComment?: (content: string) => Promise<Comment | null>;
+    onNewComment?: (content: string, forAgents?: number[]) => Promise<Comment | null>;
     currentUser?: AuthUser | null;
     onUpdateComment?: (id: number, content: string) => Promise<Comment | null>;
     onDeleteComment?: (id: number) => Promise<boolean>;
@@ -188,6 +190,7 @@
     loadingOlderComments?: boolean;
     onLoadOlderComments?: (() => void) | undefined;
     commentParentKey?: string;
+    agentInfo?: import("./api").IssueAgents | null;
     mentionProjectId?: number | null;
     activity?: Activity[];
     paletteActions?: PaletteAction[];
@@ -526,8 +529,8 @@
       {comments}
       {currentUser}
       editable={commentsEnabled}
-      onSubmit={async (content) => {
-        const created = await onNewComment(content);
+      onSubmit={async (content, forAgents) => {
+        const created = await onNewComment(content, forAgents);
         if (created) attachmentRefresh += 1;
         return created;
       }}
@@ -538,6 +541,7 @@
       loadingOlder={loadingOlderComments}
       onLoadOlder={onLoadOlderComments}
       parentKey={commentParentKey}
+      {agentInfo}
     />
   {/if}
 

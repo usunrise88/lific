@@ -1,0 +1,47 @@
+#!/bin/sh
+# Lific agent inbox hook (fork). Prints what people addressed to this agent,
+# already shaped for the harness, or nothing. Never fails the agent: any
+# error, timeout or missing setting prints nothing and exits 0.
+#
+#   lific-inbox-hook --fmt claude|codex|gemini|cursor|copilot|droid|text --event start|post|stop|prompt
+#
+# Settings (environment):
+#   LIFIC_URL             https://tasks.example.com
+#   LIFIC_API_KEY         the agent's own key (the one its MCP connection uses)
+#   LIFIC_INBOX_INTERVAL  seconds between checks after tool calls (default 20);
+#                         start, stop and prompt always check.
+
+fmt=claude
+event=post
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --fmt) fmt="$2"; shift 2 ;;
+    --event) event="$2"; shift 2 ;;
+    *) shift ;;
+  esac
+done
+
+# The harness writes the hook payload on stdin; drain it so it never blocks.
+[ -t 0 ] || cat >/dev/null 2>&1
+
+[ -n "$LIFIC_URL" ] && [ -n "$LIFIC_API_KEY" ] || exit 0
+command -v curl >/dev/null 2>&1 || exit 0
+
+case "$fmt" in
+  codex|copilot|droid|dsh) fmt=claude ;;
+esac
+
+if [ "$event" = post ]; then
+  interval="${LIFIC_INBOX_INTERVAL:-20}"
+  key=$(printf '%s' "$LIFIC_URL$LIFIC_API_KEY" | cksum | cut -d' ' -f1)
+  stamp="${TMPDIR:-/tmp}/lific-inbox-$key"
+  now=$(date +%s)
+  last=$(cat "$stamp" 2>/dev/null || echo 0)
+  [ $((now - last)) -lt "$interval" ] && exit 0
+  echo "$now" >"$stamp" 2>/dev/null
+fi
+
+curl -sf --max-time 5 \
+  -H "Authorization: Bearer $LIFIC_API_KEY" \
+  "${LIFIC_URL%/}/api/agent/inbox/hook?fmt=$fmt&event=$event" 2>/dev/null
+exit 0

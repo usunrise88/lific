@@ -34,6 +34,7 @@
   import IconPicker from "../lib/IconPicker.svelte";
   import LabelManager from "../lib/LabelManager.svelte";
   import ProjectMembers from "../lib/ProjectMembers.svelte";
+  import ProjectAgentRoutes from "../lib/ProjectAgentRoutes.svelte";
   import ImportPanel from "../lib/ImportPanel.svelte";
   import PublishPanel from "../lib/PublishPanel.svelte"; // LIF-465
   import ArchiveTransferPanel from "../lib/ArchiveTransferPanel.svelte";
@@ -746,6 +747,9 @@
             </select>
           </div>
         </section>
+
+        <!-- ── AGENTS (fork: comment routing) ───────────── -->
+        <ProjectAgentRoutes projectId={project.id} />
 
         <!-- ── LABELS (management) ──────────────────────── -->
         <!-- LIF-234: label management is a maintainer-level structure edit —

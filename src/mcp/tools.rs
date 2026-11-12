@@ -1942,6 +1942,43 @@ impl LificMcp {
         }))
     }
 
+    /// Fork: the calling agent's inbox (`queries::agent_inbox`).
+    #[tool(
+        description = "Comments people addressed to you (picked you, @mentioned you, or replied on an issue you work on). Returns only new ones; call between steps and when idle."
+    )]
+    fn check_inbox(&self, Parameters(input): Parameters<CheckInboxInput>) -> String {
+        self.check_inbox_inner(input).unwrap_or_else(error_response)
+    }
+
+    fn check_inbox_inner(&self, input: CheckInboxInput) -> Result<String, String> {
+        let identity = super::current_identity(&self.db).map(|identity| identity.user);
+        let Some(user) = identity else {
+            return Err("authentication required".into());
+        };
+        let (items, pending, is_bot) = self.write(|conn| {
+            let is_bot: bool = conn
+                .query_row("SELECT is_bot FROM users WHERE id = ?1", [user.id], |r| r.get(0))
+                .unwrap_or(false);
+            if !is_bot {
+                return Ok((Vec::new(), 0, false));
+            }
+            let items = queries::agent_inbox::take(
+                conn,
+                user.id,
+                input.limit.unwrap_or(10),
+                input.peek.unwrap_or(false),
+            )?;
+            Ok((items, queries::agent_inbox::pending_count(conn, user.id)?, true))
+        })?;
+        if !is_bot {
+            return Ok("This connection is a person's, not an agent's, so it has no inbox.".into());
+        }
+        if items.is_empty() {
+            return Ok("Inbox empty: nothing new addressed to you.".into());
+        }
+        Ok(crate::api::render_inbox_for_agent(&items, pending, 40_000))
+    }
+
     #[tool(
         description = "Read who changed what and when, and through which interface, for an issue, page, or project. Newest first; since reads forward."
     )]

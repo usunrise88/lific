@@ -1581,11 +1581,63 @@ export async function listComments(
   return commentPage(`/issues/${issueId}/comments`, before, pageSize);
 }
 
-export async function createComment(issueId: number, content: string) {
+/** `forAgents` (fork): agents the comment is addressed to explicitly. */
+export async function createComment(issueId: number, content: string, forAgents: number[] = []) {
   return request<Comment>(`/issues/${issueId}/comments`, {
     method: "POST",
-    body: JSON.stringify({ content }),
+    body: JSON.stringify(forAgents.length ? { content, for_agents: forAgents } : { content }),
   });
+}
+
+// ── Agent inbox (fork) ───────────────────────────────────────
+
+export interface AgentRef {
+  id: number;
+  username: string;
+  display_name: string;
+  owner_id: number | null;
+  owner_name: string | null;
+}
+
+export type AgentAttachReason = "created" | "took" | "asked" | "waits" | "commented" | "routed";
+
+export interface AgentDelivery {
+  agent: AgentRef;
+  reason: string;
+  created_at: string;
+  delivered_at: string | null;
+}
+
+export interface AgentRoute {
+  id: number;
+  agent: AgentRef;
+  project_id: number;
+  issue_id: number | null;
+}
+
+export interface IssueAgents {
+  available: AgentRef[];
+  attached: { agent: AgentRef; reasons: AgentAttachReason[] }[];
+  routes: AgentRoute[];
+  deliveries: Record<string, AgentDelivery[]>;
+  /** Agents the caller may route: their own, or all for an admin. */
+  mine: number[];
+}
+
+export async function getIssueAgents(issueId: number) {
+  return request<IssueAgents>(`/issues/${issueId}/agents`);
+}
+
+export async function listProjectAgents(projectId: number) {
+  return request<AgentRef[]>(`/projects/${projectId}/agents`);
+}
+
+export async function listProjectAgentRoutes(projectId: number) {
+  return request<AgentRoute[]>(`/projects/${projectId}/agent-routes`);
+}
+
+export async function setAgentRoute(route: { agent_id: number; project_id: number; issue_id?: number | null; on: boolean }) {
+  return request<null>(`/agent/routes`, { method: "PUT", body: JSON.stringify(route) });
 }
 
 export async function listPageComments(
