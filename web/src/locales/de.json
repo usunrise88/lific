@@ -1592,7 +1592,11 @@
     "empty.filtered": "Keine Treffer für diese Filter",
     "empty.title": "Noch keine Aktivität",
     "empty.body": "Neue Aufgaben, Statusänderungen und Kommentare von Personen und Agenten erscheinen hier, sobald sie passieren.",
-    "end": "Das war alles"
+    "end": "Das war alles",
+    "mentioned.label": "Erwähnt mich",
+    "mentioned.title": "Nur Kommentare, die dich erwähnen",
+    "mentioned.empty": "Hier hat dich noch niemand erwähnt",
+    "mentioned.off": "Alles anzeigen"
   },
   "forMe": {
     "title": "Für mich",

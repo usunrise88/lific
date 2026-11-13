@@ -1592,7 +1592,11 @@
     "empty.filtered": "Semmi sem felel meg ezeknek a szűrőknek",
     "empty.title": "Még nincs tevékenység",
     "empty.body": "Az új feladatok, állapotváltozások és hozzászólások személyektől és ügynököktől itt jelennek meg, ahogy történnek.",
-    "end": "Ez minden"
+    "end": "Ez minden",
+    "mentioned.label": "Engem említ",
+    "mentioned.title": "Csak az engem említő hozzászólások",
+    "mentioned.empty": "Itt még senki sem említett",
+    "mentioned.off": "Összes mutatása"
   },
   "forMe": {
     "title": "Nekem",

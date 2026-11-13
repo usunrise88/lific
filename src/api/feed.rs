@@ -29,6 +29,8 @@ pub(super) struct FeedQuery {
     pub verbs: Option<String>,
     pub actors: Option<String>,
     pub agents: Option<String>,
+    /// Fork: `me` keeps only comments that mention the caller.
+    pub mentioned: Option<String>,
     pub before: Option<i64>,
     pub after: Option<i64>,
     pub limit: Option<i64>,
@@ -130,7 +132,14 @@ pub(super) async fn feed(
     Extension(identity): Extension<Option<crate::resolve_caller::ResolvedIdentity>>,
     Query(q): Query<FeedQuery>,
 ) -> Result<Json<FeedPage>, LificError> {
-    super::require_user(&identity)?;
+    let caller = super::require_user(&identity)?;
+    let mentioned = match q.mentioned.as_deref() {
+        None | Some("") => None,
+        Some("me") => Some(caller.id),
+        Some(other) => {
+            return Err(LificError::BadRequest(format!("invalid mentioned '{other}'. Use me")));
+        }
+    };
     let visible = authz::visible_project_ids(&db, &identity)?;
     let filter = FeedFilter {
         visible: visible.as_ref(),
@@ -139,6 +148,7 @@ pub(super) async fn feed(
         verbs: q.verbs()?,
         actors: q.actors()?,
         agents: q.agents()?,
+        mentioned,
         before: q.before,
         after: q.after,
         limit: q.limit,

@@ -63,7 +63,7 @@
     CirclePlus, ArrowRightLeft, MessageSquare, Pencil, UserRound, Tag, Link2,
     FileText, ListChecks, Box, SlidersHorizontal, X, SendHorizontal,
     ArrowUpRight, ArrowUp, Bot, Users, Search, Activity as ActivityIcon,
-    Rows3, Rows2,
+    Rows3, Rows2, AtSign,
   } from "lucide-svelte";
 
   const PAGE_SIZE = 60;
@@ -117,6 +117,7 @@
       verbs: filters.verbs.length ? filters.verbs : undefined,
       actors: filters.actors.length ? filters.actors : undefined,
       agents: filters.agents,
+      mentioned: filters.mentioned || undefined,
     };
   }
 
@@ -1063,6 +1064,17 @@
       {t("feed.live.label")}
     </span>
     <div class="ml-auto flex items-center gap-2">
+      <!-- Fork: only comments that mention me. -->
+      <button
+        class="inline-flex items-center gap-1 text-caption px-1.5 sm:px-2 py-1 rounded-md border transition-colors
+               {filters.mentioned
+          ? 'border-[var(--accent)] text-[var(--accent)] bg-[var(--accent-subtle)] font-medium'
+          : 'border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)]'}"
+        title={t("feed.mentioned.title")}
+        aria-pressed={filters.mentioned}
+        data-testid="feed-mentioned"
+        onclick={() => setFilters({ mentioned: !filters.mentioned })}
+      ><AtSign size={12} /><span class="hidden sm:inline">{t("feed.mentioned.label")}</span></button>
       <div class="flex p-0.5 rounded-md bg-[var(--bg-subtle)] border border-[var(--border)]" role="group" aria-label={t("feed.density.label")}>
         {#each [["compact", t("feed.density.compact"), t("feed.density.compactTitle")], ["full", t("feed.density.full"), t("feed.density.fullTitle")]] as [d, label, hint] (d)}
           <button
@@ -1131,7 +1143,10 @@
         {:else if cards.length === 0}
           <div class="flex flex-col items-center py-20 gap-3 px-6 max-w-[440px] mx-auto text-center">
             <ActivityIcon size={32} class="text-[var(--text-faint)]" />
-            {#if filterCount}
+            {#if filters.mentioned && filterCount === 1}
+              <p class="text-body-lg text-[var(--text-muted)] m-0">{t("feed.mentioned.empty")}</p>
+              <button class="text-caption text-[var(--accent)] hover:underline" onclick={() => setFilters({ mentioned: false })}>{t("feed.mentioned.off")}</button>
+            {:else if filterCount}
               <p class="text-body-lg text-[var(--text-muted)] m-0">{t("feed.empty.filtered")}</p>
               <button class="text-caption text-[var(--accent)] hover:underline" onclick={resetFilters}>{t("feed.filter.reset")}</button>
             {:else}

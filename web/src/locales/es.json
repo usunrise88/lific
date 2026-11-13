@@ -1592,7 +1592,11 @@
     "empty.filtered": "Nada coincide con estos filtros",
     "empty.title": "Aún no hay actividad",
     "empty.body": "Las incidencias nuevas, los cambios de estado y los comentarios de personas y agentes aparecen aquí en cuanto ocurren.",
-    "end": "Eso es todo"
+    "end": "Eso es todo",
+    "mentioned.label": "Me mencionan",
+    "mentioned.title": "Solo comentarios que te mencionan",
+    "mentioned.empty": "Aquí todavía nadie te ha mencionado",
+    "mentioned.off": "Mostrar todo"
   },
   "forMe": {
     "title": "Para mí",

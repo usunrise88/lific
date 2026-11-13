@@ -1592,7 +1592,11 @@
     "empty.filtered": "Nothing matches these filters",
     "empty.title": "No activity yet",
     "empty.body": "New issues, status changes and comments from people and agents show up here as they happen.",
-    "end": "That's everything"
+    "end": "That's everything",
+    "mentioned.label": "Mentions me",
+    "mentioned.title": "Only comments that mention you",
+    "mentioned.empty": "Nobody has mentioned you here yet",
+    "mentioned.off": "Show everything"
   },
   "forMe": {
     "title": "For me",

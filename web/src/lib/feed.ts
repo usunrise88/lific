@@ -396,6 +396,8 @@ export interface FeedFilters {
   verbs: FeedVerb[];
   actors: (number | "system")[];
   agents: AgentMode;
+  /** Fork: only comments that mention the signed-in user. */
+  mentioned: boolean;
 }
 
 export const EMPTY_FILTERS: FeedFilters = {
@@ -404,6 +406,7 @@ export const EMPTY_FILTERS: FeedFilters = {
   verbs: [],
   actors: [],
   agents: "all",
+  mentioned: false,
 };
 
 const STORAGE_KEY = "lific:feed:filters";
@@ -422,6 +425,7 @@ export function loadFilters(): FeedFilters {
           ? v.actors.filter((x) => typeof x === "number" || x === "system")
           : [],
         agents: v.agents === "only" || v.agents === "exclude" ? v.agents : "all",
+        mentioned: v.mentioned === true,
       };
     }
   } catch {
@@ -443,7 +447,8 @@ export function activeFilterCount(f: FeedFilters): number {
     (f.groups.length + f.projects.length > 0 ? 1 : 0) +
     (f.verbs.length > 0 ? 1 : 0) +
     (f.actors.length > 0 ? 1 : 0) +
-    (f.agents !== "all" ? 1 : 0)
+    (f.agents !== "all" ? 1 : 0) +
+    (f.mentioned ? 1 : 0)
   );
 }
 

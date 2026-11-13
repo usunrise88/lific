@@ -1592,7 +1592,11 @@
     "empty.filtered": "Rien ne correspond à ces filtres",
     "empty.title": "Aucune activité pour l’instant",
     "empty.body": "Les nouveaux tickets, changements de statut et commentaires des personnes et des agents apparaissent ici en temps réel.",
-    "end": "C’est tout"
+    "end": "C’est tout",
+    "mentioned.label": "Me mentionnent",
+    "mentioned.title": "Seulement les commentaires qui vous mentionnent",
+    "mentioned.empty": "Personne ne vous a encore mentionné ici",
+    "mentioned.off": "Tout afficher"
   },
   "forMe": {
     "title": "Pour moi",

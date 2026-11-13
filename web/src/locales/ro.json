@@ -1661,7 +1661,11 @@
     "empty.filtered": "Nimic nu se potrivește acestor filtre",
     "empty.title": "Nicio activitate încă",
     "empty.body": "Problemele noi, schimbările de stare și comentariile de la persoane și agenți apar aici pe măsură ce au loc.",
-    "end": "Asta este tot"
+    "end": "Asta este tot",
+    "mentioned.label": "Mă menționează",
+    "mentioned.title": "Doar comentariile care te menționează",
+    "mentioned.empty": "Încă nu te-a menționat nimeni aici",
+    "mentioned.off": "Arată tot"
   },
   "forMe": {
     "title": "Pentru mine",

@@ -1592,7 +1592,11 @@
     "empty.filtered": "Niets komt overeen met deze filters",
     "empty.title": "Nog geen activiteit",
     "empty.body": "Nieuwe issues, statuswijzigingen en reacties van personen en agents verschijnen hier zodra ze gebeuren.",
-    "end": "Dat is alles"
+    "end": "Dat is alles",
+    "mentioned.label": "Noemt mij",
+    "mentioned.title": "Alleen reacties waarin je genoemd wordt",
+    "mentioned.empty": "Niemand heeft je hier nog genoemd",
+    "mentioned.off": "Alles tonen"
   },
   "forMe": {
     "title": "Voor mij",

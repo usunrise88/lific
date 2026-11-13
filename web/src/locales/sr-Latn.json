@@ -1661,7 +1661,11 @@
     "empty.filtered": "Ništa ne odgovara ovim filterima",
     "empty.title": "Još nema aktivnosti",
     "empty.body": "Novi zadaci, promene statusa i komentari osoba i agenata pojavljuju se ovde čim se dogode.",
-    "end": "To je sve"
+    "end": "To je sve",
+    "mentioned.label": "Pominju me",
+    "mentioned.title": "Samo komentari u kojima ste pomenuti",
+    "mentioned.empty": "Ovde vas još niko nije pomenuo",
+    "mentioned.off": "Prikaži sve"
   },
   "forMe": {
     "title": "Za mene",

@@ -1477,6 +1477,8 @@ export interface FeedParams {
   /** User ids, or "system" for unattributed rows. */
   actors?: (number | "system")[];
   agents?: "all" | "only" | "exclude";
+  /** Fork: only comments that mention the caller. */
+  mentioned?: boolean;
   before?: number;
   after?: number;
   limit?: number;
@@ -1489,6 +1491,7 @@ export async function listFeed(params: FeedParams = {}) {
   if (params.verbs) q.set("verbs", params.verbs.join(","));
   if (params.actors) q.set("actors", params.actors.join(","));
   if (params.agents && params.agents !== "all") q.set("agents", params.agents);
+  if (params.mentioned) q.set("mentioned", "me");
   if (params.before !== undefined) q.set("before", String(params.before));
   if (params.after !== undefined) q.set("after", String(params.after));
   if (params.limit !== undefined) q.set("limit", String(params.limit));

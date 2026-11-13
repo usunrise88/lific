@@ -97,6 +97,8 @@ pub struct FeedFilter<'a> {
     pub verbs: Option<Vec<String>>,
     pub actors: Option<Vec<ActorRef>>,
     pub agents: AgentFilter,
+    /// Fork: only comments that mention this user.
+    pub mentioned: Option<i64>,
     /// Rows strictly older than this id (paging down).
     pub before: Option<i64>,
     /// Rows strictly newer than this id (live updates).
@@ -190,6 +192,15 @@ pub fn list_feed(conn: &Connection, filter: &FeedFilter) -> Result<FeedPage, Lif
         AgentFilter::All => {}
         AgentFilter::Only => clauses.push("COALESCE(u.is_bot, 0) = 1".into()),
         AgentFilter::Exclude => clauses.push("COALESCE(u.is_bot, 0) = 0".into()),
+    }
+    if let Some(user_id) = filter.mentioned {
+        params.push(boxed(user_id));
+        clauses.push(format!(
+            "a.entity_type = 'comment' AND a.action = 'create'
+             AND EXISTS (SELECT 1 FROM comment_mentions cm
+                          WHERE cm.comment_id = a.entity_id AND cm.user_id = ?{})",
+            params.len()
+        ));
     }
     if let Some(before) = filter.before {
         params.push(boxed(before));
@@ -355,6 +366,52 @@ mod tests {
             },
         )
         .unwrap()
+    }
+
+    #[test]
+    fn mentioned_keeps_only_comments_that_name_the_user() {
+        use crate::db::queries::comments::{CommentParent, create_comment_with_mentions};
+        let pool = crate::db::open_memory().unwrap();
+        let (anton, yana) = {
+            let conn = pool.write().unwrap();
+            let pid = project(&conn, "MEN");
+            let mut ids = Vec::new();
+            for name in ["anton", "yana"] {
+                conn.execute(
+                    "INSERT INTO users (username, email, password_hash) VALUES (?1, ?1 || '@t.local', 'x')",
+                    [name],
+                )
+                .unwrap();
+                ids.push(conn.last_insert_rowid());
+            }
+            let i = issue(&conn, pid, "Talk");
+            for text in ["@anton look", "no names here", "@yana and @anton"] {
+                create_comment_with_mentions(
+                    &conn,
+                    CommentParent::Issue(i.id),
+                    Some(pid),
+                    CommentActor { user_id: ids[1], is_admin: false },
+                    AttachmentActor::Unattributed,
+                    text,
+                    false,
+                )
+                .unwrap();
+            }
+            (ids[0], ids[1])
+        };
+        let conn = pool.read().unwrap();
+        let texts = |user| {
+            list_feed(&conn, &FeedFilter { mentioned: Some(user), ..Default::default() })
+                .unwrap()
+                .items
+                .into_iter()
+                .map(|i| (i.kind, i.activity.new_value.unwrap_or_default()))
+                .collect::<Vec<_>>()
+        };
+        let mine = texts(anton);
+        assert_eq!(mine.len(), 2, "{mine:?}");
+        assert!(mine.iter().all(|(kind, _)| kind == "comment"), "{mine:?}");
+        assert_eq!(texts(yana).len(), 1);
     }
 
     fn kinds(page: &FeedPage) -> Vec<&str> {
