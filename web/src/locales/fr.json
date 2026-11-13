@@ -81,7 +81,8 @@
     "newIssue": "Nouveau ticket",
     "page": "Page",
     "module": "Module",
-    "plan": "Plan"
+    "plan": "Plan",
+    "section.parked": "En attente"
   },
   "shortcuts": {
     "title": "Raccourcis clavier",
@@ -215,7 +216,8 @@
     "openProject": "Ouvrir la navigation de {name}",
     "close": "Fermer la navigation",
     "projectUnavailable.title": "Projet indisponible",
-    "projectUnavailable.body": "Ce projet ne figure plus dans votre liste de projets."
+    "projectUnavailable.body": "Ce projet ne figure plus dans votre liste de projets.",
+    "parked": "En attente"
   },
   "issues": {
     "export.publicView": "L’export n’est pas disponible dans la vue publique.",
@@ -2488,5 +2490,30 @@
     "howAgentText": "Call get_manifest from Lific and put the block into this repository's AGENTS.md (or CLAUDE.md), replacing the old lific block.",
     "howHttp": "Sans MCP : HTTP simple avec la clé API de l'agent",
     "howRefresh": "Quand le manifeste change, get_briefing le signale une fois à chaque agent, qui appelle get_manifest pour mettre sa copie à jour."
+  },
+  "parked": {
+    "tab": "En attente",
+    "mode": "En attente",
+    "modeHint": "Tickets mis de côté : idées et bonus, hors du tableau, des statistiques et des listes des agents",
+    "banner": "Les tickets mis en attente sont conservés tels quels mais ne gênent plus : ils n'apparaissent ni sur le tableau, ni dans la liste, ni dans les statistiques, ni dans ce que lisent les agents. Changer le statut ou assigner le ticket le remet au travail.",
+    "empty.title": "Rien en attente",
+    "empty.body": "Mettez un ticket en attente pour l'écarter sans le perdre : sélectionnez des tickets dans la liste et choisissez Mettre en attente, ou faites-le depuis la page du ticket. Les tickets créés ici sont mis en attente.",
+    "row.since": "En attente",
+    "action.park": "Mettre en attente",
+    "action.parkCount": "Mettre en attente : {count}",
+    "action.unpark": "Remettre au travail",
+    "action.unparkHint": "Remettre le ticket dans la liste et sur le tableau",
+    "action.unparkSelected": "Remettre au travail",
+    "reasonPlaceholder": "Pourquoi (facultatif)",
+    "bulk.hint": "Retiré du tableau, des statistiques et des listes des agents. Changer le statut ou assigner le remet au travail.",
+    "toast.parked": "Mis en attente : {count}",
+    "toast.parkedOne": "Ticket mis en attente",
+    "toast.back": "Remis au travail : {count}",
+    "toast.backOne": "Le ticket est remis au travail",
+    "toast.failed": "Impossible de modifier : {error}",
+    "issue.title": "En attente",
+    "issue.hint": "Le mettre de côté : conservé, mais hors du tableau, des statistiques et des listes des agents.",
+    "activity.parked": "a mis le ticket en attente",
+    "activity.unparked": "a remis le ticket au travail"
   }
 }

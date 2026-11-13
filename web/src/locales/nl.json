@@ -81,7 +81,8 @@
     "newIssue": "Nieuwe issue",
     "page": "Pagina",
     "module": "Module",
-    "plan": "Plan"
+    "plan": "Plan",
+    "section.parked": "Geparkeerd"
   },
   "shortcuts": {
     "title": "Sneltoetsen",
@@ -215,7 +216,8 @@
     "openProject": "Navigatie van {name} openen",
     "close": "Navigatie sluiten",
     "projectUnavailable.title": "Project niet beschikbaar",
-    "projectUnavailable.body": "Dit project staat niet meer in je projectlijst."
+    "projectUnavailable.body": "Dit project staat niet meer in je projectlijst.",
+    "parked": "Geparkeerd"
   },
   "issues": {
     "export.publicView": "Exporteren is niet beschikbaar in de openbare weergave.",
@@ -2488,5 +2490,30 @@
     "howAgentText": "Call get_manifest from Lific and put the block into this repository's AGENTS.md (or CLAUDE.md), replacing the old lific block.",
     "howHttp": "Zonder MCP: gewone HTTP met de API-sleutel van de agent",
     "howRefresh": "Als het manifest verandert, meldt get_briefing dat één keer aan elke agent, en die roept get_manifest aan om zijn kopie bij te werken."
+  },
+  "parked": {
+    "tab": "Geparkeerd",
+    "mode": "Geparkeerd",
+    "modeHint": "Opzijgezette issues: ideeën en nice-to-haves, buiten het bord, de statistieken en de lijsten van agents",
+    "banner": "Geparkeerde issues blijven bewaard, maar zitten niet in de weg: ze staan niet op het bord, in de issuelijst, in de statistieken of in wat agents lezen. De status wijzigen of iemand toewijzen haalt een issue terug.",
+    "empty.title": "Niets geparkeerd",
+    "empty.body": "Parkeer een issue om het opzij te zetten zonder het kwijt te raken: selecteer issues in de lijst en kies Parkeren, of doe het op de issuepagina. Nieuwe issues die je hier maakt, worden geparkeerd.",
+    "row.since": "Geparkeerd",
+    "action.park": "Parkeren",
+    "action.parkCount": "Parkeren: {count}",
+    "action.unpark": "Weer oppakken",
+    "action.unparkHint": "Issue terug naar de lijst en het bord",
+    "action.unparkSelected": "Weer oppakken",
+    "reasonPlaceholder": "Waarom (optioneel)",
+    "bulk.hint": "Verdwijnt van het bord, uit de statistieken en de lijsten van agents. Status wijzigen of toewijzen haalt het terug.",
+    "toast.parked": "Geparkeerd: {count}",
+    "toast.parkedOne": "Issue geparkeerd",
+    "toast.back": "Weer opgepakt: {count}",
+    "toast.backOne": "Issue weer opgepakt",
+    "toast.failed": "Wijzigen mislukt: {error}",
+    "issue.title": "Geparkeerd",
+    "issue.hint": "Opzijzetten: blijft bewaard, maar buiten het bord, de statistieken en de lijsten van agents.",
+    "activity.parked": "heeft het issue geparkeerd",
+    "activity.unparked": "heeft het issue weer opgepakt"
   }
 }

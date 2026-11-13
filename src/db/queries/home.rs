@@ -136,7 +136,8 @@ pub fn overview(conn: &Connection, input: &OverviewInput) -> Result<HomeOverview
                 OR EXISTS (SELECT 1 FROM issue_waits w
                             WHERE w.issue_id = i.id AND {})
            FROM issues i
-          WHERE i.deleted_at IS NULL AND i.status NOT IN ('done', 'cancelled')",
+          WHERE i.deleted_at IS NULL AND i.status NOT IN ('done', 'cancelled')
+            AND NOT EXISTS (SELECT 1 FROM fork_issue_parked fp WHERE fp.issue_id = i.id)",
         super::waits::holding_predicate("?1"),
         person = super::assignees::PERSON_ROW
     ))?;
@@ -227,7 +228,7 @@ fn open_trend(
                              i.updated_at)
                 END
            FROM issues i
-          WHERE i.deleted_at IS NULL",
+          WHERE i.deleted_at IS NULL AND NOT EXISTS (SELECT 1 FROM fork_issue_parked fp WHERE fp.issue_id = i.id)",
     )?;
     let rows = stmt.query_map([], |row| {
         Ok((

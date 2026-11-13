@@ -31,6 +31,7 @@ mod resources;
 mod sync;
 mod views;
 mod waits;
+mod parked;
 
 use axum::{
     Router,
@@ -250,6 +251,12 @@ fn router_impl(
         .route(
             "/api/issues/{id}/waits/{wait_id}",
             delete(waits::clear_wait),
+        )
+        // Fork: parked issues
+        .route("/api/issues/park", post(parked::bulk_park))
+        .route(
+            "/api/issues/{id}/park",
+            put(parked::park_issue).delete(parked::unpark_issue),
         )
         // Project-wide relation edges (dependency graph — LIF-363)
         .route(

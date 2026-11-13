@@ -84,7 +84,8 @@
     "newIssue": "Novi zadatak",
     "page": "Stranica",
     "module": "Modul",
-    "plan": "Plan"
+    "plan": "Plan",
+    "section.parked": "Odgođeno"
   },
   "shortcuts": {
     "title": "Tipkovnički prečaci",
@@ -218,7 +219,8 @@
     "openProject": "Otvori navigaciju: {name}",
     "close": "Zatvori navigaciju",
     "projectUnavailable.title": "Projekt nije dostupan",
-    "projectUnavailable.body": "Ovaj projekt više nije na tvom popisu projekata."
+    "projectUnavailable.body": "Ovaj projekt više nije na tvom popisu projekata.",
+    "parked": "Odgođeno"
   },
   "issues": {
     "export.publicView": "Izvoz nije dostupan u javnom prikazu.",
@@ -2593,5 +2595,30 @@
     "howAgentText": "Call get_manifest from Lific and put the block into this repository's AGENTS.md (or CLAUDE.md), replacing the old lific block.",
     "howHttp": "Bez MCP-a: obični HTTP s API ključem agenta",
     "howRefresh": "Kad se manifest promijeni, get_briefing to jednom javi svakom agentu, a on poziva get_manifest da osvježi svoju kopiju."
+  },
+  "parked": {
+    "tab": "Odgođeno",
+    "mode": "Odgođeno",
+    "modeHint": "Odgođeni zadaci: ideje i nice-to-have, izvan ploče, statistike i popisa agenata",
+    "banner": "Odgođeni zadaci ostaju sačuvani, ali ne smetaju: nema ih na ploči, u popisu zadataka, u statistici ni u onome što agenti čitaju. Promjena statusa ili dodjela vraća zadatak u rad.",
+    "empty.title": "Ništa nije odgođeno",
+    "empty.body": "Odgodite zadatak da ga maknete s očiju, a da ga ne izgubite: odaberite zadatke u popisu i kliknite Odgodi ili to učinite na stranici zadatka. Novi zadaci stvoreni ovdje odmah se odgađaju.",
+    "row.since": "Odgođen",
+    "action.park": "Odgodi",
+    "action.parkCount": "Odgodi: {count}",
+    "action.unpark": "Vrati u rad",
+    "action.unparkHint": "Vrati zadatak u popis i na ploču",
+    "action.unparkSelected": "Vrati u rad",
+    "reasonPlaceholder": "Zašto (neobavezno)",
+    "bulk.hint": "Nestaje s ploče, iz statistike i popisa agenata. Promjena statusa ili dodjela ga vraća.",
+    "toast.parked": "Odgođeno: {count}",
+    "toast.parkedOne": "Zadatak odgođen",
+    "toast.back": "Vraćeno u rad: {count}",
+    "toast.backOne": "Zadatak je ponovno u radu",
+    "toast.failed": "Promjena nije uspjela: {error}",
+    "issue.title": "Odgođen",
+    "issue.hint": "Makni s očiju: ostaje sačuvan, ali izvan ploče, statistike i popisa agenata.",
+    "activity.parked": "odgodio/la je zadatak",
+    "activity.unparked": "vratio/la je zadatak u rad"
   }
 }

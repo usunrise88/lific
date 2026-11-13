@@ -81,7 +81,8 @@
     "newIssue": "Új feladat",
     "page": "Oldal",
     "module": "Modul",
-    "plan": "Terv"
+    "plan": "Terv",
+    "section.parked": "Félretéve"
   },
   "shortcuts": {
     "title": "Billentyűparancsok",
@@ -215,7 +216,8 @@
     "openProject": "Navigáció megnyitása: {name}",
     "close": "Navigáció bezárása",
     "projectUnavailable.title": "A projekt nem érhető el",
-    "projectUnavailable.body": "Ez a projekt már nincs a projektlistádon."
+    "projectUnavailable.body": "Ez a projekt már nincs a projektlistádon.",
+    "parked": "Félretéve"
   },
   "issues": {
     "export.publicView": "Az exportálás a nyilvános nézetben nem érhető el.",
@@ -2488,5 +2490,30 @@
     "howAgentText": "Call get_manifest from Lific and put the block into this repository's AGENTS.md (or CLAUDE.md), replacing the old lific block.",
     "howHttp": "MCP nélkül: egyszerű HTTP az ügynök API-kulcsával",
     "howRefresh": "Ha a manifeszt változik, a get_briefing ezt egyszer jelzi minden ügynöknek, az pedig a get_manifest hívással frissíti a másolatát."
+  },
+  "parked": {
+    "tab": "Félretéve",
+    "mode": "Félretéve",
+    "modeHint": "Félretett feladatok: ötletek és nice-to-have-ek, a táblán, a statisztikán és az ügynökök listáin kívül",
+    "banner": "A félretett feladatok megmaradnak, de nem zavarnak: nincsenek a táblán, a feladatlistában, a statisztikában és abban, amit az ügynökök olvasnak. Az állapot módosítása vagy a hozzárendelés visszahozza a feladatot.",
+    "empty.title": "Nincs félretett feladat",
+    "empty.body": "Tegyél félre egy feladatot, hogy eltűnjön a szemed elől, de ne vesszen el: jelölj ki feladatokat a listában, és válaszd a Félretesz gombot, vagy tedd meg a feladat oldalán. Az itt létrehozott új feladatok félre lesznek téve.",
+    "row.since": "Félretéve",
+    "action.park": "Félretesz",
+    "action.parkCount": "Félretesz: {count}",
+    "action.unpark": "Vissza a munkába",
+    "action.unparkHint": "Feladat vissza a listába és a táblára",
+    "action.unparkSelected": "Vissza a munkába",
+    "reasonPlaceholder": "Miért (nem kötelező)",
+    "bulk.hint": "Lekerül a tábláról, a statisztikából és az ügynökök listáiról. Az állapot módosítása vagy a hozzárendelés visszahozza.",
+    "toast.parked": "Félretéve: {count}",
+    "toast.parkedOne": "Feladat félretéve",
+    "toast.back": "Visszahozva: {count}",
+    "toast.backOne": "A feladat újra munkában",
+    "toast.failed": "Nem sikerült módosítani: {error}",
+    "issue.title": "Félretéve",
+    "issue.hint": "Félretétel: megmarad, de a táblán, a statisztikán és az ügynökök listáin kívül.",
+    "activity.parked": "félretette a feladatot",
+    "activity.unparked": "visszahozta a feladatot"
   }
 }

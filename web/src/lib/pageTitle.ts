@@ -67,6 +67,7 @@ export interface RouteTitleInput {
 const SECTIONS = new Set([
   "issues",
   "board",
+  "parked",
   "graph",
   "pages",
   "files",

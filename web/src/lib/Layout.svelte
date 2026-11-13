@@ -32,7 +32,7 @@
   import { currentUser, getUserRevision, publishUser } from "./userState";
   import { mobileNavState } from "./mobileNavState.svelte";
   import { navLink } from "./navLink";
-  import { Settings, List, LayoutGrid, FileText, Plus, Layers, History, ListChecks, LayoutDashboard, Search, ChevronRight, Sun, Moon, Monitor, Menu, Home, TrendingUp, HelpCircle, Folder, FolderPlus, FolderMinus, Pencil, Trash2, PanelLeftClose, PanelLeftOpen, Waypoints, Paperclip, Activity, Inbox } from "lucide-svelte";
+  import { Settings, List, LayoutGrid, FileText, Plus, Layers, History, ListChecks, LayoutDashboard, Search, ChevronRight, Sun, Moon, Monitor, Menu, Home, TrendingUp, HelpCircle, Folder, FolderPlus, FolderMinus, Pencil, Trash2, PanelLeftClose, PanelLeftOpen, Waypoints, Paperclip, Activity, Inbox, Hourglass } from "lucide-svelte";
   import { onDestroy, setContext, untrack, tick } from "svelte";
   import { Ellipsis, ArrowUp, ArrowDown } from "lucide-svelte";
   import { peekState } from "./issues/peek.svelte";
@@ -1050,6 +1050,7 @@
                 {@render subItem(`/${project.identifier}/overview`, t("nav.overview"), LayoutDashboard)}
                 {@render subItem(`/${project.identifier}/issues`, t("nav.issues"), List)}
                 {@render subItem(`/${project.identifier}/board`, t("nav.board"), LayoutGrid)}
+                {@render subItem(`/${project.identifier}/parked`, t("nav.parked"), Hourglass)}
                 {@render subItem(`/${project.identifier}/graph`, t("nav.graph"), Waypoints)}
                 {@render subItem(`/${project.identifier}/modules`, t("nav.modules"), Layers)}
                 {@render subItem(`/${project.identifier}/pages`, t("nav.pages"), FileText)}

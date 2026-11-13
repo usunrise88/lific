@@ -81,7 +81,8 @@
     "newIssue": "Nova tarefa",
     "page": "Página",
     "module": "Módulo",
-    "plan": "Plano"
+    "plan": "Plano",
+    "section.parked": "Estacionadas"
   },
   "shortcuts": {
     "title": "Atalhos de teclado",
@@ -215,7 +216,8 @@
     "openProject": "Abrir navegação de {name}",
     "close": "Fechar navegação",
     "projectUnavailable.title": "Projeto indisponível",
-    "projectUnavailable.body": "Este projeto já não está na sua lista de projetos."
+    "projectUnavailable.body": "Este projeto já não está na sua lista de projetos.",
+    "parked": "Estacionadas"
   },
   "issues": {
     "export.publicView": "A exportação não está disponível na vista pública.",
@@ -2488,5 +2490,30 @@
     "howAgentText": "Call get_manifest from Lific and put the block into this repository's AGENTS.md (or CLAUDE.md), replacing the old lific block.",
     "howHttp": "Sem MCP: HTTP simples com a chave API do agente",
     "howRefresh": "Quando o manifesto muda, o get_briefing avisa cada agente uma vez, e este chama get_manifest para atualizar a sua cópia."
+  },
+  "parked": {
+    "tab": "Estacionadas",
+    "mode": "Estacionadas",
+    "modeHint": "Tarefas postas de lado: ideias e extras, fora do quadro, das estatísticas e das listas dos agentes",
+    "banner": "As tarefas estacionadas ficam guardadas como estão, mas não atrapalham: não aparecem no quadro, na lista, nas estatísticas nem no que os agentes leem. Mudar o estado ou atribuí-la devolve-a ao trabalho.",
+    "empty.title": "Nada estacionado",
+    "empty.body": "Estacione uma tarefa para a tirar da frente sem a perder: selecione tarefas na lista e escolha Estacionar, ou faça-o na página da tarefa. As tarefas novas criadas aqui ficam estacionadas.",
+    "row.since": "Estacionada",
+    "action.park": "Estacionar",
+    "action.parkCount": "Estacionar: {count}",
+    "action.unpark": "Voltar ao trabalho",
+    "action.unparkHint": "Devolver a tarefa à lista e ao quadro",
+    "action.unparkSelected": "Voltar ao trabalho",
+    "reasonPlaceholder": "Porquê (opcional)",
+    "bulk.hint": "Sai do quadro, das estatísticas e das listas dos agentes. Mudar o estado ou atribuí-la devolve-a.",
+    "toast.parked": "Estacionadas: {count}",
+    "toast.parkedOne": "Tarefa estacionada",
+    "toast.back": "De volta ao trabalho: {count}",
+    "toast.backOne": "A tarefa voltou ao trabalho",
+    "toast.failed": "Não foi possível alterar: {error}",
+    "issue.title": "Estacionada",
+    "issue.hint": "Pô-la de lado: fica guardada, mas fora do quadro, das estatísticas e das listas dos agentes.",
+    "activity.parked": "estacionou a tarefa",
+    "activity.unparked": "devolveu a tarefa ao trabalho"
   }
 }

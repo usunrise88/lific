@@ -133,6 +133,11 @@
         return t("activity.waitStarted");
       case "unwait":
         return t("activity.waitStopped");
+      // Fork: parked issues. The value is the reason.
+      case "park":
+        return t("parked.activity.parked");
+      case "unpark":
+        return t("parked.activity.unparked");
       // LIF-147: the value is "@username" or "human".
       case "assign":
       case "unassign":
@@ -269,6 +274,8 @@
               <span class="text-[var(--text)]">
                 {shortValue(a.action === "wait" ? a.new_value : a.old_value, 60)}
               </span>
+            {:else if a.action === "park" && a.new_value}
+              <span class="text-[var(--text)]">{shortValue(a.new_value, 60)}</span>
             {:else if a.action === "assign" || a.action === "unassign"}
               {@const subject = assignActivity(a.action, a.action === "assign" ? a.new_value : a.old_value).subject}
               {#if subject}

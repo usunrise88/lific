@@ -35,6 +35,7 @@
     type RelationKind,
   } from "../lib/issues/relations";
   import WaitEditor from "../lib/issues/WaitEditor.svelte"; // LIF-485
+  import ParkField from "../lib/issues/ParkField.svelte"; // fork: parked issues
   import AssigneeField from "../lib/issues/AssigneeField.svelte"; // LIF-147
   import { assignmentNames, sameNames, type Person } from "../lib/issues/assignees";
   import ProjectIcon from "../lib/ProjectIcon.svelte";
@@ -65,7 +66,7 @@
   import { pageTitle, PAGE_TITLE_CONTEXT } from "../lib/pageTitle";
   import { inPublicScope } from "../lib/publicScope"; // LIF-471
   import IssueAgentsPanel from "../lib/IssueAgentsPanel.svelte";
-  import { getIssueAgents, type IssueAgents } from "../lib/api";
+  import { getIssueAgents, type IssueAgents, type IssueParked } from "../lib/api";
 
   let {
     navigate,
@@ -473,6 +474,13 @@
 
   async function saveTitle(next: string) {
     await saveField("title", next);
+  }
+
+  /** Fork: a park or unpark landed; take it and refresh the history. */
+  function setParked(parked: IssueParked | undefined) {
+    if (!issue) return;
+    issue = { ...issue, parked };
+    refreshActivity();
   }
 
   async function saveDescription(next: string) {
@@ -899,6 +907,11 @@
   {paletteActions}
   layout="two-column"
 >
+  {#snippet belowTitle()}
+    {#if issue?.parked}
+      <ParkField {issue} {editable} variant="banner" onChange={setParked} />
+    {/if}
+  {/snippet}
   {#snippet breadcrumbExtra()}
     {#if issue}
       <span class="text-[var(--text-faint)]">/</span>
@@ -1165,6 +1178,12 @@
             }}
           />
 
+          <div class="border-t border-[var(--border)] -mx-5 px-5 py-0 my-1"></div>
+        {/if}
+
+        <!-- Fork: set the issue aside, or see why it is. -->
+        {#if issue.parked || (editable && issue.status !== "done" && issue.status !== "cancelled")}
+          <ParkField {issue} {editable} onChange={setParked} />
           <div class="border-t border-[var(--border)] -mx-5 px-5 py-0 my-1"></div>
         {/if}
 

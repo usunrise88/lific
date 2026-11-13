@@ -81,7 +81,8 @@
     "newIssue": "Nueva incidencia",
     "page": "Página",
     "module": "Módulo",
-    "plan": "Plan"
+    "plan": "Plan",
+    "section.parked": "Aparcadas"
   },
   "shortcuts": {
     "title": "Atajos de teclado",
@@ -215,7 +216,8 @@
     "openProject": "Abrir la navegación de {name}",
     "close": "Cerrar navegación",
     "projectUnavailable.title": "Proyecto no disponible",
-    "projectUnavailable.body": "Este proyecto ya no está en tu lista de proyectos."
+    "projectUnavailable.body": "Este proyecto ya no está en tu lista de proyectos.",
+    "parked": "Aparcadas"
   },
   "issues": {
     "export.publicView": "La exportación no está disponible en la vista pública.",
@@ -2488,5 +2490,30 @@
     "howAgentText": "Call get_manifest from Lific and put the block into this repository's AGENTS.md (or CLAUDE.md), replacing the old lific block.",
     "howHttp": "Sin MCP: HTTP simple con la clave API del agente",
     "howRefresh": "Cuando el manifiesto cambia, get_briefing se lo dice una vez a cada agente y este llama a get_manifest para actualizar su copia."
+  },
+  "parked": {
+    "tab": "Aparcadas",
+    "mode": "Aparcadas",
+    "modeHint": "Tareas apartadas: ideas y extras, fuera del tablero, las estadísticas y las listas de agentes",
+    "banner": "Las tareas aparcadas se conservan tal cual, pero no estorban: no aparecen en el tablero, la lista, las estadísticas ni en lo que leen los agentes. Cambiar el estado o asignarla la devuelve al trabajo.",
+    "empty.title": "Nada aparcado",
+    "empty.body": "Aparca una tarea para quitarla de en medio sin perderla: selecciona tareas en la lista y elige Aparcar, o hazlo desde la página de la tarea. Las tareas nuevas creadas aquí se aparcan.",
+    "row.since": "Aparcada",
+    "action.park": "Aparcar",
+    "action.parkCount": "Aparcar: {count}",
+    "action.unpark": "Volver al trabajo",
+    "action.unparkHint": "Devolver la tarea a la lista y al tablero",
+    "action.unparkSelected": "Volver al trabajo",
+    "reasonPlaceholder": "Por qué (opcional)",
+    "bulk.hint": "Sale del tablero, las estadísticas y las listas de agentes. Cambiar el estado o asignarla la devuelve.",
+    "toast.parked": "Aparcadas: {count}",
+    "toast.parkedOne": "Tarea aparcada",
+    "toast.back": "De vuelta al trabajo: {count}",
+    "toast.backOne": "La tarea vuelve al trabajo",
+    "toast.failed": "No se pudo cambiar: {error}",
+    "issue.title": "Aparcada",
+    "issue.hint": "Apartarla: se conserva, pero fuera del tablero, las estadísticas y las listas de agentes.",
+    "activity.parked": "aparcó la tarea",
+    "activity.unparked": "devolvió la tarea al trabajo"
   }
 }

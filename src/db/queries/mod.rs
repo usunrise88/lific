@@ -16,6 +16,7 @@ pub(crate) mod insights;
 mod issues;
 pub(crate) mod members;
 mod pages;
+pub(crate) mod parked;
 pub(crate) mod plans;
 pub(crate) mod project_groups;
 mod projects;

@@ -72,6 +72,10 @@ pub struct ListIssuesInput {
     pub statuses: Option<Vec<String>>,
     #[schemars(description = "none (free for agents), human (needs a person), me, or a username")]
     pub assignee: Option<String>,
+    #[schemars(
+        description = "true: only parked issues (set aside, left out of every other listing)"
+    )]
+    pub parked: Option<bool>,
 }
 
 #[derive(Debug, Default, Deserialize, JsonSchema)]
@@ -226,6 +230,12 @@ pub struct UpdateIssueInput {
         description = "How you verified the work (markdown), only with status=done. Saved as a verification comment"
     )]
     pub evidence: Option<String>,
+    #[schemars(
+        description = "true parks the issue (set aside: off the board, stats and agents' lists); false brings it back"
+    )]
+    pub parked: Option<bool>,
+    #[schemars(description = "Why it is parked, with parked=true")]
+    pub park_reason: Option<String>,
 }
 
 #[derive(Debug, Default, Deserialize, JsonSchema)]
@@ -242,6 +252,8 @@ pub struct BulkUpdateInput {
     pub filter_module: Option<String>,
     #[schemars(description = "Only issues with this label")]
     pub filter_label: Option<String>,
+    #[schemars(description = "true: only parked issues; parked ones are skipped otherwise")]
+    pub filter_parked: Option<bool>,
     // ── Target (fields to set on every matching issue) ──
     #[schemars(description = "Status to set")]
     pub set_status: Option<String>,
@@ -251,6 +263,10 @@ pub struct BulkUpdateInput {
     pub set_module: Option<String>,
     #[schemars(description = "Assignment to set, as in update_issue")]
     pub set_assignees: Option<Vec<String>>,
+    #[schemars(description = "true parks every match, false brings them back")]
+    pub set_parked: Option<bool>,
+    #[schemars(description = "Why, with set_parked=true")]
+    pub park_reason: Option<String>,
 }
 
 #[derive(Debug, Default, Deserialize, JsonSchema)]

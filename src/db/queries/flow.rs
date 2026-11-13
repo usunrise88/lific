@@ -592,7 +592,7 @@ fn load_issues(
     let mut stmt = conn.prepare(
         "SELECT i.id, i.project_id, p.identifier || '-' || i.sequence, i.title, i.status, i.created_at
            FROM issues i JOIN projects p ON p.id = i.project_id
-          WHERE i.deleted_at IS NULL",
+          WHERE i.deleted_at IS NULL AND NOT EXISTS (SELECT 1 FROM fork_issue_parked fp WHERE fp.issue_id = i.id)",
     )?;
     let rows = stmt.query_map([], |row| {
         Ok((

@@ -66,7 +66,8 @@
   let model = $state<ProjectReadModel | null>(null);
   /** Skinny issue rows. Only `module_id` and `status` are read here, both of
    *  which the sync wire shape carries, so no adaptation is needed. */
-  let issues = $derived(model?.issueList ?? []);
+  // Fork: parked issues are set aside, so they don't count toward progress.
+  let issues = $derived((model?.issueList ?? []).filter((row) => !row.parked));
   let projectLoading = $state(true);
   /** Cold start only — a warm project shows its counts immediately. */
   let loading = $derived(model === null ? projectLoading : model.coldStart);

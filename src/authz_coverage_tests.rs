@@ -416,6 +416,10 @@ fn rest_manifest() -> HashMap<(&'static str, &'static str), Classification> {
             Gated(Maintainer),
         ),
         (("POST", "/api/issues/reverse"), Gated(Maintainer)),
+        // Fork: parked issues. Bulk checks Maintainer per issue's project.
+        (("PUT", "/api/issues/{id}/park"), Gated(Maintainer)),
+        (("DELETE", "/api/issues/{id}/park"), Gated(Maintainer)),
+        (("POST", "/api/issues/park"), Gated(Maintainer)),
         // ── Activity / export (all read-side, Viewer) ──
         (("GET", "/api/issues/{id}/activity"), Gated(Viewer)),
         (("GET", "/api/pages/{id}/activity"), Gated(Viewer)),

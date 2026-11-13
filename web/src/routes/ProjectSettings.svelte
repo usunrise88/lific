@@ -134,7 +134,7 @@
 
     const [countsRes, issuesRes, actRes, usersRes, meRes, instanceRes] = await Promise.all([
       getIssueCounts(found.id),
-      listIssues({ project_id: found.id, limit: 1000 }),
+      listIssues({ project_id: found.id, parked: false, limit: 1000 }),
       listProjectActivity(found.id, 14),
       listUsers(),
       // Who is signed in, and whether this instance signs in without a
@@ -162,7 +162,7 @@
   // list that can actually change, and leave `loading` alone.
   async function refreshLabelUsage() {
     if (!project) return;
-    const res = await listIssues({ project_id: project.id, limit: 1000 });
+    const res = await listIssues({ project_id: project.id, parked: false, limit: 1000 });
     if (res.ok) issues = res.data;
   }
 

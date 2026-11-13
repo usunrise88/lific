@@ -315,6 +315,23 @@ pub struct Issue {
     /// and for issues marked for any human.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub assignees: Vec<IssueAssignee>,
+    /// Fork: set while the issue is parked ("Отложено"): kept, but out of
+    /// the board, the statistics and what agents read by default.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parked: Option<IssueParked>,
+}
+
+/// Fork: why and since when an issue is parked, and who parked it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct IssueParked {
+    #[serde(default)]
+    pub reason: String,
+    pub at: String,
+    /// Username of who parked it; `None` once that account is gone.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub by: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub by_name: Option<String>,
 }
 
 /// LIF-147: one named assignee. A person, or (fork) one specific agent.
@@ -531,6 +548,9 @@ pub struct ListIssuesQuery {
     /// Who `assignee=me` means. Internal: set by the transport.
     #[serde(skip)]
     pub caller_user_id: Option<i64>,
+    /// Fork: `false` leaves parked issues out, `true` lists only them,
+    /// unset lists both (exports and other internal readers).
+    pub parked: Option<bool>,
 }
 
 /// Per-status issue counts for a project (LIF-161). `total` is the sum of
@@ -1326,6 +1346,9 @@ pub struct IssueChange {
     pub needs_human: bool,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub assignees: Vec<IssueAssignee>,
+    /// Fork: see [`Issue::parked`].
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub parked: Option<IssueParked>,
 }
 
 /// A live page in the sync stream. `identifier` is the `PRO-DOC-7` form

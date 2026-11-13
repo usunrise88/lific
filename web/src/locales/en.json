@@ -81,7 +81,8 @@
     "newIssue": "New issue",
     "page": "Page",
     "module": "Module",
-    "plan": "Plan"
+    "plan": "Plan",
+    "section.parked": "Parked"
   },
   "shortcuts": {
     "title": "Keyboard shortcuts",
@@ -215,7 +216,8 @@
     "openProject": "Open {name} navigation",
     "close": "Close navigation",
     "projectUnavailable.title": "Project unavailable",
-    "projectUnavailable.body": "This project is no longer in your project list."
+    "projectUnavailable.body": "This project is no longer in your project list.",
+    "parked": "Parked"
   },
   "issues": {
     "export.publicView": "Export isn't available in the public view.",
@@ -2488,5 +2490,30 @@
     "howAgentText": "Call get_manifest from Lific and put the block into this repository's AGENTS.md (or CLAUDE.md), replacing the old lific block.",
     "howHttp": "Without MCP: plain HTTP with the agent's API key",
     "howRefresh": "When the manifest changes, get_briefing tells each agent once, and it calls get_manifest to update its copy."
+  },
+  "parked": {
+    "tab": "Parked",
+    "mode": "Parked",
+    "modeHint": "Issues set aside: ideas and nice-to-haves, kept out of the board, statistics and agents' lists",
+    "banner": "Parked issues are kept as they are but set aside: they stay off the board, the issue list, statistics and what agents read. Changing an issue's status or assigning it brings it back.",
+    "empty.title": "Nothing parked",
+    "empty.body": "Park an issue to set it aside without losing it: select issues in the list and choose Park, or use Park on the issue page. New issues created here are parked.",
+    "row.since": "Parked",
+    "action.park": "Park",
+    "action.parkCount": "Park: {count}",
+    "action.unpark": "Back to work",
+    "action.unparkHint": "Bring this issue back to the list and the board",
+    "action.unparkSelected": "Back to work",
+    "reasonPlaceholder": "Why (optional)",
+    "bulk.hint": "Set aside: off the board, statistics and agents' lists. Changing status or assigning brings it back.",
+    "toast.parked": "Parked: {count}",
+    "toast.parkedOne": "Issue parked",
+    "toast.back": "Back to work: {count}",
+    "toast.backOne": "Issue is back to work",
+    "toast.failed": "Couldn't change: {error}",
+    "issue.title": "Parked",
+    "issue.hint": "Set it aside: kept, but off the board, statistics and agents' lists.",
+    "activity.parked": "parked the issue",
+    "activity.unparked": "brought the issue back"
   }
 }

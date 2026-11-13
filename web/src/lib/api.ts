@@ -952,6 +952,39 @@ export interface Issue {
   assignees?: IssueAssignee[];
   /** LIF-436: instance-wide write sequence; send back as `expected_seq`. */
   seq?: number;
+  /** Fork: set while the issue is parked ("Отложено"). */
+  parked?: IssueParked;
+}
+
+// ── Parked issues (fork) ───────────────────────────────────
+// A parked issue is kept as is but set aside: off the board, the issue
+// list, the statistics and agents' default reads. Any status change or
+// assignment brings it back on the server.
+
+export interface IssueParked {
+  reason: string;
+  /** "YYYY-MM-DD HH:MM:SS", UTC. */
+  at: string;
+  by?: string;
+  by_name?: string;
+}
+
+export async function parkIssue(issueId: number, reason = "") {
+  return request<IssueParked>(`/issues/${issueId}/park`, {
+    method: "PUT",
+    body: JSON.stringify({ reason }),
+  });
+}
+
+export async function unparkIssue(issueId: number) {
+  return request<{ unparked: boolean }>(`/issues/${issueId}/park`, { method: "DELETE" });
+}
+
+export async function bulkParkIssues(ids: number[], parked: boolean, reason = "") {
+  return request<{ changed: number }>(`/issues/park`, {
+    method: "POST",
+    body: JSON.stringify({ ids, parked, reason }),
+  });
 }
 
 // ── Assignment (LIF-147) ───────────────────────────────────
@@ -1048,6 +1081,9 @@ export interface IssueFilters {
   /** LIF-147: `none`, `human` (any issue a person must do), `me`, or a
    *  username. */
   assignee?: string;
+  /** Fork: false leaves parked issues out, true lists only them; omitted
+   *  lists both. */
+  parked?: boolean;
   order_by?: string;
   order?: "asc" | "desc";
   limit?: number;

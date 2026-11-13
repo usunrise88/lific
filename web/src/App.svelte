@@ -500,6 +500,7 @@
     | { type: "app"; page: "project-settings"; project: string }
     | { type: "app"; page: "issues"; project: string }
     | { type: "app"; page: "board"; project: string }
+    | { type: "app"; page: "parked"; project: string }
     | { type: "app"; page: "graph"; project: string }
     | {
         type: "app";
@@ -612,6 +613,12 @@
     const boardMatch = r.match(/^\/([A-Za-z][A-Za-z0-9_-]*)\/board$/i);
     if (boardMatch) {
       return { type: "app", page: "board", project: boardMatch[1] };
+    }
+
+    // Fork: /{IDENTIFIER}/parked, the issue list's Parked mode
+    const parkedMatch = r.match(/^\/([A-Za-z][A-Za-z0-9_-]*)\/parked$/i);
+    if (parkedMatch) {
+      return { type: "app", page: "parked", project: parkedMatch[1] };
     }
 
     // Project-scoped: /{IDENTIFIER}/graph (dependency graph — LIF-363)
@@ -772,7 +779,7 @@
   // a prop update on the already-mounted component.
   let routeTransitionKey = $derived(
     parsed.type === "app"
-      ? parsed.page === "board"
+      ? parsed.page === "board" || parsed.page === "parked"
         ? "issues"
         : parsed.page
       : parsed.type === "public"
@@ -919,7 +926,7 @@
       <ProjectImport {navigate} />
     {:else if parsed.page === "project-settings"}
       <ProjectSettings {navigate} projectIdentifier={parsed.project} {onProjectChange} />
-    {:else if parsed.page === "issues" || parsed.page === "board"}
+    {:else if parsed.page === "issues" || parsed.page === "board" || parsed.page === "parked"}
       <!-- Single IssueList instance shared across the list/board routes.
            Rendering them as one branch keeps Svelte from unmounting +
            remounting the component when toggling views — a remount would
@@ -929,6 +936,7 @@
         {navigate}
         projectIdentifier={parsed.project}
         layout={parsed.page === "board" ? "board" : "list"}
+        parkedMode={parsed.page === "parked"}
       />
     {:else if parsed.page === "graph"}
       <DependencyGraph {navigate} projectIdentifier={parsed.project} />

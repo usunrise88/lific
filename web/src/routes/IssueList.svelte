@@ -6,13 +6,14 @@
     listLabels,
     updateIssue,
     createIssue,
+    parkIssue,
     type IssueStatusCounts,
     type Issue,
     type Project,
     type Module,
     type Label,
   } from "../lib/api";
-  import { Plus, ChevronRight, Layers, PanelLeftClose, PanelLeftOpen } from "lucide-svelte";
+  import { Plus, ChevronRight, Layers, PanelLeftClose, PanelLeftOpen, Hourglass } from "lucide-svelte";
   import Tooltip from "../lib/Tooltip.svelte";
   import PriorityIcon from "../lib/PriorityIcon.svelte";
   import StatusIcon from "../lib/StatusIcon.svelte";
@@ -69,6 +70,8 @@
     prevPatchFor,
   } from "../lib/issues/state.svelte"; // LIF-243: undo layer
   import { scheduleDelete } from "../lib/issues/deferredDelete.svelte"; // LIF-283
+  import { canPark } from "../lib/issues/parked"; // fork
+  import { parkWithUndo, unparkWithUndo } from "../lib/issues/parkActions"; // fork
   import {
     assigneesIn,
     assignmentNames,
@@ -95,12 +98,16 @@
     navigate,
     projectIdentifier,
     layout = "list",
+    parkedMode = false,
   }: {
     navigate: (path: string) => void;
     projectIdentifier: string;
     /** Render mode. Both modes share data loading, filters, sort, and
      *  topbar; only the body below the chrome differs. */
     layout?: "list" | "board";
+    /** Fork: Parked mode (`/{PROJECT}/parked`): only parked issues, with
+     *  actions that bring them back. Elsewhere parked issues are left out. */
+    parkedMode?: boolean;
   } = $props();
 
   let project = $state<Project | null>(null);
@@ -145,11 +152,17 @@
     if (!m) return;
     const rows = m.issueList;
     const removed = locallyRemoved;
+    const wantParked = parkedMode;
     if (dragActive || mutationsInFlight > 0) return;
     issues = rows
-      .filter((row) => !removed.has(row.id))
+      .filter((row) => !removed.has(row.id) && !!row.parked === wantParked)
       .map((row) => toIssue(row, m.projectId));
   });
+
+  /** Fork: parked issues in this project, for the mode switch's badge. */
+  let parkedCount = $derived(
+    model && !model.coldStart ? model.issueList.filter((row) => !!row.parked).length : null,
+  );
 
   /** Cold start = nothing to show and nothing shown before. A warm project
    *  never sets this, so switching between the list and the board (or
@@ -532,7 +545,7 @@
   // This slice is list-only: Recent intentionally overrides only its rendered
   // order/grouping, never the user's persisted sort or group preferences.
   let subTabIssues = $derived.by(() => {
-    switch (view.issueSubTab) {
+    switch (parkedMode ? "all" : view.issueSubTab) {
       case "recent":
         return [...sortedIssues]
           .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
@@ -555,7 +568,7 @@
   // lib/issues/grouping.ts). Returns ordered groups for the active
   // `groupBy`, or null when the view should render flat.
   let groups = $derived(
-    view.issueSubTab === "recent"
+    view.issueSubTab === "recent" && !parkedMode
       ? null
       : buildGroups({
           sortedIssues: subTabIssues,
@@ -590,7 +603,7 @@
     const narrowed =
       view.hasActiveFilters() ||
       !!view.searchQuery.trim() ||
-      (layout === "list" && view.issueSubTab !== "all");
+      (layout === "list" && !parkedMode && view.issueSubTab !== "all");
     return narrowed && shown !== total
       ? t("issueList.countOf", { shown, total })
       : String(total);
@@ -1529,12 +1542,53 @@
       title: inlineCreateTitle.trim(),
       status: inlineCreateStatus,
     });
+    if (res.ok && parkedMode) {
+      // Fork: in Parked mode a new issue is an idea: park it and stay,
+      // ready for the next one.
+      const parked = await trackMutation(parkIssue(res.data.id));
+      inlineCreateSaving = false;
+      if (!parked.ok) {
+        navigate(`/${projectIdentifier}/issues/${res.data.identifier}`);
+        return;
+      }
+      inlineCreateTitle = "";
+      requestAnimationFrame(() => inlineCreateTitleEl?.focus());
+      return;
+    }
     inlineCreateSaving = false;
     if (res.ok) {
       inlineCreateActive = false;
       inlineCreateTitle = "";
       navigate(`/${projectIdentifier}/issues/${res.data.identifier}`);
     }
+  }
+
+  // ── Fork: parked issues ───────────────────────────────
+  function selectedIssues(): Issue[] {
+    return issues.filter((i) => view.selectedIds.has(i.id));
+  }
+
+  async function bulkPark(reason: string) {
+    if (bulkBusy || view.selectedIds.size === 0) return;
+    bulkBusy = true;
+    bulkMenu = null;
+    const targets = selectedIssues().filter(canPark);
+    const ok = await trackMutation(parkWithUndo(targets, reason, reconcile));
+    bulkBusy = false;
+    if (ok) clearSelection();
+  }
+
+  async function bulkUnpark() {
+    if (bulkBusy || view.selectedIds.size === 0) return;
+    bulkBusy = true;
+    bulkMenu = null;
+    const ok = await trackMutation(unparkWithUndo(selectedIssues(), reconcile));
+    bulkBusy = false;
+    if (ok) clearSelection();
+  }
+
+  async function unparkOne(issue: Issue) {
+    await trackMutation(unparkWithUndo([issue], reconcile));
   }
 
   // ── Row interaction handlers (fed to <IssueRow> as callbacks) ─────────
@@ -1689,6 +1743,8 @@
     {view}
     {projectIdentifier}
     {layout}
+    {parkedMode}
+    {parkedCount}
     {navigate}
     {canEdit}
     {statusCounts}
@@ -2074,6 +2130,17 @@
 {:else}
 
 <div class="h-full flex flex-col">
+  <!-- Fork: Parked mode explains itself; the tint marks the mode. -->
+  {#if parkedMode}
+    <div
+      class="shrink-0 flex items-start gap-2.5 px-6 py-2.5 border-b border-[var(--border)]
+             bg-[var(--bg-subtle)] text-body-sm text-[var(--text-muted)]"
+      data-testid="parked-banner"
+    >
+      <Hourglass size={15} class="shrink-0 mt-0.5 text-[var(--text-faint)]" />
+      <p class="min-w-0">{t("parked.banner")}</p>
+    </div>
+  {/if}
   <!-- Inline create row (sticky above scrollable list) -->
   {#if inlineCreateActive}
       <div
@@ -2233,7 +2300,13 @@
         </button>
       </ErrorState>
     {:else if subTabIssues.length === 0}
-      {#if view.hasActiveFilters() || view.searchQuery || view.issueSubTab !== "all"}
+      {#if parkedMode && !view.hasActiveFilters() && !view.searchQuery}
+        <div class="flex flex-col items-center justify-center py-20 gap-3 text-center px-6" data-testid="parked-empty">
+          <Mascot src="/LizzySleep2.png" nativeW={1000} nativeH={420} scale={0.2} />
+          <p class="text-[var(--text)] text-heading font-medium">{t("parked.empty.title")}</p>
+          <p class="text-[var(--text-muted)] text-body max-w-md">{t("parked.empty.body")}</p>
+        </div>
+      {:else if view.hasActiveFilters() || view.searchQuery || view.issueSubTab !== "all"}
         <!-- Filtered-empty: work exists, it's just hidden behind a
              filter/search, so we keep the recovery affordance. -->
         <div class="flex flex-col items-center justify-center py-20 gap-3">
@@ -2362,6 +2435,9 @@
       onUpdate={bulkUpdate}
       onAddLabel={bulkAddLabel}
       onDelete={bulkDelete}
+      {parkedMode}
+      onPark={bulkPark}
+      onUnpark={bulkUnpark}
       onExport={bulkExport}
       onClear={clearSelection}
     />
@@ -2400,6 +2476,7 @@
     isSelected={view.selectedIds.has(issue.id)}
     isChanged={changedIds.has(issue.id)}
     hitSnippet={issueSearchScores.get(issue.id)?.snippet ?? null}
+    onUnpark={parkedMode ? unparkOne : undefined}
     statusOpen={view.statusDropdownId === issue.id}
     priorityOpen={view.priorityDropdownId === issue.id}
     moduleOpen={view.moduleDropdownId === issue.id}

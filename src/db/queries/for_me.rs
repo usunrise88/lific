@@ -205,6 +205,7 @@ pub fn list_for_me(conn: &Connection, f: &ForMeFilter) -> Result<ForMePage, Lifi
     }
     let marks = in_list(statuses.into_iter().map(boxed).collect());
     clauses.push(format!("i.status IN ({marks})"));
+    clauses.push(super::parked::not_parked("i"));
     if let Some(priorities) = &f.priorities {
         if priorities.is_empty() {
             return Ok(empty());

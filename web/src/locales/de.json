@@ -81,7 +81,8 @@
     "newIssue": "Neue Aufgabe",
     "page": "Seite",
     "module": "Modul",
-    "plan": "Plan"
+    "plan": "Plan",
+    "section.parked": "Zurückgestellt"
   },
   "shortcuts": {
     "title": "Tastenkürzel",
@@ -215,7 +216,8 @@
     "openProject": "Navigation von {name} öffnen",
     "close": "Navigation schließen",
     "projectUnavailable.title": "Projekt nicht verfügbar",
-    "projectUnavailable.body": "Dieses Projekt ist nicht mehr in deiner Projektliste."
+    "projectUnavailable.body": "Dieses Projekt ist nicht mehr in deiner Projektliste.",
+    "parked": "Zurückgestellt"
   },
   "issues": {
     "export.publicView": "Der Export ist in der öffentlichen Ansicht nicht verfügbar.",
@@ -2488,5 +2490,30 @@
     "howAgentText": "Call get_manifest from Lific and put the block into this repository's AGENTS.md (or CLAUDE.md), replacing the old lific block.",
     "howHttp": "Ohne MCP: einfaches HTTP mit dem API-Schlüssel des Agenten",
     "howRefresh": "Ändert sich das Manifest, sagt get_briefing es jedem Agenten einmal, und er ruft get_manifest auf, um seine Kopie zu erneuern."
+  },
+  "parked": {
+    "tab": "Zurückgestellt",
+    "mode": "Zurückgestellt",
+    "modeHint": "Zurückgestellte Issues: Ideen und Nice-to-haves, ohne Board, Statistik und Agentenlisten",
+    "banner": "Zurückgestellte Issues bleiben erhalten, stören aber nicht: Sie fehlen auf dem Board, in der Issue-Liste, in der Statistik und in dem, was Agenten lesen. Ein Statuswechsel oder eine Zuweisung holt ein Issue zurück.",
+    "empty.title": "Nichts zurückgestellt",
+    "empty.body": "Stelle ein Issue zurück, um es aus dem Blick zu nehmen, ohne es zu verlieren: Wähle Issues in der Liste und klicke auf Zurückstellen, oder nutze das auf der Issue-Seite. Hier neu erstellte Issues werden zurückgestellt.",
+    "row.since": "Zurückgestellt",
+    "action.park": "Zurückstellen",
+    "action.parkCount": "Zurückstellen: {count}",
+    "action.unpark": "Wieder aufnehmen",
+    "action.unparkHint": "Issue zurück in Liste und Board holen",
+    "action.unparkSelected": "Wieder aufnehmen",
+    "reasonPlaceholder": "Warum (optional)",
+    "bulk.hint": "Verschwindet von Board, Statistik und Agentenlisten. Ein Statuswechsel oder eine Zuweisung holt es zurück.",
+    "toast.parked": "Zurückgestellt: {count}",
+    "toast.parkedOne": "Issue zurückgestellt",
+    "toast.back": "Wieder aufgenommen: {count}",
+    "toast.backOne": "Issue wieder aufgenommen",
+    "toast.failed": "Änderung fehlgeschlagen: {error}",
+    "issue.title": "Zurückgestellt",
+    "issue.hint": "Aus dem Blick nehmen: bleibt erhalten, aber ohne Board, Statistik und Agentenlisten.",
+    "activity.parked": "hat das Issue zurückgestellt",
+    "activity.unparked": "hat das Issue wieder aufgenommen"
   }
 }

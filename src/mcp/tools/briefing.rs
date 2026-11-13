@@ -385,6 +385,7 @@ impl LificMcp {
                     project_id: Some(project_id),
                     order_by: Some("priority".into()),
                     limit: Some(SCAN_LIMIT),
+                    parked: Some(false),
                     ..query
                 },
             )

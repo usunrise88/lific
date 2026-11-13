@@ -12,7 +12,7 @@
   import { t } from "../i18n";
   import type { Issue, Label, Module } from "../api";
   import { safeLabelColor } from "../labelColors";
-  import { Check, Signal, Layers, PanelRight, ExternalLink, Copy } from "lucide-svelte";
+  import { Check, Signal, Layers, PanelRight, ExternalLink, Copy, Undo2 } from "lucide-svelte";
   import { longpress } from "../actions/longpress"; // press-and-hold peek on touch
   import StatusIcon from "../StatusIcon.svelte";
   import PriorityIcon from "../PriorityIcon.svelte";
@@ -38,6 +38,7 @@
     isSelected,
     isChanged = false,
     hitSnippet,
+    onUnpark,
     statusOpen,
     priorityOpen,
     moduleOpen,
@@ -82,6 +83,9 @@
     isChanged?: boolean;
     /** Search snippet to show under the title, if this row matched on body. */
     hitSnippet: string | null;
+    /** Fork: Parked mode. Shows why and since when the issue is parked, and
+     *  a hover action that brings it back. */
+    onUnpark?: (issue: Issue) => void;
     /** This row's inline status dropdown is open. */
     statusOpen: boolean;
     /** This row's inline priority dropdown is open. */
@@ -325,6 +329,10 @@
       <span class="text-caption text-[var(--text-muted)] truncate">
         {hitSnippet}
       </span>
+    {:else if onUnpark && issue.parked}
+      <span class="text-caption text-[var(--text-faint)] truncate" data-testid="parked-note">
+        {#if issue.parked.reason}<span class="text-[var(--text-muted)]">{issue.parked.reason}</span>{" · "}<TimeAgo date={issue.parked.at} />{:else}{t("parked.row.since")} <TimeAgo date={issue.parked.at} />{/if}{#if issue.parked.by_name}{" · "}{issue.parked.by_name}{/if}
+      </span>
     {:else if density === "comfortable"}
       {@const prev = descriptionPreview(issue.description)}
       {#if prev}
@@ -507,6 +515,27 @@
     {/if}
     {/if}
   </div>
+
+  {#if onUnpark && editable}
+    <Tooltip content={t("parked.action.unparkHint")}>
+      <button
+        class="hidden shrink-0 h-6 px-1.5 items-center gap-1 rounded text-caption
+               text-[var(--text-muted)] hover:text-[var(--text)]
+               hover:bg-[var(--bg-subtle)] transition-colors
+               [@media(hover:hover)]:flex [@media(hover:hover)]:opacity-0
+               [@media(hover:hover)]:group-hover:opacity-100
+               pointer-coarse:flex pointer-coarse:opacity-100 pointer-coarse:h-8"
+        data-testid="row-unpark"
+        onclick={(e) => {
+          e.stopPropagation();
+          onUnpark(issue);
+        }}
+      >
+        <Undo2 size={13} />
+        <span class="hidden md:inline">{t("parked.action.unpark")}</span>
+      </button>
+    </Tooltip>
+  {/if}
 
   <!-- LIF-244: peek affordance. Hover-revealed on pointer devices. On touch
        (LIF-275) it's ALWAYS visible instead of removed — the peek panel is

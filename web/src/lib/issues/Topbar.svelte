@@ -12,7 +12,7 @@
   import type { IssueAssignee, Label, Module } from "../api";
   import {
     Plus, Search, ChevronDown, Signal,
-    List as ListIcon, LayoutGrid, SlidersHorizontal, HelpCircle,
+    List as ListIcon, LayoutGrid, Hourglass, SlidersHorizontal, HelpCircle,
     ArrowDown, ArrowUp, Hash, Clock, History, Check, Zap, PenLine,
     SlidersVertical, Rows3, Layers, MoreHorizontal,
     Square, SquareMinus, SquareCheck,
@@ -34,6 +34,8 @@
     view,
     projectIdentifier,
     layout,
+    parkedMode = false,
+    parkedCount = null,
     navigate,
     statusCounts,
     countsLoading = false,
@@ -58,6 +60,10 @@
     view: IssueListState;
     projectIdentifier: string;
     layout: "list" | "board";
+    /** Fork: the list shows parked issues only. */
+    parkedMode?: boolean;
+    /** Fork: parked issues in the project; null while loading. */
+    parkedCount?: number | null;
     navigate: (path: string) => void;
     statusCounts: { status: string; count: number }[];
     /** LIF-246: true until the counts fetch resolves — swaps the tally
@@ -127,6 +133,9 @@
   // fetch), so All/Open/Closed stay accurate even for large projects. While
   // they load, omit the numbers instead of presenting a misleading zero.
   let issueSubTabs = $derived.by<SubTab[]>(() => {
+    if (parkedMode) {
+      return [{ id: "all", label: t("parked.tab"), count: parkedCount }];
+    }
     if (countsLoading) {
       return [
         { id: "all", label: t("common.all"), count: null },
@@ -242,10 +251,10 @@
       <button
         class="flex items-center gap-1 px-2 py-0.5 rounded
                text-caption font-medium transition
-               {layout === 'list'
+               {layout === 'list' && !parkedMode
           ? 'bg-[var(--surface)] text-[var(--text)] shadow-[0_1px_2px_rgba(0,0,0,0.16),0_1px_1px_rgba(0,0,0,0.10)]'
           : 'text-[var(--text-muted)] hover:text-[var(--text)]'}"
-        aria-pressed={layout === "list"}
+        aria-pressed={layout === "list" && !parkedMode}
         onclick={() => navigate(`/${projectIdentifier}/issues`)}
       >
         <ListIcon size={11} class="shrink-0" />
@@ -263,6 +272,25 @@
         <LayoutGrid size={11} class="shrink-0" />
         <span class="sr-only md:not-sr-only">{t("issues.topbar.board")}</span>
       </button>
+      <!-- Fork: Parked mode, the set-aside issues. -->
+      <Tooltip content={t("parked.modeHint")} placement="bottom">
+        <button
+          class="flex items-center gap-1 px-2 py-0.5 rounded
+                 text-caption font-medium transition
+                 {parkedMode
+            ? 'bg-[var(--surface)] text-[var(--text)] shadow-[0_1px_2px_rgba(0,0,0,0.16),0_1px_1px_rgba(0,0,0,0.10)]'
+            : 'text-[var(--text-muted)] hover:text-[var(--text)]'}"
+          aria-pressed={parkedMode}
+          data-testid="mode-parked"
+          onclick={() => navigate(`/${projectIdentifier}/parked`)}
+        >
+          <Hourglass size={11} class="shrink-0" />
+          <span class="sr-only md:not-sr-only">{t("parked.mode")}</span>
+          {#if parkedCount}
+            <span class="tabular-nums text-[var(--text-faint)]">{parkedCount}</span>
+          {/if}
+        </button>
+      </Tooltip>
     </div>
 
     <!-- LIF-161: per-status tallies (server truth, immune to the list fetch

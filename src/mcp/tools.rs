@@ -258,6 +258,27 @@ impl Display for IssueRelations<'_> {
     }
 }
 
+/// Fork: apply `parked` from update_issue / bulk_update. `true` when it
+/// changed anything.
+fn set_parked(
+    conn: &rusqlite::Connection,
+    issue_id: i64,
+    parked: Option<bool>,
+    reason: Option<&str>,
+) -> Result<bool, crate::error::LificError> {
+    match parked {
+        Some(true) => {
+            queries::parked::park(conn, issue_id, reason.unwrap_or(""), None)?;
+            Ok(true)
+        }
+        Some(false) => queries::parked::unpark(conn, issue_id),
+        None if reason.is_some() => Err(crate::error::LificError::BadRequest(
+            "park_reason needs parked=true".into(),
+        )),
+        None => Ok(false),
+    }
+}
+
 /// Fork: who an issue is for, as an agent reads it: `you` when the issue
 /// names the calling agent, else the usual `human` / `@name` list.
 fn assignment_marker(issue: &models::Issue) -> Option<String> {
@@ -328,6 +349,9 @@ impl Display for IssueLine<'_> {
             )
         })?;
         Display::fmt(&super::waits::WaitTokens(&issue.waits), formatter)?;
+        if issue.parked.is_some() {
+            formatter.write_str(" parked")?;
+        }
         assignment_marker(issue).map_or(Ok(()), |who| {
             write!(formatter, " for:{}", who.replace(", ", ","))
         })
@@ -2306,6 +2330,7 @@ impl LificMcp {
                     offset: Some(offset),
                     assignee: input.assignee.clone(),
                     caller_user_id: crate::authz::effective_user(conn, &identity).map(|u| u.id),
+                    parked: Some(input.parked == Some(true)),
                 },
             )
         })?;
@@ -2546,6 +2571,21 @@ No issues found."
                 Some(who) => writeln!(output, "Assigned: {who} (only that agent works on it)"),
                 None => Ok(()),
             }?;
+            issue.parked.as_ref().map_or(Ok(()), |p| {
+                write!(
+                    output,
+                    "Parked {} by {}",
+                    p.at.get(..10).unwrap_or(&p.at),
+                    p.by.as_deref().map_or("someone".into(), |u| format!("@{u}"))
+                )?;
+                if !p.reason.is_empty() {
+                    write!(output, ": {}", p.reason)?;
+                }
+                writeln!(
+                    output,
+                    " (set aside: don't start it unless asked; update_issue(parked=false) brings it back)"
+                )
+            })?;
             [
                 ("Blocks: ", rels.blocks.as_slice()),
                 ("Blocked by: ", rels.blocked_by.as_slice()),
@@ -3108,6 +3148,13 @@ No issues found."
                 }
                 None => (issue, None),
             };
+            // Fork: parked after the other fields, so a status change in the
+            // same call (which unparks) does not undo it.
+            let issue = if set_parked(conn, id, input.parked, input.park_reason.as_deref())? {
+                queries::get_issue(conn, id)?
+            } else {
+                issue
+            };
             Ok((issue, cascade_action, cascaded_steps, verification))
         })?;
         self.emit_with_seq(
@@ -3217,13 +3264,14 @@ No issues found."
                             .map(|name| names::stored_label_name(conn, pid, name))
                             .transpose()?,
                         limit: Some(BULK_CAP),
+                        parked: Some(input.filter_parked == Some(true)),
                         ..Default::default()
                     },
                 )?;
                 issues
                     .iter()
                     .map(|issue| {
-                        queries::update_issue(
+                        let updated = queries::update_issue(
                             conn,
                             issue.id,
                             &models::UpdateIssue {
@@ -3237,8 +3285,9 @@ No issues found."
                                 assignees: set_assignees.clone(),
                                 ..Default::default()
                             },
-                        )
-                        .map(|issue| (issue.project_id, issue.id))
+                        )?;
+                        set_parked(conn, updated.id, input.set_parked, input.park_reason.as_deref())?;
+                        Ok((updated.project_id, updated.id))
                     })
                     .collect::<Result<Vec<_>, _>>()
             })
@@ -3364,6 +3413,7 @@ No issues found."
                 &models::ListIssuesQuery {
                     project_id: Some(pid),
                     limit: Some(BOARD_CAP),
+                    parked: Some(false),
                     ..Default::default()
                 },
             )
@@ -4166,6 +4216,7 @@ No issues found."
                             project_id: Some(pid),
                             limit: Some(limit),
                             offset: Some(offset),
+                            parked: Some(false),
                             ..Default::default()
                         },
                     )
@@ -6011,6 +6062,9 @@ mod tests_manifest;
 #[cfg(test)]
 #[path = "tests_assignees.rs"]
 mod tests_assignees;
+#[cfg(test)]
+#[path = "tests_parked.rs"]
+mod tests_parked;
 
 #[cfg(test)]
 mod tests {
@@ -8632,6 +8686,7 @@ mod tests {
             waits: vec![],
             needs_human: false,
             assignees: vec![],
+            parked: None,
         };
         crate::mcp::reset_issue_link_context_reads();
         let context = current_issue_link_context();

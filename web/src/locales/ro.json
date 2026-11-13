@@ -84,7 +84,8 @@
     "newIssue": "Problemă nouă",
     "page": "Pagină",
     "module": "Modul",
-    "plan": "Plan"
+    "plan": "Plan",
+    "section.parked": "Amânate"
   },
   "shortcuts": {
     "title": "Scurtături de tastatură",
@@ -218,7 +219,8 @@
     "openProject": "Deschide navigarea pentru {name}",
     "close": "Închide navigarea",
     "projectUnavailable.title": "Proiect indisponibil",
-    "projectUnavailable.body": "Acest proiect nu mai este în lista ta de proiecte."
+    "projectUnavailable.body": "Acest proiect nu mai este în lista ta de proiecte.",
+    "parked": "Amânate"
   },
   "issues": {
     "export.publicView": "Exportul nu este disponibil în vizualizarea publică.",
@@ -2593,5 +2595,30 @@
     "howAgentText": "Call get_manifest from Lific and put the block into this repository's AGENTS.md (or CLAUDE.md), replacing the old lific block.",
     "howHttp": "Fără MCP: HTTP simplu cu cheia API a agentului",
     "howRefresh": "Când manifestul se schimbă, get_briefing îi spune o dată fiecărui agent, iar acesta apelează get_manifest pentru a-și actualiza copia."
+  },
+  "parked": {
+    "tab": "Amânate",
+    "mode": "Amânate",
+    "modeHint": "Sarcini puse deoparte: idei și extra, în afara tablei, statisticilor și listelor agenților",
+    "banner": "Sarcinile amânate se păstrează așa cum sunt, dar nu încurcă: nu apar pe tablă, în listă, în statistici sau în ce citesc agenții. Schimbarea stării sau atribuirea o readuce în lucru.",
+    "empty.title": "Nimic amânat",
+    "empty.body": "Amână o sarcină ca să o scoți din vedere fără să o pierzi: selectează sarcini în listă și alege Amână, sau fă asta pe pagina sarcinii. Sarcinile noi create aici sunt amânate.",
+    "row.since": "Amânată",
+    "action.park": "Amână",
+    "action.parkCount": "Amână: {count}",
+    "action.unpark": "Înapoi în lucru",
+    "action.unparkHint": "Readu sarcina în listă și pe tablă",
+    "action.unparkSelected": "Înapoi în lucru",
+    "reasonPlaceholder": "De ce (opțional)",
+    "bulk.hint": "Iese de pe tablă, din statistici și din listele agenților. Schimbarea stării sau atribuirea o readuce.",
+    "toast.parked": "Amânate: {count}",
+    "toast.parkedOne": "Sarcină amânată",
+    "toast.back": "Readuse în lucru: {count}",
+    "toast.backOne": "Sarcina e din nou în lucru",
+    "toast.failed": "Nu s-a putut modifica: {error}",
+    "issue.title": "Amânată",
+    "issue.hint": "Pune-o deoparte: se păstrează, dar în afara tablei, statisticilor și listelor agenților.",
+    "activity.parked": "a amânat sarcina",
+    "activity.unparked": "a readus sarcina în lucru"
   }
 }

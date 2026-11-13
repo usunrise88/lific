@@ -11,7 +11,7 @@
 // the highest seq it has applied; `/changes?since=cursor` returns everything
 // above it, tombstones included.
 
-import type { IssueAssignee, IssueWait } from "../api";
+import type { IssueAssignee, IssueParked, IssueWait } from "../api";
 
 export type SyncKind = "issue" | "page" | "comment";
 
@@ -49,6 +49,8 @@ export interface IssueRow {
   needs_human?: boolean;
   /** LIF-147: named people. Omitted when there are none. */
   assignees?: IssueAssignee[];
+  /** Fork: present while the issue is parked. */
+  parked?: IssueParked;
 }
 
 /** A live page row. Note the field the wire shape does NOT carry: no

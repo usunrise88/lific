@@ -97,6 +97,7 @@ pub fn ensure_schema(conn: &Connection) -> Result<(), LificError> {
     conn.execute_batch(INBOX_TABLE)?;
     conn.execute_batch(SCHEMA)?;
     conn.execute_batch(super::agent_workspaces::SCHEMA)?;
+    conn.execute_batch(super::parked::SCHEMA)?;
     Ok(())
 }
 

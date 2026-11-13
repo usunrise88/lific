@@ -143,7 +143,7 @@
     // Pull the issues for this module. Using the existing module_id
     // filter on listIssues keeps the load efficient even for very
     // populous modules — server-side filter, no client trim.
-    const issuesRes = await listIssues({ project_id: mod.project_id, module_id: mod.id, limit: 500 });
+    const issuesRes = await listIssues({ project_id: mod.project_id, module_id: mod.id, parked: false, limit: 500 });
     if (issuesRes.ok) issues = issuesRes.data;
 
     loading = false;

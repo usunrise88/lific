@@ -175,7 +175,7 @@
     const [attentionRes, overviewRes, poolRes, pagesRes, flowRes] = await Promise.all([
       getAttention(),
       getHomeOverview(sinceIso, ids),
-      listIssues({ workable: true, assignee: "none", order_by: "priority", limit: 500 }),
+      listIssues({ workable: true, assignee: "none", parked: false, order_by: "priority", limit: 500 }),
       listAllPages(),
       getHomeFlow(f.days, ids),
     ]);
