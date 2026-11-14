@@ -11,6 +11,8 @@
 // its data lands, through the `lific:title` context App.svelte provides.
 // Routes only set; App.svelte resets the slot when the page changes.
 
+import { t } from "./i18n";
+
 /** Max characters kept from a single part before it is cut. */
 const MAX_PART = 60;
 /** Separates the parts of a title. */
@@ -62,54 +64,65 @@ export interface RouteTitleInput {
   inner?: RouteTitleInput;
 }
 
-const SECTION_LABELS: Record<string, string> = {
-  issues: "Issues",
-  board: "Board",
-  graph: "Graph",
-  pages: "Pages",
-  files: "Files",
-  plans: "Plans",
-  modules: "Modules",
-  activity: "Activity",
-  insights: "Insights",
-};
+const SECTIONS = new Set([
+  "issues",
+  "board",
+  "parked",
+  "graph",
+  "pages",
+  "files",
+  "plans",
+  "modules",
+  "activity",
+  "insights",
+]);
+
+/** Display label for a project section; evaluated per call so the active
+ *  locale applies. */
+function sectionLabel(page: string): string | undefined {
+  return SECTIONS.has(page) ? t(`pageTitle.section.${page}`) : undefined;
+}
 
 /** Title for a parsed route. Public routes resolve to their inner page so
  *  a stranger's tab reads the same as a signed-in maintainer's. */
 export function routePageTitle(p: RouteTitleInput): string {
   if (p.type === "public" && p.inner) return routePageTitle(p.inner);
   if (p.type === "auth") {
-    return pageTitle(p.page === "login" ? "Sign in" : "Create account");
+    return pageTitle(p.page === "login" ? t("pageTitle.signIn") : t("pageTitle.createAccount"));
   }
-  if (p.type === "not-found") return pageTitle("Not found");
+  if (p.type === "not-found") return pageTitle(t("pageTitle.notFound"));
   if (p.type !== "app") return pageTitle();
 
   const project = p.project;
   switch (p.page) {
     case "home":
-      return pageTitle("Home");
+      return pageTitle(t("pageTitle.home"));
+    case "feed":
+      return pageTitle(t("pageTitle.feed"));
+    case "for-me":
+      return pageTitle(t("pageTitle.forMe"));
     case "settings":
-      return pageTitle("Settings");
+      return pageTitle(t("pageTitle.settings"));
     case "instance-settings":
-      return pageTitle("Instance settings");
+      return pageTitle(t("pageTitle.instanceSettings"));
     case "project-new":
-      return pageTitle("New project");
+      return pageTitle(t("pageTitle.newProject"));
     case "project-import":
-      return pageTitle("Import project");
+      return pageTitle(t("pageTitle.importProject"));
     case "project-settings":
-      return pageTitle("Settings", project);
+      return pageTitle(t("pageTitle.settings"), project);
     case "issue-new":
-      return pageTitle("New issue", project);
+      return pageTitle(t("pageTitle.newIssue"), project);
     case "issue-detail":
       return pageTitle(p.identifier, project);
     case "page-detail":
-      return pageTitle("Page", project);
+      return pageTitle(t("pageTitle.page"), project);
     case "module-detail":
-      return pageTitle("Module", project);
+      return pageTitle(t("pageTitle.module"), project);
     case "plan-detail":
-      return pageTitle("Plan", project);
+      return pageTitle(t("pageTitle.plan"), project);
     default: {
-      const label = p.page ? SECTION_LABELS[p.page] : undefined;
+      const label = p.page ? sectionLabel(p.page) : undefined;
       return label ? pageTitle(label, project) : pageTitle();
     }
   }

@@ -14,10 +14,11 @@
 
   import { filesFromDrop } from "./compose";
   import type { Snippet } from "svelte";
+  import { t } from "../i18n";
 
   let {
     onFiles,
-    label = "Drop files to attach",
+    label = t("attachments.drop.label"),
     radius = "0.75rem",
     children,
   }: {

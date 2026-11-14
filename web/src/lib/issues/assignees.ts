@@ -1,30 +1,35 @@
 // LIF-147: who an issue is for, as the web UI shows, edits and filters it.
 //
 // An issue is in exactly one of three states: unassigned (any agent may
-// work it), marked for any person, or assigned to named people. The wire
-// shape is `needs_human` plus `assignees`; writes send a whole replacement
-// as `[]`, `["human"]` or usernames. Everything here is pure so the list
+// work it), marked for any person, or assigned to named people or (fork)
+// specific agents. The wire shape is `needs_human` (a person must act) plus
+// `assignees`; writes send a whole replacement as `[]`, `["human"]` or
+// usernames. Everything here is pure so the list
 // filter and the labels can be unit tested without a component.
 
 import type { Issue, IssueAssignee } from "../api";
+import { locale, t } from "../i18n";
 
 export type AssignmentKind = "agents" | "human" | "people";
 
 /** The reserved write value that marks an issue for any person. */
 export const HUMAN = "human";
 
-/** A person the picker can offer or a marker can draw. */
+/** A person (or, fork, an agent) the picker can offer or a marker can draw. */
 export interface Person {
   user_id: number;
   username: string;
   display_name?: string | null;
+  is_bot?: boolean;
+  /** For an agent: whose it is. */
+  owner_name?: string | null;
 }
 
 type Assignable = Pick<Issue, "needs_human" | "assignees">;
 
 export function assignmentKind(issue: Assignable): AssignmentKind {
-  if (!issue.needs_human) return "agents";
-  return issue.assignees?.length ? "people" : "human";
+  if (issue.assignees?.length) return "people";
+  return issue.needs_human ? "human" : "agents";
 }
 
 /** The `assignees` write value that reproduces this issue's assignment. */
@@ -57,9 +62,9 @@ export function initials(name: string): string {
 export function describeAssignment(issue: Assignable): string {
   switch (assignmentKind(issue)) {
     case "agents":
-      return "Any agent";
+      return t("issues.assignee.anyAgent");
     case "human":
-      return "Any person";
+      return t("issues.assignee.anyPerson");
     case "people":
       return (issue.assignees ?? []).map(personName).join(", ");
   }
@@ -68,8 +73,8 @@ export function describeAssignment(issue: Assignable): string {
 /** Same as {@link describeAssignment}, from a write value. Names resolve
  *  through `people` when known and fall back to `@username`. */
 export function describeNames(names: string[], people: Person[] = []): string {
-  if (names.length === 0) return "Any agent";
-  if (names.length === 1 && names[0] === HUMAN) return "Any person";
+  if (names.length === 0) return t("issues.assignee.anyAgent");
+  if (names.length === 1 && names[0] === HUMAN) return t("issues.assignee.anyPerson");
   return names
     .map((n) => {
       const p = people.find((x) => x.username.toLowerCase() === n.toLowerCase());
@@ -88,14 +93,20 @@ export function assignmentFields(
   if (names.length === 0) return { needs_human: false, assignees: undefined };
   if (names.length === 1 && names[0] === HUMAN) return { needs_human: true, assignees: undefined };
   const assignees: IssueAssignee[] = [];
+  let person = false;
   for (const n of names) {
     const p = people.find((x) => x.username.toLowerCase() === n.toLowerCase());
-    if (!p) continue;
+    if (!p) {
+      person = true;
+      continue;
+    }
     const a: IssueAssignee = { user_id: p.user_id, username: p.username };
     if (p.display_name) a.display_name = p.display_name;
+    if (p.is_bot) a.is_bot = true;
+    else person = true;
     assignees.push(a);
   }
-  return { needs_human: true, assignees: assignees.length ? assignees : undefined };
+  return { needs_human: person, assignees: assignees.length ? assignees : undefined };
 }
 
 /** Whether two write values mean the same assignment (order and case of
@@ -111,7 +122,7 @@ export function sameNames(a: string[], b: string[]): boolean {
 export function orderPeople(people: Person[], me: Person | null): Person[] {
   const rest = people
     .filter((p) => p.user_id !== me?.user_id)
-    .sort((a, b) => personName(a).localeCompare(personName(b), undefined, { sensitivity: "base" }));
+    .sort((a, b) => personName(a).localeCompare(personName(b), locale(), { sensitivity: "base" }));
   return me ? [me, ...rest] : rest;
 }
 
@@ -170,7 +181,7 @@ export function matchesAssigneeFilter(
   me: { id: number; username: string } | null,
 ): boolean {
   if (!filter) return true;
-  if (filter === ASSIGNEE_FILTER_NONE) return !issue.needs_human;
+  if (filter === ASSIGNEE_FILTER_NONE) return !issue.needs_human && !issue.assignees?.length;
   if (filter === ASSIGNEE_FILTER_HUMAN) return !!issue.needs_human;
   const named = issue.assignees ?? [];
   if (filter === ASSIGNEE_FILTER_ME) return !!me && named.some((a) => a.user_id === me.id);
@@ -188,7 +199,7 @@ export function assigneesIn(issues: Assignable[]): IssueAssignee[] {
     for (const a of issue.assignees ?? []) if (!seen.has(a.user_id)) seen.set(a.user_id, a);
   }
   return [...seen.values()].sort((a, b) =>
-    personName(a).localeCompare(personName(b), undefined, { sensitivity: "base" }),
+    personName(a).localeCompare(personName(b), locale(), { sensitivity: "base" }),
   );
 }
 
@@ -200,9 +211,9 @@ export function assignActivity(
 ): { verb: string; subject: string | null } {
   const human = value === HUMAN;
   if (action === "assign") {
-    return human ? { verb: "marked for any person", subject: null } : { verb: "assigned", subject: value };
+    return human ? { verb: t("issues.activity.markedForPerson"), subject: null } : { verb: t("issues.activity.assigned"), subject: value };
   }
   return human
-    ? { verb: "removed the any-person mark", subject: null }
-    : { verb: "unassigned", subject: value };
+    ? { verb: t("issues.activity.removedPersonMark"), subject: null }
+    : { verb: t("issues.activity.unassigned"), subject: value };
 }

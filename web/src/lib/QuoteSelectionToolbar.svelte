@@ -11,6 +11,7 @@
 
   import { Copy, Quote } from "lucide-svelte";
   import { copyToClipboard } from "./clipboard";
+  import { t } from "./i18n";
 
   let {
     container,
@@ -125,7 +126,7 @@
   async function copy() {
     const text = selectedText;
     if (!text) return;
-    await copyToClipboard(text, { label: "selection" });
+    await copyToClipboard(text, { label: t("markdown.selection.copyLabel") });
     const sel = typeof window !== "undefined" ? window.getSelection() : null;
     sel?.removeAllRanges();
     hide();
@@ -153,17 +154,17 @@
     onmousedown={onToolbarMouseDown}
     role="toolbar"
     tabindex="-1"
-    aria-label="Selection actions"
+    aria-label={t("markdown.selection.toolbar")}
   >
     <button type="button" class="qsel__btn" onclick={copy}>
       <Copy size={13} />
-      Copy
+      {t("common.copy")}
     </button>
     {#if canQuote && onQuote}
       <span class="qsel__sep" aria-hidden="true"></span>
       <button type="button" class="qsel__btn" onclick={quote}>
         <Quote size={13} />
-        Quote in comment
+        {t("markdown.selection.quote")}
       </button>
     {/if}
   </div>

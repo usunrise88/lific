@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from "./i18n";
   // Section nav for the settings area: Account (any user) vs Instance
   // (admin-only). The Instance tab only appears for admins, matching the
   // backend scope. Underlined tabs read as "sections of one area" rather
@@ -22,7 +23,7 @@
       : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text)]'}"
     onclick={() => navigate("/settings")}
   >
-    Account
+    {t("settings.tabs.account")}
   </button>
   {#if isAdmin}
     <button
@@ -32,7 +33,7 @@
         : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text)]'}"
       onclick={() => navigate("/settings/instance")}
     >
-      Instance
+      {t("settings.tabs.instance")}
     </button>
   {/if}
 </div>

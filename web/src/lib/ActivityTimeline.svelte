@@ -16,6 +16,15 @@
   import PriorityIcon from "./PriorityIcon.svelte";
   import { History, ChevronDown } from "lucide-svelte";
   import { assignActivity } from "./issues/assignees";
+  import { relationLabel } from "./feed";
+  import { t } from "./i18n";
+
+  /** The entity's name in the active language; an unknown type stays as is. */
+  function entityName(type: string): string {
+    const key = `projectActivity.entity.${type}`;
+    const name = t(key);
+    return name === key ? type : name;
+  }
 
   let {
     items,
@@ -40,7 +49,7 @@
   }
 
   function actorName(a: Activity): string {
-    return a.actor_display_name || a.actor_username || "system";
+    return a.actor_display_name || a.actor_username || t("activity.system");
   }
 
   /** Long-form fields get the expandable old/new treatment. */
@@ -49,9 +58,9 @@
   }
 
   function shortValue(v: string | null, max = 80): string {
-    if (!v) return "(none)";
+    if (!v) return t("activity.none");
     const flat = v.replace(/\n+/g, " ").trim();
-    if (!flat) return "(none)";
+    if (!flat) return t("activity.none");
     return flat.length > max ? flat.slice(0, max) + "…" : flat;
   }
 
@@ -62,60 +71,73 @@
     if (a.entity_type === "plan_step") {
       switch (a.action) {
         case "create":
-          return "added step";
+          return t("activity.step.added");
         case "delete":
-          return "removed step";
+          return t("activity.step.removed");
         case "auto-complete":
-          return "auto-completed a step (issue closed)";
+          return t("activity.step.autoCompleted");
         case "auto-reopen":
-          return "reopened a step (issue reopened)";
+          return t("activity.step.autoReopened");
         case "update":
           if (a.field === "done")
-            return a.new_value === "1" ? "completed a step" : "reopened a step";
-          if (a.field === "title") return "renamed a step";
-          if (a.field === "description") return "edited a step’s description";
+            return a.new_value === "1" ? t("activity.step.completed") : t("activity.step.reopened");
+          if (a.field === "title") return t("activity.step.renamed");
+          if (a.field === "description") return t("activity.step.editedDescription");
           if (a.field === "issue")
-            return a.new_value ? "linked a step to" : "unlinked a step from";
-          return `changed a step’s ${a.field}`;
+            return a.new_value ? t("activity.step.linked") : t("activity.step.unlinked");
+          return t("activity.step.changedField", { field: a.field ?? "" });
       }
     }
     if (a.entity_type === "plan") {
       switch (a.action) {
         case "create":
-          return "created this plan";
+          return t("activity.plan.created");
         case "delete":
-          return "deleted the plan";
+          return t("activity.plan.deleted");
         case "auto-archive":
-          return "archived the plan (anchor issue closed)";
+          return t("activity.plan.autoArchived");
         case "update":
-          if (a.field === "status") return "set status to";
-          if (a.field === "title") return "renamed the plan";
+          if (a.field === "status") return t("activity.plan.setStatus");
+          if (a.field === "title") return t("activity.plan.renamed");
           if (a.field === "anchor_issue")
-            return a.new_value ? "set anchor to" : "cleared the anchor";
-          return `changed ${a.field}`;
+            return a.new_value ? t("activity.plan.setAnchor") : t("activity.plan.clearedAnchor");
+          return t("activity.changedField", { field: a.field ?? "" });
       }
     }
 
     switch (a.action) {
       case "create":
-        return a.entity_type === "comment" ? "commented" : `created this ${a.entity_type}`;
+        if (a.entity_type === "comment") return t("activity.commented");
+        if (a.entity_type === "issue") return t("activity.created.issue");
+        if (a.entity_type === "page") return t("activity.created.page");
+        return t("activity.created.other", { entity: entityName(a.entity_type) });
       case "delete":
-        return a.entity_type === "comment" ? "deleted a comment" : `deleted ${a.entity_type}`;
+        if (a.entity_type === "comment") return t("activity.deletedComment");
+        if (a.entity_type === "issue") return t("activity.deleted.issue");
+        if (a.entity_type === "page") return t("activity.deleted.page");
+        return t("activity.deleted.other", { entity: entityName(a.entity_type) });
       case "update":
-        return a.entity_type === "comment" ? "edited a comment" : `changed ${a.field}`;
+        return a.entity_type === "comment"
+          ? t("activity.editedComment")
+          : t("activity.changedField", { field: a.field ?? "" });
       case "attach":
-        return "added label";
+        return t("activity.labelAdded");
       case "detach":
-        return "removed label";
+        return t("activity.labelRemoved");
       case "link":
-        return `linked ${(a.field ?? "relates_to").replace("_", " ")}`;
+        return t("activity.linked", { relation: relationLabel(a.field) });
       case "unlink":
-        return `unlinked ${(a.field ?? "relates_to").replace("_", " ")}`;
+        return t("activity.unlinked", { relation: relationLabel(a.field) });
       // LIF-484: user and date blockers. The value is the rendered wait.
       case "wait":
-        return "started waiting on";
+        return t("activity.waitStarted");
       case "unwait":
-        return "stopped waiting on";
+        return t("activity.waitStopped");
+      // Fork: parked issues. The value is the reason.
+      case "park":
+        return t("parked.activity.parked");
+      case "unpark":
+        return t("parked.activity.unparked");
       // LIF-147: the value is "@username" or "human".
       case "assign":
       case "unassign":
@@ -127,6 +149,15 @@
 
   /** Steps/plans carry a title in new_value (create) / old_value (delete);
    *  show it in quotes so "added step" reads as "added step “schema”". */
+  const STATUSES = new Set(["backlog", "todo", "active", "done", "cancelled"]);
+  const PRIORITIES = new Set(["urgent", "high", "medium", "low", "none"]);
+  function statusLabel(v: string | null): string {
+    return v && STATUSES.has(v) ? t(`common.status.${v}`) : (v ?? "");
+  }
+  function priorityLabel(v: string | null): string {
+    return v && PRIORITIES.has(v) ? t(`common.priority.${v}`) : (v ?? "");
+  }
+
   function titleValue(a: Activity): string | null {
     if (a.entity_type !== "plan_step" && a.entity_type !== "plan") return null;
     if (a.action === "create") return a.new_value;
@@ -145,7 +176,7 @@
         class="text-micro font-semibold uppercase tracking-widest
                text-[var(--text-muted)]"
       >
-        Activity
+        {t("activity.title")}
       </h2>
       <span class="text-micro text-[var(--text-faint)] tabular-nums">
         {items.length}
@@ -178,7 +209,7 @@
                        uppercase tracking-wider px-1 py-px rounded
                        bg-[var(--accent-subtle)] text-[var(--accent)] mx-0.5"
               >
-                agent
+                {t("activity.agent")}
               </span>
             {/if}
 
@@ -195,22 +226,22 @@
             {:else if a.action === "update" && a.field === "status"}
               <span class="inline-flex items-center gap-1 align-middle mx-0.5">
                 <StatusIcon status={a.old_value ?? ""} size={12} />
-                <span class="capitalize">{a.old_value}</span>
+                <span>{statusLabel(a.old_value)}</span>
               </span>
               <span class="text-[var(--text-faint)]">→</span>
               <span class="inline-flex items-center gap-1 align-middle mx-0.5">
                 <StatusIcon status={a.new_value ?? ""} size={12} />
-                <span class="capitalize text-[var(--text)]">{a.new_value}</span>
+                <span class="text-[var(--text)]">{statusLabel(a.new_value)}</span>
               </span>
             {:else if a.action === "update" && a.field === "priority"}
               <span class="inline-flex items-center gap-1 align-middle mx-0.5">
                 <PriorityIcon priority={a.old_value ?? "none"} size={12} />
-                <span class="capitalize">{a.old_value}</span>
+                <span>{priorityLabel(a.old_value)}</span>
               </span>
               <span class="text-[var(--text-faint)]">→</span>
               <span class="inline-flex items-center gap-1 align-middle mx-0.5">
                 <PriorityIcon priority={a.new_value ?? "none"} size={12} />
-                <span class="capitalize text-[var(--text)]">{a.new_value}</span>
+                <span class="text-[var(--text)]">{priorityLabel(a.new_value)}</span>
               </span>
             {:else if a.action === "update" && isLongField(a)}
               <button
@@ -218,7 +249,7 @@
                        inline-flex items-center gap-0.5 align-baseline"
                 onclick={() => toggleValue(a.id)}
               >
-                {openValues.has(a.id) ? "hide" : "show"} change
+                {openValues.has(a.id) ? t("activity.hideChange") : t("activity.showChange")}
                 <ChevronDown
                   size={11}
                   class="transition-transform {openValues.has(a.id) ? 'rotate-180' : ''}"
@@ -243,6 +274,8 @@
               <span class="text-[var(--text)]">
                 {shortValue(a.action === "wait" ? a.new_value : a.old_value, 60)}
               </span>
+            {:else if a.action === "park" && a.new_value}
+              <span class="text-[var(--text)]">{shortValue(a.new_value, 60)}</span>
             {:else if a.action === "assign" || a.action === "unassign"}
               {@const subject = assignActivity(a.action, a.action === "assign" ? a.new_value : a.old_value).subject}
               {#if subject}
@@ -257,9 +290,9 @@
             <!-- Time + transport, quiet, at the end of the line -->
             <span
               class="text-caption text-[var(--text-faint)] whitespace-nowrap"
-              title="{formatDate(a.ts)} · via {a.transport}"
+              title={t("activity.viaTitle", { date: formatDate(a.ts), transport: a.transport })}
             >
-              · <TimeAgo date={a.ts} /> via {a.transport}
+              · <TimeAgo date={a.ts} /> {t("activity.via", { transport: a.transport })}
             </span>
           </div>
 
@@ -271,13 +304,13 @@
                        border border-[var(--border)] bg-[var(--error-bg)]
                        text-[var(--text-muted)] whitespace-pre-wrap break-words
                        max-h-[200px] overflow-y-auto"
-              >{a.old_value || "(empty)"}</div>
+              >{a.old_value || t("activity.empty")}</div>
               <div
                 class="text-caption leading-relaxed px-3 py-2 rounded-md
                        border border-[var(--border)] bg-[var(--success-bg)]
                        text-[var(--text)] whitespace-pre-wrap break-words
                        max-h-[200px] overflow-y-auto"
-              >{a.new_value || "(empty)"}</div>
+              >{a.new_value || t("activity.empty")}</div>
             </div>
           {/if}
         </li>
@@ -295,7 +328,7 @@
           size={12}
           class="transition-transform {expanded ? 'rotate-180' : ''}"
         />
-        {expanded ? "Show recent only" : `Show all ${items.length} entries`}
+        {expanded ? t("activity.showRecent") : t("activity.showAll", { count: items.length })}
       </button>
     {/if}
   </section>

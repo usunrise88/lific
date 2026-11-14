@@ -7,31 +7,37 @@
 // to. Files.svelte holds only rendering and fetching.
 
 import type { LinkedEntity, MimeClass, ProjectAttachment } from "../api";
+import { t } from "../i18n";
 
-/** The filter chips, in display order. `null` is the "All" chip. */
-export const MIME_FILTERS: { value: MimeClass | null; label: string }[] = [
-  { value: null, label: "All" },
-  { value: "image", label: "Images" },
-  { value: "video", label: "Video" },
-  { value: "audio", label: "Audio" },
-  { value: "text", label: "Text" },
-  { value: "pdf", label: "PDF" },
-  { value: "archive", label: "Archives" },
-  { value: "other", label: "Other" },
-];
+/** The filter chips, in display order. `null` is the "All" chip. Built per
+ *  call so the labels follow the active language. */
+export function mimeFilters(): { value: MimeClass | null; label: string }[] {
+  return [
+    { value: null, label: t("files.filter.all") },
+    { value: "image", label: t("files.filter.image") },
+    { value: "video", label: t("files.filter.video") },
+    { value: "audio", label: t("files.filter.audio") },
+    { value: "text", label: t("files.filter.text") },
+    { value: "pdf", label: t("files.filter.pdf") },
+    { value: "archive", label: t("files.filter.archive") },
+    { value: "other", label: t("files.filter.other") },
+  ];
+}
 
-export const SORT_OPTIONS: {
+export function sortOptions(): {
   value: "created_at" | "size" | "filename";
   label: string;
-}[] = [
-  { value: "created_at", label: "Newest first" },
-  { value: "size", label: "Largest first" },
-  { value: "filename", label: "Name A to Z" },
-];
+}[] {
+  return [
+    { value: "created_at", label: t("files.sort.newest") },
+    { value: "size", label: t("files.sort.largest") },
+    { value: "filename", label: t("files.sort.name") },
+  ];
+}
 
 /** Human label for a class, used by the row subtitle and the empty state. */
 export function mimeClassLabel(cls: MimeClass): string {
-  return MIME_FILTERS.find((f) => f.value === cls)?.label ?? "Other";
+  return mimeFilters().find((f) => f.value === cls)?.label ?? t("files.filter.other");
 }
 
 /**
@@ -42,15 +48,15 @@ export function mimeClassLabel(cls: MimeClass): string {
  * window and goes on the next pass.
  */
 export function formatSweepCountdown(seconds: number): string {
-  if (seconds <= 0) return "swept on the next pass";
+  if (seconds <= 0) return t("files.sweep.nextPass");
   const hours = Math.floor(seconds / 3600);
   if (hours >= 24) {
     const days = Math.floor(hours / 24);
-    return `swept in ${days} day${days === 1 ? "" : "s"}`;
+    return t("files.sweep.days", { count: days });
   }
-  if (hours >= 1) return `swept in ${hours}h`;
+  if (hours >= 1) return t("files.sweep.hours", { count: hours });
   const minutes = Math.max(1, Math.floor(seconds / 60));
-  return `swept in ${minutes} min`;
+  return t("files.sweep.minutes", { count: minutes });
 }
 
 /**
@@ -60,11 +66,9 @@ export function formatSweepCountdown(seconds: number): string {
  */
 export function deleteConfirmMessage(referenceCount: number): string {
   if (referenceCount === 0) {
-    return "Removes the file. It has no references.";
+    return t("files.deleteConfirm.noRefs");
   }
-  return `Removes the file and its ${referenceCount} reference${
-    referenceCount === 1 ? "" : "s"
-  }.`;
+  return t("files.deleteConfirm.refs", { count: referenceCount });
 }
 
 /**
@@ -109,8 +113,8 @@ export function entityHref(
 /** Chip label: the identifier, with a marker when the reference is a comment
  *  rather than the entity body. */
 export function entityChipLabel(entity: LinkedEntity): string {
-  const base = entity.identifier ?? "unlinked";
-  return entity.entity_type === "comment" ? `${base} (comment)` : base;
+  const base = entity.identifier ?? t("files.chip.unlinked");
+  return entity.entity_type === "comment" ? t("files.chip.comment", { base }) : base;
 }
 
 /** The distinct uploader usernames present in a set of rows, sorted, for the

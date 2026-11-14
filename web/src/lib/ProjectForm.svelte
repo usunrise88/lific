@@ -2,6 +2,7 @@
   import { listUsers, listProjectGroups, type UserSummary, type ProjectGroup } from "./api";
   import IconPicker from "./IconPicker.svelte";
   import Select from "./Select.svelte";
+  import { t, locale } from "./i18n";
 
   let {
     name = $bindable(""),
@@ -48,32 +49,19 @@
     }
   });
 
-  const PLACEHOLDERS = [
-    "Half-Life 3",
-    "Star Citizen 2",
-    "Portal 3",
-    "Aperture Science",
-    "Rewriting Rust in Rust",
-    "Is It DNS?",
-    "TODO: Name This Later",
-    "Untitled Goose Project",
-    "Regex for Dummys",
-    "Shovelware Simulator",
-    "Moon Base Alpha",
-    "Sentient Spreadsheet",
-    "Banana for Scale",
-  ];
-  const placeholder = PLACEHOLDERS[Math.floor(Math.random() * PLACEHOLDERS.length)];
+  // Playful example names; one is picked per mount (projects.form.example.1..13).
+  const PLACEHOLDER_COUNT = 13;
+  const placeholder = t(`projects.form.example.${1 + Math.floor(Math.random() * PLACEHOLDER_COUNT)}`);
 
   let previewId = $derived((identifier.trim().toUpperCase() || "PRO") + "-1");
 
   let groupOptions = $derived([
-    { value: null, label: "No group" },
+    { value: null, label: t("projects.form.noGroup") },
     ...groups.map((g) => ({ value: g.id, label: g.name })),
   ]);
 
   let userOptions = $derived([
-    { value: null, label: "No lead" },
+    { value: null, label: t("projects.form.noLead") },
     ...users.map((u) => ({
       value: u.id,
       label: u.display_name || u.username,
@@ -85,7 +73,7 @@
 
   function formatMemberSince(iso: string): string {
     const d = new Date(iso + "Z");
-    return d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+    return d.toLocaleDateString(locale(), { month: "short", year: "numeric" });
   }
 
   function userInitials(name: string): string {
@@ -100,7 +88,7 @@
       for="project-name"
       class="block text-body-sm font-medium text-[var(--text)] mb-2 w-fit"
     >
-      Name
+      {t("projects.form.name")}
     </label>
     <input
       id="project-name"
@@ -123,7 +111,7 @@
         for="project-id"
         class="block text-body-sm font-medium text-[var(--text)] mb-2 w-fit"
       >
-        Identifier
+        {t("projects.form.identifier")}
       </label>
       <input
         id="project-id"
@@ -144,7 +132,7 @@
         autocapitalize="characters"
       />
       <p class="mt-1.5 text-body-sm text-[var(--text-faint)] w-fit">
-        {mode === "edit" ? "Issue prefix" : "Issues become"}
+        {mode === "edit" ? t("projects.form.issuePrefix") : t("projects.form.issuesBecome")}
       </p>
       <span
         class="inline-block font-mono text-caption font-medium
@@ -159,12 +147,12 @@
       <label
         class="block text-body-sm font-medium text-[var(--text)] mb-2"
       >
-        Lead
+        {t("projects.form.lead")}
       </label>
       <Select
         options={userOptions}
         bind:value={leadUserId}
-        placeholder="No lead"
+        placeholder={t("projects.form.noLead")}
         renderSelected={selectedUser}
         renderOption={userOption}
       />
@@ -174,7 +162,7 @@
       <label
         class="block text-body-sm font-medium text-[var(--text)] mb-2 w-fit"
       >
-        Icon
+        {t("projects.form.icon")}
       </label>
       <IconPicker value={emoji} onchange={(v) => { emoji = v; }} />
     </div>
@@ -184,9 +172,9 @@
     <!-- Sidebar grouping. Personal to the signed-in user, unlike Lead. -->
     <div class="mb-8 max-w-xs">
       <label class="block text-body-sm font-medium text-[var(--text)] mb-2 w-fit">
-        Group
+        {t("projects.form.group")}
       </label>
-      <Select options={groupOptions} bind:value={groupId} placeholder="No group" />
+      <Select options={groupOptions} bind:value={groupId} placeholder={t("projects.form.noGroup")} />
     </div>
   {/if}
 
@@ -197,9 +185,9 @@
         for="project-desc"
         class="text-body-sm font-medium text-[var(--text)]"
       >
-        Description
+        {t("projects.form.description")}
       </label>
-      <span class="text-caption text-[var(--text-faint)]">optional</span>
+      <span class="text-caption text-[var(--text-faint)]">{t("projects.form.optional")}</span>
     </div>
     <textarea
       id="project-desc"
@@ -209,7 +197,7 @@
              text-[var(--text)] placeholder:text-[var(--text-faint)]
              outline-none resize-y transition-colors
              focus:border-[var(--accent)] focus:shadow-[0_0_0_3px_var(--accent-subtle)]"
-      placeholder="What is this project about?"
+      placeholder={t("projects.form.descriptionPlaceholder")}
       rows="3"
     ></textarea>
   </div>
@@ -256,12 +244,12 @@
               class="text-micro font-semibold uppercase tracking-wide
                      px-1 py-0.5 rounded bg-[var(--accent-subtle)] text-[var(--accent)]"
             >
-              Admin
+              {t("projects.form.admin")}
             </span>
           {/if}
         </div>
         <span class="text-caption text-[var(--text-faint)]">
-          Member since {formatMemberSince(opt.created_at as string)}
+          {t("projects.form.memberSince", { date: formatMemberSince(opt.created_at as string) })}
         </span>
       </div>
     </div>

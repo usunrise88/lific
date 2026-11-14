@@ -34,6 +34,7 @@
   import IconPicker from "../lib/IconPicker.svelte";
   import LabelManager from "../lib/LabelManager.svelte";
   import ProjectMembers from "../lib/ProjectMembers.svelte";
+  import ProjectAgentRoutes from "../lib/ProjectAgentRoutes.svelte";
   import ImportPanel from "../lib/ImportPanel.svelte";
   import PublishPanel from "../lib/PublishPanel.svelte"; // LIF-465
   import ArchiveTransferPanel from "../lib/ArchiveTransferPanel.svelte";
@@ -58,6 +59,7 @@
   // all lead-level. `canEdit` = maintainer/admin — label management.
   import { projectRole, loadProjectRole, deriveCanPublish } from "../lib/projectRole.svelte";
   import { toast } from "../lib/toast/toast.svelte";
+  import { t } from "../lib/i18n";
 
   const topbarCtx = getContext<{
     set: (s: import("svelte").Snippet | undefined) => void;
@@ -121,7 +123,7 @@
     const projRes = await listProjects();
     if (!projRes.ok) { error = projRes.error; loading = false; return; }
     const found = projRes.data.find((p: Project) => p.identifier === ident);
-    if (!found) { error = `Project ${ident} not found`; loading = false; return; }
+    if (!found) { error = t("projectSettings.notFound", { identifier: ident }); loading = false; return; }
     project = found;
     // LIF-234: prime the shared role store for this project so `canManage`/
     // `canEdit` below reflect the correct answer (Layout also primes it, but
@@ -132,7 +134,7 @@
 
     const [countsRes, issuesRes, actRes, usersRes, meRes, instanceRes] = await Promise.all([
       getIssueCounts(found.id),
-      listIssues({ project_id: found.id, limit: 1000 }),
+      listIssues({ project_id: found.id, parked: false, limit: 1000 }),
       listProjectActivity(found.id, 14),
       listUsers(),
       // Who is signed in, and whether this instance signs in without a
@@ -160,7 +162,7 @@
   // list that can actually change, and leave `loading` alone.
   async function refreshLabelUsage() {
     if (!project) return;
-    const res = await listIssues({ project_id: project.id, limit: 1000 });
+    const res = await listIssues({ project_id: project.id, parked: false, limit: 1000 });
     if (res.ok) issues = res.data;
   }
 
@@ -178,7 +180,7 @@
       // `error` only feeds the initial-load ErrorState, which isn't rendered
       // in the loaded view — so a field autosave failure here would otherwise
       // be silent. The identity hero has no inline slot, so toast it (LIF-284).
-      toast(`Couldn't save changes: ${res.error}`, { kind: "error" });
+      toast(t("projectSettings.saveFailed", { error: res.error }), { kind: "error" });
       return false;
     }
   }
@@ -265,7 +267,7 @@
       pendingLead = pending;
       return false;
     }
-    toast(`Couldn't save changes: ${res.error}`, { kind: "error" });
+    toast(t("projectSettings.saveFailed", { error: res.error }), { kind: "error" });
     restoreLead(pending.previousLead);
     return false;
   }
@@ -275,7 +277,7 @@
     const pending = pendingLead;
     if (!pending || leadBusy || !leadPassword || currentUserId == null) return;
     if (pending.projectId !== project?.id || pending.userId !== currentUserId) {
-      leadError = "That change was interrupted and was not applied.";
+      leadError = t("projectSettings.lead.interrupted");
       pendingLead = null;
       leadPassword = "";
       return;
@@ -293,7 +295,7 @@
     if (await assignLead(pending, false)) {
       pendingLead = null;
     } else if (!leadError) {
-      leadError = "That still was not accepted. Sign out and sign back in, then try again.";
+      leadError = t("projectSettings.lead.stillRejected");
       restoreLead(pending.previousLead);
       pendingLead = null;
     }
@@ -361,7 +363,7 @@
     if (!project) return;
     const res = await assignProjectGroup(project.id, groupId);
     if (!res.ok) {
-      toast(`Couldn't save changes: ${res.error}`, { kind: "error" });
+      toast(t("projectSettings.saveFailed", { error: res.error }), { kind: "error" });
       // Put the select back so it never shows a value the server rejected.
       selectedGroupId = currentGroupId();
       return;
@@ -421,18 +423,21 @@
   }
 
   function actorName(a: Activity): string {
-    return a.actor_display_name || a.actor_username || (a.actor_is_bot ? "a bot" : "system");
+    return a.actor_display_name || a.actor_username || (a.actor_is_bot ? t("projectSettings.recent.bot") : t("projectSettings.recent.system"));
   }
+  const ENTITY_TYPES = ["issue", "page", "comment", "module", "label", "folder", "plan", "project"];
   function activityText(a: Activity): string {
-    const verb = a.action === "create" ? "created"
-      : a.action === "delete" ? "deleted"
-      : a.action === "update" ? "updated" : a.action;
-    return `${verb} ${a.entity_label ? `${a.entity_type} ${a.entity_label}` : a.entity_type}`;
+    const type = ENTITY_TYPES.includes(a.entity_type) ? t(`projectActivity.entity.${a.entity_type}`) : a.entity_type;
+    const entity = a.entity_label ? t("projectSettings.recent.entity", { type, label: a.entity_label }) : type;
+    return a.action === "create" ? t("projectSettings.recent.created", { entity })
+      : a.action === "delete" ? t("projectSettings.recent.deleted", { entity })
+      : a.action === "update" ? t("projectSettings.recent.updated", { entity })
+      : `${a.action} ${entity}`;
   }
 
   // ── Danger zone actions ──────────────────────────────
   let leadOptions = $derived([
-    { value: "", label: "No lead" },
+    { value: "", label: t("projectSettings.lead.none") },
     ...users.map((u) => ({ value: String(u.id), label: u.display_name || u.username })),
   ]);
 
@@ -466,7 +471,7 @@
     archiving = true; archiveError = "";
     const res = await archiveProject(project.id);
     if (res.ok) {
-      toast(`Archived ${res.data.identifier}. An admin can unarchive it from Settings, Instance.`, { kind: "success" });
+      toast(t("projectSettings.archive.done", { identifier: res.data.identifier }), { kind: "success" });
       navigate("/settings");
     } else {
       archiveError = res.error;
@@ -526,18 +531,18 @@
     </div>
   </div>
 {:else if !project}
-  <ErrorState title="Couldn't load this project" message={error}>
+  <ErrorState title={t("projectSettings.loadError")} message={error}>
     <button
       class="text-body-sm font-medium text-[var(--btn-success-text)] bg-[var(--btn-success)] px-3 py-1.5 rounded-md hover:bg-[var(--btn-success-hover)] transition-colors"
       onclick={() => loadAll(projectIdentifier)}
     >
-      Try again
+      {t("common.retry")}
     </button>
     <button
       class="text-body-sm text-[var(--text-muted)] border border-[var(--border)] px-3 py-1.5 rounded-md hover:bg-[var(--bg-subtle)] transition-colors"
       onclick={() => navigate("/settings")}
     >
-      Back to home
+      {t("projectSettings.backHome")}
     </button>
   </ErrorState>
 {:else}
@@ -604,7 +609,7 @@
               </CopyIdButton>
               {#if savedAt}
                 <span class="inline-flex items-center gap-1 text-micro text-[var(--success)]" aria-live="polite">
-                  <Check size={11} /> Saved
+                  <Check size={11} /> {t("common.saved")}
                 </span>
               {/if}
               {#if !canManage && projectRole.enforced}
@@ -612,8 +617,8 @@
                      read-only, in the existing badge vocabulary. -->
                 <span class="inline-flex items-center gap-1 text-micro font-medium px-1.5 py-0.5 rounded-full
                              text-[var(--text-muted)] bg-[var(--bg-subtle)]"
-                      title="Only a project lead or admin can change project settings.">
-                  Read-only
+                      title={t("projectSettings.readOnly.title")}>
+                  {t("projectSettings.readOnly.badge")}
                 </span>
               {/if}
             </div>
@@ -630,7 +635,7 @@
                 rows="2"
                 class="mt-2 w-full text-body bg-transparent border border-[var(--border)] rounded-md px-2.5 py-1.5
                        text-[var(--text)] outline-none resize-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
-                placeholder="Describe this project…"
+                placeholder={t("projectSettings.descPlaceholder")}
                 autofocus
                 onblur={commitDesc}
                 onkeydown={(e) => { if (e.key === 'Escape') editingDesc = false; if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) commitDesc(); }}
@@ -640,15 +645,15 @@
                 {#if project.description}
                   <span class="text-body text-[var(--text-muted)] leading-relaxed">{project.description}</span>
                 {:else}
-                  <span class="text-body-sm text-[var(--text-faint)] italic">Add a description…</span>
+                  <span class="text-body-sm text-[var(--text-faint)] italic">{t("projectSettings.addDescription")}</span>
                 {/if}
                 <Pencil size={12} class="inline ml-1 text-[var(--text-faint)] opacity-0 group-hover:opacity-100 pointer-coarse:opacity-100 transition-opacity align-baseline" />
               </button>
             {/if}
 
             <div class="flex items-center gap-3 mt-2.5 text-caption text-[var(--text-faint)] tabular-nums">
-              <span>Created {formatDate(project.created_at)}</span>
-              {#if activity[0]}<span>·</span><span>Active <TimeAgo date={activity[0].ts} /></span>{/if}
+              <span>{t("projectSettings.created", { date: formatDate(project.created_at) })}</span>
+              {#if activity[0]}<span>·</span><span>{t("projectSettings.active.before")} <TimeAgo date={activity[0].ts} /></span>{/if}
             </div>
           </div>
 
@@ -656,7 +661,7 @@
           {#if total > 0}
             <div class="shrink-0 flex flex-col items-center gap-1 pt-0.5">
               <ProgressRing value={completion} size={52} stroke={5} color="var(--success)" />
-              <span class="text-micro text-[var(--text-faint)] tabular-nums">{counts?.done ?? 0}/{total} done</span>
+              <span class="text-micro text-[var(--text-faint)] tabular-nums">{t("projectSettings.progress", { done: counts?.done ?? 0, total })}</span>
             </div>
           {/if}
         </section>
@@ -664,10 +669,10 @@
         <!-- ── NEEDS ATTENTION (the star) ───────────────── -->
         <section>
           <div class="flex items-baseline justify-between mb-3">
-            <h2 class="text-body-sm font-semibold text-[var(--text)]">Needs attention</h2>
+            <h2 class="text-body-sm font-semibold text-[var(--text)]">{t("projectSettings.attention.title")}</h2>
             {#if moreCount > 0}
               <button class="text-caption text-[var(--text-muted)] hover:text-[var(--text)] transition-colors flex items-center gap-1" onclick={gotoOpenIssues}>
-                +{moreCount} more open <ArrowRight size={11} />
+                {t("projectSettings.attention.more", { count: moreCount })} <ArrowRight size={11} />
               </button>
             {/if}
           </div>
@@ -676,8 +681,8 @@
             <div class="flex items-center gap-3 py-6 px-1 text-[var(--text-muted)]">
               <span class="grid place-items-center size-8 rounded-full bg-[var(--success-bg)] text-[var(--success)]"><Check size={16} /></span>
               <div>
-                <p class="text-body text-[var(--text)]">Nothing needs attention</p>
-                <p class="text-body-sm text-[var(--text-faint)]">Everything open is fresh and on track.</p>
+                <p class="text-body text-[var(--text)]">{t("projectSettings.attention.emptyTitle")}</p>
+                <p class="text-body-sm text-[var(--text-faint)]">{t("projectSettings.attention.emptyBody")}</p>
               </div>
             </div>
           {:else}
@@ -702,9 +707,9 @@
                   <span class="text-micro font-mono text-[var(--text-faint)] shrink-0 tabular-nums w-[58px]">{issue.identifier}</span>
                   <span class="text-body text-[var(--text)] truncate flex-1">{issue.title}</span>
                   <div class="shrink-0 flex items-center gap-2 text-micro tabular-nums">
-                    <span class="text-[var(--text-faint)]">open {ageLabel(age)}</span>
+                    <span class="text-[var(--text-faint)]">{t("projectSettings.attention.open", { age: ageLabel(age) })}</span>
                     {#if idle >= 14}
-                      <span class="px-1.5 py-0.5 rounded-full text-[var(--warn)] bg-[color-mix(in_oklab,var(--warn)_14%,transparent)]">idle {ageLabel(idle)}</span>
+                      <span class="px-1.5 py-0.5 rounded-full text-[var(--warn)] bg-[color-mix(in_oklab,var(--warn)_14%,transparent)]">{t("projectSettings.attention.idle", { age: ageLabel(idle) })}</span>
                     {/if}
                     <StatusIcon status={issue.status} size={14} />
                   </div>
@@ -720,9 +725,9 @@
         <section class="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
           <div class="flex items-center gap-3">
             <div class="flex-1">
-              <p class="text-body-sm font-medium text-[var(--text)]">Sidebar group</p>
+              <p class="text-body-sm font-medium text-[var(--text)]">{t("projectSettings.group.title")}</p>
               <p class="text-caption text-[var(--text-muted)]">
-                Where this project sits in your sidebar. Only you see it.
+                {t("projectSettings.group.body")}
               </p>
             </div>
             <select
@@ -735,13 +740,16 @@
               class="text-body-sm rounded-md border border-[var(--border)] bg-[var(--surface)]
                      text-[var(--text)] px-2.5 py-1.5 outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
             >
-              <option value="">No group</option>
+              <option value="">{t("projectSettings.group.none")}</option>
               {#each groups as group (group.id)}
                 <option value={String(group.id)}>{group.name}</option>
               {/each}
             </select>
           </div>
         </section>
+
+        <!-- ── AGENTS (fork: comment routing) ───────────── -->
+        <ProjectAgentRoutes projectId={project.id} />
 
         <!-- ── LABELS (management) ──────────────────────── -->
         <!-- LIF-234: label management is a maintainer-level structure edit —
@@ -784,9 +792,9 @@
         {#if activity.length > 0}
           <section>
             <div class="flex items-baseline justify-between mb-3">
-              <h2 class="text-body-sm font-semibold text-[var(--text)]">Recent activity</h2>
+              <h2 class="text-body-sm font-semibold text-[var(--text)]">{t("projectSettings.recent.title")}</h2>
               <button class="text-caption text-[var(--text-muted)] hover:text-[var(--text)] transition-colors flex items-center gap-1" onclick={() => navigate(`/${projectIdentifier}/activity`)}>
-                <History size={11} /> Full log
+                <History size={11} /> {t("projectSettings.recent.fullLog")}
               </button>
             </div>
             <div class="flex flex-col gap-2.5">
@@ -814,7 +822,7 @@
             onclick={() => { dangerOpen = !dangerOpen; }}
           >
             <AlertTriangle size={15} class="text-[var(--error)]" />
-            <span class="text-body font-semibold text-[var(--error)] flex-1">Danger zone</span>
+            <span class="text-body font-semibold text-[var(--error)] flex-1">{t("projectSettings.danger.title")}</span>
             <ChevronDown size={15} class="text-[var(--error)] transition-transform {dangerOpen ? 'rotate-180' : ''}" />
           </button>
 
@@ -825,8 +833,8 @@
               <!-- Project lead -->
               <div class="flex items-center gap-3">
                 <div class="flex-1">
-                  <p class="text-body-sm font-medium text-[var(--text)]">Project lead</p>
-                  <p class="text-caption text-[var(--text-muted)]">Who owns this project.</p>
+                  <p class="text-body-sm font-medium text-[var(--text)]">{t("projectSettings.lead.title")}</p>
+                  <p class="text-caption text-[var(--text-muted)]">{t("projectSettings.lead.body")}</p>
                 </div>
                 <select
                   bind:value={leadValue}
@@ -846,12 +854,11 @@
               {#if pendingLead}
                 <div class="flex flex-col gap-2 rounded-md bg-[var(--bg-subtle)] px-3 py-2.5">
                   <p class="text-caption text-[var(--text)] leading-relaxed">
-                    Verify it's you to make that person the project lead. It grants them lead
-                    access to this project, and you have been signed in for a while.
+                    {t("projectSettings.lead.reauth")}
                   </p>
                   {#if autoLeadNote}
                     <p class="text-caption text-[var(--text-muted)]" role="status">
-                      Signing you in automatically did not work ({autoLeadNote}).
+                      {t("projectSettings.lead.autoFailed", { error: autoLeadNote })}
                     </p>
                   {/if}
                   {#if leadError}
@@ -859,11 +866,11 @@
                   {/if}
                   <div class="flex items-center gap-2 flex-wrap">
                     <label class="flex-1 min-w-[170px]">
-                      <span class="sr-only">Your current password</span>
+                      <span class="sr-only">{t("projectSettings.lead.passwordLabel")}</span>
                       <input
                         bind:value={leadPassword}
                         type="password"
-                        placeholder="your current password"
+                        placeholder={t("projectSettings.lead.passwordPlaceholder")}
                         autocomplete="current-password"
                         disabled={leadBusy}
                         class="w-full px-3 py-1.5 text-body-sm rounded-md border border-[var(--border)]
@@ -879,14 +886,14 @@
                       disabled={leadBusy || !leadPassword}
                       onclick={submitLeadReauth}
                     >
-                      {leadBusy ? "Verifying…" : "Confirm and continue"}
+                      {leadBusy ? t("projectSettings.lead.verifying") : t("projectSettings.lead.confirm")}
                     </button>
                     <button
                       class="text-body-sm text-[var(--text-muted)] px-3 py-1.5 rounded-md hover:bg-[var(--surface)] transition-colors disabled:opacity-50 shrink-0"
                       disabled={leadBusy}
                       onclick={cancelLeadReauth}
                     >
-                      Cancel
+                      {t("common.cancel")}
                     </button>
                   </div>
                 </div>
@@ -896,10 +903,10 @@
 
               <!-- Change identifier -->
               <div>
-                <p class="text-body-sm font-medium text-[var(--text)]">Change identifier</p>
+                <p class="text-body-sm font-medium text-[var(--text)]">{t("projectSettings.ident.title")}</p>
                 <p class="text-caption text-[var(--text-muted)] mt-0.5 mb-2 leading-relaxed">
-                  Re-keys every issue, page, and plan. Existing references to <span class="font-mono">{project.identifier}-NNN</span>
-                  written inside other issues/pages will no longer resolve. This cannot be undone automatically.
+                  {t("projectSettings.ident.body.before")} <span class="font-mono">{project.identifier}-NNN</span>
+                  {t("projectSettings.ident.body.after")}
                 </p>
                 <div class="flex items-center gap-2">
                   <input
@@ -915,7 +922,7 @@
                     disabled={renaming || !newIdent.trim() || newIdent.trim().toUpperCase() === project.identifier}
                     onclick={renameIdentifier}
                   >
-                    {renaming ? "Renaming…" : "Rename"}
+                    {renaming ? t("projectSettings.ident.renaming") : t("projectSettings.ident.rename")}
                   </button>
                 </div>
                 {#if identError}<p class="text-caption text-[var(--error)] mt-1.5">{identError}</p>{/if}
@@ -925,23 +932,21 @@
 
               <!-- Archive -->
               <div>
-                <p class="text-body-sm font-medium text-[var(--text)]">Archive project</p>
+                <p class="text-body-sm font-medium text-[var(--text)]">{t("projectSettings.archive.title")}</p>
                 <p class="text-caption text-[var(--text-muted)] mt-0.5 leading-relaxed">
-                  Compresses the project into a single file on the server and removes it from Lific.
-                  Nothing is lost: an instance admin can unarchive it from Settings, Instance.
+                  {t("projectSettings.archive.body")}
                 </p>
                 {#if !showArchiveSection}
                   <button
                     class="mt-2 text-body-sm text-[var(--error)] border border-[var(--error)] px-3 py-1.5 rounded-md hover:bg-[var(--error-bg)] transition-colors"
                     onclick={() => { showArchiveSection = true; }}
                   >
-                    Archive this project
+                    {t("projectSettings.archive.open")}
                   </button>
                 {:else}
                   <p class="text-caption text-[var(--text-muted)] mt-2 mb-2 leading-relaxed">
-                    <strong class="font-mono">{project.identifier}</strong> and its <strong>{total}</strong> issue{total !== 1 ? 's' : ''},
-                    pages, plans, and attachments disappear for everyone until it is unarchived. It comes back private, with its
-                    members and history. Page revision history, saved views, and repository bindings are not kept.
+                    <strong class="font-mono">{project.identifier}</strong> {t("projectSettings.archive.confirm.mid")} <strong>{total}</strong>
+                    {t("projectSettings.archive.confirm.after", { count: total })}
                   </p>
                   <div class="flex items-center gap-2">
                     <button
@@ -950,12 +955,12 @@
                       disabled={archiving}
                       onclick={handleArchive}
                     >
-                      {archiving ? "Archiving…" : "Archive"}
+                      {archiving ? t("projectSettings.archive.archiving") : t("projectSettings.archive.action")}
                     </button>
                     <button class="text-body-sm text-[var(--text-muted)] px-2 py-1.5 rounded-md hover:bg-[var(--bg-subtle)] transition-colors"
                             disabled={archiving}
                             onclick={() => { showArchiveSection = false; archiveError = ''; }}>
-                      Cancel
+                      {t("common.cancel")}
                     </button>
                   </div>
                 {/if}
@@ -966,18 +971,20 @@
 
               <!-- Delete -->
               <div>
-                <p class="text-body-sm font-medium text-[var(--text)]">Delete project</p>
+                <p class="text-body-sm font-medium text-[var(--text)]">{t("projectSettings.delete.title")}</p>
                 {#if !showDeleteSection}
                   <button
                     class="mt-2 text-body-sm text-[var(--error)] border border-[var(--error)] px-3 py-1.5 rounded-md hover:bg-[var(--error-bg)] transition-colors"
                     onclick={() => { showDeleteSection = true; }}
                   >
-                    Delete this project
+                    {t("projectSettings.delete.open")}
                   </button>
                 {:else}
                   <p class="text-caption text-[var(--text-muted)] mt-1 mb-2">
-                    Permanently deletes the project and all <strong>{total}</strong> issue{total !== 1 ? 's' : ''}, modules, labels, folders, pages, and plans.
-                    Type <strong class="font-mono">{project.identifier}</strong> to confirm.
+                    {t("projectSettings.delete.body.before")} <strong>{total}</strong>
+                    {t("projectSettings.delete.body.after", { count: total })}
+                    {t("projectSettings.delete.type.before")} <strong class="font-mono">{project.identifier}</strong>
+                    {t("projectSettings.delete.type.after")}
                   </p>
                   <div class="flex items-center gap-2">
                     <input
@@ -992,11 +999,11 @@
                       disabled={!deleteReady || deleting}
                       onclick={handleDelete}
                     >
-                      {deleting ? "Deleting…" : "Delete permanently"}
+                      {deleting ? t("projectSettings.delete.deleting") : t("projectSettings.delete.action")}
                     </button>
                     <button class="text-body-sm text-[var(--text-muted)] px-2 py-1.5 rounded-md hover:bg-[var(--bg-subtle)] transition-colors"
                             onclick={() => { showDeleteSection = false; deleteConfirmText = ''; deleteError = ''; }}>
-                      Cancel
+                      {t("common.cancel")}
                     </button>
                   </div>
                   {#if deleteError}<p class="text-caption text-[var(--error)] mt-1.5">{deleteError}</p>{/if}
@@ -1024,7 +1031,7 @@
           {project.identifier}
         </button>
         <ChevronRight size={12} class="text-[var(--text-faint)]" />
-        <span class="text-body-sm font-medium text-[var(--text)]">Overview</span>
+        <span class="text-body-sm font-medium text-[var(--text)]">{t("projectSettings.title")}</span>
       </div>
       <div class="ml-auto flex items-center gap-2 shrink-0">
         {#if exportError}
@@ -1032,7 +1039,7 @@
         {/if}
         <button class="toolbar-pill" onclick={exportProject} disabled={exporting}>
           <Download size={14} />
-          {exporting ? "Exporting…" : "Export"}
+          {exporting ? t("projectSettings.export.exporting") : t("projectSettings.export.action")}
         </button>
       </div>
     </div>

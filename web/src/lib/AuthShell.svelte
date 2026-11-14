@@ -1,4 +1,6 @@
 <script lang="ts">
+  import LanguagePicker from "./LanguagePicker.svelte";
+  import { t } from "./i18n";
   // LIF-203 v6: the auth screen IS Lific, signed out. It wears the real
   // application chrome so you feel like you are already inside the product:
   //
@@ -54,7 +56,7 @@
     children: import("svelte").Snippet;
   } = $props();
 
-  const crumb = $derived(mode === "signup" ? "Create account" : "Sign in");
+  const crumb = $derived(mode === "signup" ? t("auth.shell.createAccount") : t("auth.shell.signIn"));
 
   // Theme cycle, identical behavior to the real sidebar footer control.
   let themePref = $state<ThemePreference>(getPreference());
@@ -71,8 +73,8 @@
     class="size-8 shrink-0 grid place-items-center rounded-md
            text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-subtle)] transition-colors {extra}"
     onclick={cycleTheme}
-    title="Theme: {themePref}"
-    aria-label="Cycle theme, current: {themePref}"
+    title={t("appearance.themeCycle.title", { theme: t(`appearance.themeCycle.${themePref}`) })}
+    aria-label={t("appearance.themeCycle.aria", { theme: t(`appearance.themeCycle.${themePref}`) })}
   >
     {#if themePref === "system"}
       <Monitor size={15} />
@@ -99,7 +101,7 @@
       onclick={() => navigate("/login")}
     >
       <LogIn size={11} class="shrink-0" />
-      Sign in
+      {t("auth.shell.signIn")}
     </button>
     <button
       class="flex items-center gap-1 px-2.5 py-1 rounded text-caption font-medium transition-all
@@ -110,7 +112,7 @@
       onclick={() => navigate("/signup")}
     >
       <UserPlus size={11} class="shrink-0" />
-      Create account
+      {t("auth.shell.createAccount")}
     </button>
   </div>
 {/snippet}
@@ -133,6 +135,11 @@
 
     <div class="flex-1"></div>
 
+    <!-- Fork: pick the language before signing in. -->
+    <div class="px-3 pb-2">
+      <LanguagePicker compact />
+    </div>
+
     <!-- Footer: signed-out identity placeholder + theme cycle. -->
     <div class="p-2 flex items-center gap-1">
       <div class="flex-1 min-w-0 flex items-center gap-2.5 px-2 py-1.5 rounded-md">
@@ -141,10 +148,10 @@
         </div>
         <div class="flex-1 min-w-0">
           <div class="text-body-sm text-[var(--text-muted)] truncate leading-tight">
-            Not signed in
+            {t("auth.shell.notSignedIn")}
           </div>
           <div class="text-micro text-[var(--text-faint)] leading-tight mt-0.5">
-            {crumb} to continue
+            {mode === "signup" ? t("auth.shell.createToContinue") : t("auth.shell.signInToContinue")}
           </div>
         </div>
       </div>

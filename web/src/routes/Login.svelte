@@ -1,6 +1,7 @@
 <script lang="ts">
   import { login, saveSession, getInstance } from "../lib/api";
   import AuthShell from "../lib/AuthShell.svelte";
+  import { t } from "../lib/i18n";
   import { AlertTriangle, Eye, EyeOff } from "lucide-svelte";
   import { onMount } from "svelte";
 
@@ -34,7 +35,7 @@
 
   let identityError = $derived(
     identityTouched && identity.trim() === ""
-      ? "Enter your username or email."
+      ? t("auth.login.identityRequired")
       : "",
   );
 
@@ -82,8 +83,8 @@
   {host}
   {instanceName}
   {loginMessage}
-  title="Welcome back."
-  subtitle="Sign in to continue on this instance."
+  title={t("auth.login.title")}
+  subtitle={t("auth.login.subtitle")}
   mascotSrc="/LizzyReading.png"
   mascotW={487}
   mascotH={714}
@@ -109,7 +110,7 @@
         for="login-identity"
         class="text-micro font-semibold uppercase tracking-widest text-[var(--text-faint)]"
       >
-        Username or email
+        {t("auth.login.identity")}
       </label>
       <input
         id="login-identity"
@@ -138,7 +139,7 @@
         for="login-password"
         class="text-micro font-semibold uppercase tracking-widest text-[var(--text-faint)]"
       >
-        Password
+        {t("auth.login.password")}
       </label>
       <div class="relative">
         <input
@@ -153,8 +154,8 @@
           type="button"
           onclick={() => (showPassword = !showPassword)}
           aria-pressed={showPassword}
-          aria-label={showPassword ? "Hide password" : "Show password"}
-          title={showPassword ? "Hide password" : "Show password"}
+          aria-label={showPassword ? t("auth.password.hide") : t("auth.password.show")}
+          title={showPassword ? t("auth.password.hide") : t("auth.password.show")}
           class="absolute inset-y-0 right-0 flex items-center px-3 text-[var(--text-faint)]
                  hover:text-[var(--text-muted)] transition-colors
                  focus-visible:outline-none focus-visible:text-[var(--accent)]"
@@ -179,7 +180,7 @@
              focus-visible:ring-2 focus-visible:ring-[var(--btn-success)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]
              disabled:opacity-55 disabled:cursor-not-allowed disabled:hover:bg-[var(--btn-success)]"
     >
-      {loading ? "Signing in…" : "Sign in"}
+      {loading ? t("auth.login.submitting") : t("auth.login.submit")}
     </button>
   </form>
 </AuthShell>

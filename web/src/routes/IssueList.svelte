@@ -1,17 +1,19 @@
 <script lang="ts">
+  import { t } from "../lib/i18n";
   import {
     listProjects,
     listModules,
     listLabels,
     updateIssue,
     createIssue,
+    parkIssue,
     type IssueStatusCounts,
     type Issue,
     type Project,
     type Module,
     type Label,
   } from "../lib/api";
-  import { Plus, ChevronRight, Layers, PanelLeftClose, PanelLeftOpen } from "lucide-svelte";
+  import { Plus, ChevronRight, Layers, PanelLeftClose, PanelLeftOpen, Hourglass } from "lucide-svelte";
   import Tooltip from "../lib/Tooltip.svelte";
   import PriorityIcon from "../lib/PriorityIcon.svelte";
   import StatusIcon from "../lib/StatusIcon.svelte";
@@ -19,7 +21,7 @@
   import Mascot from "../lib/Mascot.svelte";
   import ErrorState from "../lib/ErrorState.svelte";
   import Skeleton from "../lib/Skeleton.svelte";
-  import { dndzone, type DndEvent } from "svelte-dnd-action";
+  import { dndzone, TRIGGERS, type DndEvent } from "svelte-dnd-action";
   import { flip } from "svelte/animate";
   import { slide } from "svelte/transition";
   import { motionReduced } from "../lib/theme";
@@ -38,7 +40,7 @@
   import { compareIssues as compareIssuesPure } from "../lib/issues/sort";
   import { computeSearchResult, RESULT_CAP } from "../lib/issues/search";
   import {
-    STATUSES, PRIORITIES, buildGroups,
+    STATUSES, PRIORITIES, buildGroups, statusLabel, statusWord,
     buildLanes, laneKeyForIssue,
   } from "../lib/issues/grouping";
   import { applyIssueFilters, statusFilterSet } from "../lib/issues/filters";
@@ -68,6 +70,8 @@
     prevPatchFor,
   } from "../lib/issues/state.svelte"; // LIF-243: undo layer
   import { scheduleDelete } from "../lib/issues/deferredDelete.svelte"; // LIF-283
+  import { canPark } from "../lib/issues/parked"; // fork
+  import { parkWithUndo, unparkWithUndo } from "../lib/issues/parkActions"; // fork
   import {
     assigneesIn,
     assignmentNames,
@@ -94,12 +98,16 @@
     navigate,
     projectIdentifier,
     layout = "list",
+    parkedMode = false,
   }: {
     navigate: (path: string) => void;
     projectIdentifier: string;
     /** Render mode. Both modes share data loading, filters, sort, and
      *  topbar; only the body below the chrome differs. */
     layout?: "list" | "board";
+    /** Fork: Parked mode (`/{PROJECT}/parked`): only parked issues, with
+     *  actions that bring them back. Elsewhere parked issues are left out. */
+    parkedMode?: boolean;
   } = $props();
 
   let project = $state<Project | null>(null);
@@ -144,11 +152,17 @@
     if (!m) return;
     const rows = m.issueList;
     const removed = locallyRemoved;
+    const wantParked = parkedMode;
     if (dragActive || mutationsInFlight > 0) return;
     issues = rows
-      .filter((row) => !removed.has(row.id))
+      .filter((row) => !removed.has(row.id) && !!row.parked === wantParked)
       .map((row) => toIssue(row, m.projectId));
   });
+
+  /** Fork: parked issues in this project, for the mode switch's badge. */
+  let parkedCount = $derived(
+    model && !model.coldStart ? model.issueList.filter((row) => !!row.parked).length : null,
+  );
 
   /** Cold start = nothing to show and nothing shown before. A warm project
    *  never sets this, so switching between the list and the board (or
@@ -211,6 +225,12 @@
   // the appearance system's motion preference takes effect on the very
   // next reorder — same call-fresh pattern as Toaster/PeekPanel's
   // enterParams()/panelInParams().
+  // Fork: on touch screens a card only picks up after a still press of this
+  // long. Moving the finger sooner scrolls the column or the board instead,
+  // which an immediate drag start made impossible. Mouse drags are untouched
+  // (svelte-dnd-action applies the delay to touch events only).
+  const TOUCH_DRAG_DELAY_MS = 350;
+
   function flipMs(): number {
     return motionReduced() ? 0 : 150;
   }
@@ -362,7 +382,7 @@
         (p: Project) => p.identifier.toLowerCase() === identifier.toLowerCase()
       );
       if (!found) {
-        error = `Project ${identifier} not found`;
+        error = t("issueNew.projectNotFound", { project: identifier });
         projectLoading = false;
         return;
       }
@@ -525,7 +545,7 @@
   // This slice is list-only: Recent intentionally overrides only its rendered
   // order/grouping, never the user's persisted sort or group preferences.
   let subTabIssues = $derived.by(() => {
-    switch (view.issueSubTab) {
+    switch (parkedMode ? "all" : view.issueSubTab) {
       case "recent":
         return [...sortedIssues]
           .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
@@ -548,7 +568,7 @@
   // lib/issues/grouping.ts). Returns ordered groups for the active
   // `groupBy`, or null when the view should render flat.
   let groups = $derived(
-    view.issueSubTab === "recent"
+    view.issueSubTab === "recent" && !parkedMode
       ? null
       : buildGroups({
           sortedIssues: subTabIssues,
@@ -583,9 +603,9 @@
     const narrowed =
       view.hasActiveFilters() ||
       !!view.searchQuery.trim() ||
-      (layout === "list" && view.issueSubTab !== "all");
+      (layout === "list" && !parkedMode && view.issueSubTab !== "all");
     return narrowed && shown !== total
-      ? `${shown} of ${total}`
+      ? t("issueList.countOf", { shown, total })
       : String(total);
   });
 
@@ -648,6 +668,11 @@
   ) {
     // A drag is in progress — veto auto-refresh until finalize.
     dragActive = true;
+    // The long press landed: a short buzz tells a touch user the card is
+    // now held (no-op where vibration is unsupported, e.g. iOS Safari).
+    if (e.detail.info.trigger === TRIGGERS.DRAG_STARTED && window.matchMedia?.("(pointer: coarse)").matches) {
+      navigator.vibrate?.(10);
+    }
     boardItems[cellKey(laneKey, status)] = e.detail.items as Issue[];
   }
 
@@ -804,7 +829,7 @@
       link.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (e) {
-      bulkError = e instanceof Error ? e.message : "Could not export selected issues. Try again.";
+      bulkError = e instanceof Error ? e.message : t("issueList.exportFailed");
     } finally {
       bulkBusy = false;
     }
@@ -1517,12 +1542,53 @@
       title: inlineCreateTitle.trim(),
       status: inlineCreateStatus,
     });
+    if (res.ok && parkedMode) {
+      // Fork: in Parked mode a new issue is an idea: park it and stay,
+      // ready for the next one.
+      const parked = await trackMutation(parkIssue(res.data.id));
+      inlineCreateSaving = false;
+      if (!parked.ok) {
+        navigate(`/${projectIdentifier}/issues/${res.data.identifier}`);
+        return;
+      }
+      inlineCreateTitle = "";
+      requestAnimationFrame(() => inlineCreateTitleEl?.focus());
+      return;
+    }
     inlineCreateSaving = false;
     if (res.ok) {
       inlineCreateActive = false;
       inlineCreateTitle = "";
       navigate(`/${projectIdentifier}/issues/${res.data.identifier}`);
     }
+  }
+
+  // ── Fork: parked issues ───────────────────────────────
+  function selectedIssues(): Issue[] {
+    return issues.filter((i) => view.selectedIds.has(i.id));
+  }
+
+  async function bulkPark(reason: string) {
+    if (bulkBusy || view.selectedIds.size === 0) return;
+    bulkBusy = true;
+    bulkMenu = null;
+    const targets = selectedIssues().filter(canPark);
+    const ok = await trackMutation(parkWithUndo(targets, reason, reconcile));
+    bulkBusy = false;
+    if (ok) clearSelection();
+  }
+
+  async function bulkUnpark() {
+    if (bulkBusy || view.selectedIds.size === 0) return;
+    bulkBusy = true;
+    bulkMenu = null;
+    const ok = await trackMutation(unparkWithUndo(selectedIssues(), reconcile));
+    bulkBusy = false;
+    if (ok) clearSelection();
+  }
+
+  async function unparkOne(issue: Issue) {
+    await trackMutation(unparkWithUndo([issue], reconcile));
   }
 
   // ── Row interaction handlers (fed to <IssueRow> as callbacks) ─────────
@@ -1677,6 +1743,8 @@
     {view}
     {projectIdentifier}
     {layout}
+    {parkedMode}
+    {parkedCount}
     {navigate}
     {canEdit}
     {statusCounts}
@@ -1720,7 +1788,7 @@
         class="text-micro font-semibold uppercase tracking-widest
                text-[var(--text-faint)]"
       >
-        Columns
+        {t("issueList.board.columns")}
       </span>
       <div
         class="flex items-center gap-0.5 p-0.5 rounded-md
@@ -1730,7 +1798,7 @@
           {@const visible = !view.hiddenStatuses.has(status)}
           {@const count = sortedIssues.filter((i) => i.status === status).length}
           <Tooltip
-            content={`${visible ? "Hide" : "Show"} ${status[0].toUpperCase() + status.slice(1)}`}
+            content={visible ? t("issueList.board.hideColumn", { status: statusLabel(status) }) : t("issueList.board.showColumn", { status: statusLabel(status) })}
             placement="bottom"
           >
             <button
@@ -1743,7 +1811,7 @@
               onclick={() => view.toggleStatusVisibility(projectIdentifier, status)}
             >
               <StatusIcon status={status} size={12} />
-              <span class="capitalize">{status}</span>
+              <span>{statusLabel(status)}</span>
               <span
                 class="tabular-nums text-micro
                        {visible
@@ -1810,18 +1878,18 @@
       </div>
     {:else if error}
       <div class="flex-1 flex items-center justify-center">
-        <ErrorState title="Couldn't load this board" message={error}>
+        <ErrorState title={t("issueList.board.loadFailed")} message={error}>
           <button
             class="text-body-sm font-medium text-[var(--btn-success-text)] bg-[var(--btn-success)] px-3 py-1.5 rounded-md hover:bg-[var(--btn-success-hover)] transition-colors"
             onclick={() => loadProject(projectIdentifier)}
           >
-            Try again
+            {t("common.retry")}
           </button>
           <button
             class="text-body-sm text-[var(--text-muted)] border border-[var(--border)] px-3 py-1.5 rounded-md hover:bg-[var(--bg-subtle)] transition-colors"
             onclick={() => navigate(`/${projectIdentifier}/overview`)}
           >
-            Project overview
+            {t("issueList.projectOverview")}
           </button>
         </ErrorState>
       </div>
@@ -1855,6 +1923,7 @@
                 flipDurationMs: flipMs(),
                 type: "lific-issues",
                 dragDisabled: !canEdit,
+                delayTouchStart: TOUCH_DRAG_DELAY_MS,
                 dropTargetStyle: {
                   outline: "2px dashed var(--accent)",
                   outlineOffset: "-4px",
@@ -1869,7 +1938,7 @@
               {/each}
             </div>
             <div class="pointer-events-none absolute inset-0 flex flex-col items-center pt-2.5 pb-3 gap-2">
-              <Tooltip content="Expand {status} column" placement="right">
+              <Tooltip content={t("issueList.board.expandColumn", { status: statusWord(status) })} placement="right">
                 <button
                   class="pointer-events-auto size-5 flex items-center justify-center rounded
                          text-[var(--text-faint)] hover:text-[var(--text)]
@@ -1884,7 +1953,7 @@
                 class="flex-1 text-caption font-semibold uppercase tracking-widest text-[var(--text-muted)]"
                 style="writing-mode: vertical-rl; transform: rotate(180deg);"
               >
-                {status}
+                {statusLabel(status)}
               </span>
               <span class="text-micro text-[var(--text-faint)] tabular-nums">{colIssues.length}</span>
             </div>
@@ -1899,13 +1968,13 @@
                 class="text-caption font-semibold uppercase tracking-widest
                        text-[var(--text-muted)]"
               >
-                {status}
+                {statusLabel(status)}
               </span>
               <span class="text-caption text-[var(--text-faint)] tabular-nums">
                 {colIssues.length}
               </span>
               <div class="flex-1"></div>
-              <Tooltip content="Collapse column" placement="bottom">
+              <Tooltip content={t("issueList.board.collapseColumn")} placement="bottom">
                 <button
                   class="size-5 flex items-center justify-center rounded
                          text-[var(--text-faint)] hover:text-[var(--text)]
@@ -1916,7 +1985,7 @@
                 </button>
               </Tooltip>
               {#if canEdit}
-                <Tooltip content="New {status} issue" placement="bottom">
+                <Tooltip content={t("issueList.board.newInColumn", { status: statusWord(status) })} placement="bottom">
                   <button
                     class="touch-target size-5 flex items-center justify-center rounded
                            text-[var(--text-faint)] hover:text-[var(--accent)]
@@ -1947,7 +2016,7 @@
                 >
                   <Mascot src="/LizzySleep2.png" nativeW={1000} nativeH={420} scale={0.1} />
                   <span class="text-caption text-[var(--text-faint)]">
-                    All quiet
+                    {t("issueList.board.emptyColumn")}
                   </span>
                 </div>
               {/if}
@@ -1962,6 +2031,7 @@
                   flipDurationMs: flipMs(),
                   type: "lific-issues",
                   dragDisabled: !canEdit,
+                  delayTouchStart: TOUCH_DRAG_DELAY_MS,
                   dropTargetStyle: {
                     outline: "2px dashed var(--accent)",
                     outlineOffset: "-4px",
@@ -1975,7 +2045,7 @@
                 <!-- Wrapper carries animate:flip (svelte-dnd-action animates
                      each direct zone child) and is the draggable item; the
                      visual card lives in IssueCard. -->
-                <div animate:flip={{ duration: flipMs() }}>
+                <div class="board-card-touch" animate:flip={{ duration: flipMs() }}>
                   <IssueCard
                     {issue}
                     {labels}
@@ -2060,6 +2130,17 @@
 {:else}
 
 <div class="h-full flex flex-col">
+  <!-- Fork: Parked mode explains itself; the tint marks the mode. -->
+  {#if parkedMode}
+    <div
+      class="shrink-0 flex items-start gap-2.5 px-6 py-2.5 border-b border-[var(--border)]
+             bg-[var(--bg-subtle)] text-body-sm text-[var(--text-muted)]"
+      data-testid="parked-banner"
+    >
+      <Hourglass size={15} class="shrink-0 mt-0.5 text-[var(--text-faint)]" />
+      <p class="min-w-0">{t("parked.banner")}</p>
+    </div>
+  {/if}
   <!-- Inline create row (sticky above scrollable list) -->
   {#if inlineCreateActive}
       <div
@@ -2072,7 +2153,7 @@
           <button
             class="size-4 flex items-center justify-center transition-colors
                    hover:text-[var(--accent)]"
-            title="Set status"
+            title={t("issueList.inline.setStatus")}
             onclick={(e) => { e.stopPropagation(); inlineCreateStatusOpen = !inlineCreateStatusOpen; }}
           >
             <StatusIcon status={inlineCreateStatus} size={16} />
@@ -2100,7 +2181,7 @@
                   onmouseenter={() => { view.inlineCreateStatusIdx = si; }}
                 >
                   <StatusIcon status={s} size={14} />
-                  {s}
+                  {statusWord(s)}
                 </button>
               {/each}
             </div>
@@ -2117,7 +2198,7 @@
           bind:value={inlineCreateTitle}
           class="flex-1 text-body bg-transparent text-[var(--text)]
                  placeholder:text-[var(--text-faint)] outline-none border-none"
-          placeholder="Issue title..."
+          placeholder={t("issueList.inline.titlePlaceholder")}
           autofocus={!inlineCreateStatusOpen}
           disabled={inlineCreateSaving}
           onkeydown={(e) => {
@@ -2144,7 +2225,7 @@
           }}
         />
         {#if inlineCreateSaving}
-          <span class="text-caption text-[var(--text-faint)]">Creating...</span>
+          <span class="text-caption text-[var(--text-faint)]">{t("issueNew.creating")}</span>
         {/if}
       </div>
   {/if}
@@ -2204,35 +2285,41 @@
         {/each}
       </div>
     {:else if error}
-      <ErrorState title="Couldn't load issues" message={error}>
+      <ErrorState title={t("issueList.loadFailed")} message={error}>
         <button
           class="text-body-sm font-medium text-[var(--btn-success-text)] bg-[var(--btn-success)] px-3 py-1.5 rounded-md hover:bg-[var(--btn-success-hover)] transition-colors"
           onclick={() => loadProject(projectIdentifier)}
         >
-          Try again
+          {t("common.retry")}
         </button>
         <button
           class="text-body-sm text-[var(--text-muted)] border border-[var(--border)] px-3 py-1.5 rounded-md hover:bg-[var(--bg-subtle)] transition-colors"
           onclick={() => navigate(`/${projectIdentifier}/overview`)}
         >
-          Project overview
+          {t("issueList.projectOverview")}
         </button>
       </ErrorState>
     {:else if subTabIssues.length === 0}
-      {#if view.hasActiveFilters() || view.searchQuery || view.issueSubTab !== "all"}
+      {#if parkedMode && !view.hasActiveFilters() && !view.searchQuery}
+        <div class="flex flex-col items-center justify-center py-20 gap-3 text-center px-6" data-testid="parked-empty">
+          <Mascot src="/LizzySleep2.png" nativeW={1000} nativeH={420} scale={0.2} />
+          <p class="text-[var(--text)] text-heading font-medium">{t("parked.empty.title")}</p>
+          <p class="text-[var(--text-muted)] text-body max-w-md">{t("parked.empty.body")}</p>
+        </div>
+      {:else if view.hasActiveFilters() || view.searchQuery || view.issueSubTab !== "all"}
         <!-- Filtered-empty: work exists, it's just hidden behind a
              filter/search, so we keep the recovery affordance. -->
         <div class="flex flex-col items-center justify-center py-20 gap-3">
           <Mascot src="/LizzySleep2.png" nativeW={1000} nativeH={420} scale={0.16} />
           <p class="text-[var(--text-muted)] text-body-lg">
-            No issues match your filters
+            {t("issueList.empty.filtered")}
           </p>
           <button
             class="text-body-sm text-[var(--accent)]
                    hover:underline transition-colors"
           onclick={() => view.clearFilters()}
           >
-            Clear filters
+            {t("issueList.empty.clearFilters")}
           </button>
         </div>
       {:else if !inlineCreateActive}
@@ -2242,10 +2329,10 @@
           <Mascot src="/LizzySleep2.png" nativeW={1000} nativeH={420} scale={0.25} />
           <div class="flex flex-col items-center gap-1.5 text-center">
             <p class="text-[var(--text)] text-heading font-medium">
-              All quiet here
+              {t("issueList.empty.title")}
             </p>
             <p class="text-[var(--text-muted)] text-body">
-              No work on the board. Time for a nap… or a fresh idea.
+              {t("issueList.empty.body")}
             </p>
           </div>
           {#if canEdit}
@@ -2257,7 +2344,7 @@
               onclick={startInlineCreateFromEmpty}
             >
               <Plus size={15} />
-              Create an issue
+              {t("issueList.empty.create")}
             </button>
           {/if}
         </div>
@@ -2267,7 +2354,7 @@
            orders by relevance; Recent orders by most recently updated. -->
       {#if view.searchQuery.trim() && view.issueSubTab === "all" && subTabIssues.length === RESULT_CAP}
         <div class="text-micro text-[var(--text-faint)] uppercase tracking-widest font-semibold px-6 py-2 border-b border-[var(--border)] bg-[var(--surface)]">
-          Top {RESULT_CAP} matches — narrow the query for fewer results
+          {t("issueList.search.capped", { count: RESULT_CAP })}
         </div>
       {/if}
       {#each subTabIssues as issue, i (issue.id)}
@@ -2348,6 +2435,9 @@
       onUpdate={bulkUpdate}
       onAddLabel={bulkAddLabel}
       onDelete={bulkDelete}
+      {parkedMode}
+      onPark={bulkPark}
+      onUnpark={bulkUnpark}
       onExport={bulkExport}
       onClear={clearSelection}
     />
@@ -2386,6 +2476,7 @@
     isSelected={view.selectedIds.has(issue.id)}
     isChanged={changedIds.has(issue.id)}
     hitSnippet={issueSearchScores.get(issue.id)?.snippet ?? null}
+    onUnpark={parkedMode ? unparkOne : undefined}
     statusOpen={view.statusDropdownId === issue.id}
     priorityOpen={view.priorityDropdownId === issue.id}
     moduleOpen={view.moduleDropdownId === issue.id}

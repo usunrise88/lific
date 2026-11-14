@@ -15,6 +15,7 @@
   import { copyToClipboard } from "../../clipboard";
   import { parseUnifiedDiff, summarizeDiff, type DiffFile } from "./diff";
   import { MAX_INLINE_BYTES } from "./kind";
+  import { t } from "../../i18n";
 
   let {
     id,
@@ -42,7 +43,7 @@
       return;
     }
     if (res.text.length > MAX_INLINE_BYTES) {
-      loadError = "This patch is too large to preview inline.";
+      loadError = t("viewers.diff.tooLarge");
       return;
     }
     text = res.text;
@@ -71,7 +72,7 @@
   });
 
   function fileStat(file: DiffFile): string {
-    if (file.binary) return "binary";
+    if (file.binary) return t("viewers.diff.binary");
     return `+${file.additions} -${file.deletions}`;
   }
 </script>
@@ -85,8 +86,8 @@
         <button
           type="button"
           class="vf__btn"
-          title="Copy raw diff"
-          aria-label="Copy raw diff"
+          title={t("viewers.diff.copy")}
+          aria-label={t("viewers.diff.copy")}
           onclick={() => void copyToClipboard(text ?? "", { label: filename })}
         >
           <Copy size={13} />
@@ -100,14 +101,14 @@
           if (expanded) void load();
         }}
       >
-        {expanded ? "Collapse" : "Expand"}
+        {expanded ? t("viewers.collapse") : t("viewers.expand")}
       </button>
     {/snippet}
 
     {#if loadError}
       <p class="dv__note">{loadError}</p>
     {:else if text === null}
-      <p class="dv__note">{loading ? "Loading patch..." : "Preview not loaded yet."}</p>
+      <p class="dv__note">{loading ? t("viewers.diff.loading") : t("viewers.notLoaded")}</p>
     {:else if !expanded}
       <div class="dv__files">
         {#each parsed?.files ?? [] as file, i (i)}
@@ -141,9 +142,9 @@
         {/each}
         {#if overBudget}
           <div class="dv__gap">
-            <span>Showing the first {ROW_BUDGET} of {totalRows} lines.</span>
+            <span>{t("viewers.diff.truncated", { shown: ROW_BUDGET, count: totalRows })}</span>
             <button type="button" class="dv__more" onclick={() => (showAll = true)}>
-              Show the whole patch
+              {t("viewers.diff.showAll")}
             </button>
           </div>
         {/if}

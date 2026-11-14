@@ -23,6 +23,7 @@
   import { FileText, RotateCw, X, AlertCircle, Scaling } from "lucide-svelte";
   import AltTextInput from "./AltTextInput.svelte";
   import type { PendingUpload, UploadController } from "./uploads.svelte";
+  import { t } from "../i18n";
 
   let { controller }: { controller: UploadController } = $props();
 
@@ -34,21 +35,21 @@
   function offerLabel(item: PendingUpload): string {
     const offer = item.offer;
     if (!offer) return "";
-    return `Resize to ${offer.targetEdge}px (~${formatBytes(offer.estimatedBytes)})`;
+    return t("attachments.pending.resize", { edge: offer.targetEdge, size: formatBytes(offer.estimatedBytes) });
   }
 
   function offerReason(item: PendingUpload): string {
     const offer = item.offer;
     if (!offer) return "";
     if (offer.reason === "size") {
-      return `${formatBytes(item.size)} is close to this server's limit.`;
+      return t("attachments.pending.nearLimit", { size: formatBytes(item.size) });
     }
-    return `${formatBytes(item.size)}, larger than most screens can show.`;
+    return t("attachments.pending.tooLarge", { size: formatBytes(item.size) });
   }
 </script>
 
 {#if controller.items.length > 0}
-  <ul class="pu" aria-label="Pending uploads">
+  <ul class="pu" aria-label={t("attachments.pending.label")}>
     {#each controller.items as item (item.id)}
       <li
         class="pu__chip"
@@ -70,7 +71,7 @@
                 <Scaling size={12} />
               </span>
             {:else if item.status !== "alt"}
-              <span class="pu__spinner" aria-label="Uploading"></span>
+              <span class="pu__spinner" aria-label={t("attachments.pending.uploading")}></span>
             {/if}
           </span>
 
@@ -85,16 +86,16 @@
             <span class="pu__body">
               <span class="pu__name" title={item.filename}>{item.filename}</span>
               {#if item.status === "error"}
-                <span class="pu__err" title={item.error ?? "Upload failed"}>
-                  {item.error ?? "Upload failed"}
+                <span class="pu__err" title={item.error ?? t("attachments.pending.failed")}>
+                  {item.error ?? t("attachments.pending.failed")}
                 </span>
               {:else if item.status === "offer"}
                 <span class="pu__size">{offerReason(item)}</span>
               {:else if item.status === "queued"}
-                <span class="pu__size">Queued · {formatBytes(item.size)}</span>
+                <span class="pu__size">{t("attachments.pending.queued", { size: formatBytes(item.size) })}</span>
               {:else}
                 <span class="pu__size">
-                  {formatBytes(item.loaded)} of {formatBytes(item.total)}
+                  {t("attachments.pending.progress", { loaded: formatBytes(item.loaded), total: formatBytes(item.total) })}
                 </span>
               {/if}
             </span>
@@ -104,8 +105,8 @@
                 <button
                   type="button"
                   class="pu__act"
-                  title="Retry upload"
-                  aria-label="Retry upload"
+                  title={t("attachments.pending.retry")}
+                  aria-label={t("attachments.pending.retry")}
                   onclick={() => controller.retry(item.id)}
                 >
                   <RotateCw size={13} />
@@ -113,8 +114,8 @@
                 <button
                   type="button"
                   class="pu__act"
-                  title="Dismiss"
-                  aria-label="Dismiss"
+                  title={t("attachments.pending.dismiss")}
+                  aria-label={t("attachments.pending.dismiss")}
                   onclick={() => controller.dismiss(item.id)}
                 >
                   <X size={13} />
@@ -123,8 +124,8 @@
                 <button
                   type="button"
                   class="pu__act"
-                  title="Cancel upload"
-                  aria-label={`Cancel upload of ${item.filename}`}
+                  title={t("attachments.pending.cancel")}
+                  aria-label={t("attachments.pending.cancelFile", { name: item.filename })}
                   onclick={() => controller.cancel(item.id)}
                 >
                   <X size={13} />
@@ -138,7 +139,7 @@
           <div
             class="pu__track"
             role="progressbar"
-            aria-label={`Uploading ${item.filename}`}
+            aria-label={t("attachments.pending.uploadingFile", { name: item.filename })}
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={percent(item)}
@@ -161,13 +162,13 @@
               class="pu__choice-btn"
               onclick={() => controller.keepOriginal(item.id)}
             >
-              Upload original
+              {t("attachments.pending.original")}
             </button>
             <button
               type="button"
               class="pu__act pu__choice-cancel"
-              title="Cancel upload"
-              aria-label={`Cancel upload of ${item.filename}`}
+              title={t("attachments.pending.cancel")}
+              aria-label={t("attachments.pending.cancelFile", { name: item.filename })}
               onclick={() => controller.cancel(item.id)}
             >
               <X size={13} />

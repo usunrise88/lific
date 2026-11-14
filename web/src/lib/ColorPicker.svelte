@@ -12,6 +12,7 @@
     normalizeHex,
     safeLabelColor,
   } from "./labelColors";
+  import { t } from "./i18n";
 
   let {
     value,
@@ -65,7 +66,7 @@
            shadow-sm transition-transform hover:scale-105
            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
     style="width: {size}px; height: {size}px; background: {displayValue}"
-    aria-label="Color: {colorName(displayValue)}. Click to change."
+    aria-label={t("pickers.color.triggerLabel", { name: colorName(displayValue) })}
     title="{colorName(displayValue)} · {displayValue}"
     onclick={toggle}
   ></button>
@@ -104,7 +105,7 @@
           bind:value={hexDraft}
           spellcheck="false"
           maxlength="7"
-          placeholder="hex"
+          placeholder={t("pickers.color.hexPlaceholder")}
           class="flex-1 min-w-0 px-1.5 py-1 text-body-sm font-mono rounded
                  border bg-[var(--bg)] text-[var(--text)] outline-none
                  focus:border-[var(--accent)]
@@ -122,7 +123,7 @@
                  hover:bg-[var(--border)] transition-colors"
           onclick={commitHex}
         >
-          Set
+          {t("pickers.color.set")}
         </button>
       </div>
     </div>

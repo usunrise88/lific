@@ -3,6 +3,7 @@
   import { Icon as LucideIcon, type IconNode } from "lucide-svelte";
   import emojiData from "unicode-emoji-json";
   import ProjectIcon from "./ProjectIcon.svelte";
+  import { t, formatNumber } from "./i18n";
 
   let {
     value = "",
@@ -155,7 +156,7 @@
            flex items-center justify-center text-title
            hover:border-[var(--accent)] transition-colors"
     onclick={toggle}
-    title="Choose icon"
+    title={t("pickers.icon.choose")}
   >
     {#if value}
       <ProjectIcon {value} size={20} class="text-[var(--text)]" />
@@ -187,7 +188,7 @@
             : 'text-[var(--text-muted)] hover:text-[var(--text)]'}"
           onclick={() => { tab = "icons"; }}
         >
-          Icons
+          {t("pickers.icon.tabIcons")}
         </button>
         <button
           class="flex-1 text-body-sm py-2 transition-colors
@@ -196,7 +197,7 @@
             : 'text-[var(--text-muted)] hover:text-[var(--text)]'}"
           onclick={() => { tab = "emoji"; }}
         >
-          Emoji
+          {t("pickers.icon.tabEmoji")}
         </button>
       </div>
 
@@ -210,7 +211,9 @@
                  border border-[var(--border)] bg-[var(--bg)]
                  text-[var(--text)] placeholder:text-[var(--text-faint)]
                  outline-none focus:border-[var(--accent)]"
-          placeholder={tab === "icons" ? "Search 1,900+ icons..." : "Search emojis..."}
+          placeholder={tab === "icons"
+            ? t("pickers.icon.searchIcons", { n: formatNumber(1900) })
+            : t("pickers.icon.searchEmoji")}
         />
       </div>
 
@@ -224,7 +227,7 @@
         {#if tab === "icons"}
           {#if filteredIcons.length === 0}
             <p class="text-body-sm text-[var(--text-faint)] text-center py-4">
-              No icons match "{search}"
+              {t("pickers.icon.noIcons", { query: search })}
             </p>
           {:else if iconVirt.needsVirt}
             <!-- Virtualized: large result set -->
@@ -271,7 +274,7 @@
         {:else}
           {#if filteredEmojis.length === 0}
             <p class="text-body-sm text-[var(--text-faint)] text-center py-4">
-              No emojis match "{search}"
+              {t("pickers.icon.noEmoji", { query: search })}
             </p>
           {:else if emojiVirt.needsVirt}
             <!-- Virtualized: full emoji set -->
@@ -320,7 +323,7 @@
                    rounded-md hover:bg-[var(--bg-subtle)] transition-colors"
             onclick={() => select("")}
           >
-            Remove icon
+            {t("pickers.icon.remove")}
           </button>
         </div>
       {/if}

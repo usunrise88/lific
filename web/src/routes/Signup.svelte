@@ -1,6 +1,7 @@
 <script lang="ts">
   import { signup, saveSession, getInstance } from "../lib/api";
   import AuthShell from "../lib/AuthShell.svelte";
+  import { t } from "../lib/i18n";
   import StatusIcon, { statusCssColor } from "../lib/StatusIcon.svelte";
   import { AlertTriangle, Eye, EyeOff, Check, Lock } from "lucide-svelte";
   import { onMount } from "svelte";
@@ -53,14 +54,14 @@
   const fresh = $derived(allowSignup && !hasUsers);
 
   const title = $derived(
-    closed ? "Signups are closed." : fresh ? "Be the first." : "Create your account.",
+    closed ? t("auth.signup.closed.title") : fresh ? t("auth.signup.fresh.title") : t("auth.signup.title"),
   );
   const subtitle = $derived(
     closed
-      ? "This instance is not accepting new accounts right now."
+      ? t("auth.signup.closed.subtitle")
       : fresh
-        ? "No one has an account on this instance yet. Create the first one to get started."
-        : "Join this instance and start tracking work.",
+        ? t("auth.signup.fresh.subtitle")
+        : t("auth.signup.subtitle"),
   );
 
   // ── Getting started, as real Lific issue rows ──
@@ -69,9 +70,9 @@
   // way the app changes an issue's status, then we navigate in.
   let accountDone = $state(false);
   const steps = $derived([
-    { title: "Create your account", status: accountDone ? "done" : "active" },
-    { title: "Start your first project", status: "todo" },
-    { title: "Connect your AI tools", status: "backlog" },
+    { title: t("auth.signup.steps.account"), status: accountDone ? "done" : "active" },
+    { title: t("auth.signup.steps.project"), status: "todo" },
+    { title: t("auth.signup.steps.tools"), status: "backlog" },
   ]);
 
   // ── Validation ──
@@ -83,33 +84,33 @@
   // The 8-char minimum mirrors the server exactly; the others nudge toward a
   // stronger secret without blocking submit.
   const reqs = $derived([
-    { label: "At least 8 characters", met: password.length >= 8 },
-    { label: "A lowercase and uppercase letter", met: /[a-z]/.test(password) && /[A-Z]/.test(password) },
-    { label: "A number or symbol", met: /[\d\W]/.test(password) },
+    { label: t("auth.signup.password.length"), met: password.length >= 8 },
+    { label: t("auth.signup.password.case"), met: /[a-z]/.test(password) && /[A-Z]/.test(password) },
+    { label: t("auth.signup.password.symbol"), met: /[\d\W]/.test(password) },
   ]);
   const metCount = $derived(reqs.filter((r) => r.met).length);
   const passwordOk = $derived(password.length >= 8);
 
   const strength = $derived(
     metCount <= 1
-      ? { label: "Weak", color: "var(--strength-weak)", segments: 1 }
+      ? { label: t("auth.signup.strength.weak"), color: "var(--strength-weak)", segments: 1 }
       : metCount === 2
-        ? { label: "Fair", color: "var(--strength-fair)", segments: 2 }
-        : { label: "Strong", color: "var(--strength-strong)", segments: 3 },
+        ? { label: t("auth.signup.strength.fair"), color: "var(--strength-fair)", segments: 2 }
+        : { label: t("auth.signup.strength.strong"), color: "var(--strength-strong)", segments: 3 },
   );
 
   const usernameError = $derived(
     usernameTouched && username.trim() !== "" && !usernameOk
-      ? "Use at least 2 letters, numbers, dashes or underscores."
+      ? t("auth.signup.username.invalid")
       : usernameTouched && username.trim() === ""
-        ? "Pick a username."
+        ? t("auth.signup.username.required")
         : "",
   );
   const emailError = $derived(
     emailTouched && email !== "" && !emailOk
-      ? "That does not look like an email address."
+      ? t("auth.signup.email.invalid")
       : emailTouched && email === ""
-        ? "Enter your email."
+        ? t("auth.signup.email.required")
         : "",
   );
 
@@ -160,8 +161,7 @@
       <div class="flex items-start gap-2.5 text-body-sm text-[var(--text-muted)] bg-[var(--bg-subtle)] px-3.5 py-3 rounded-lg">
         <Lock size={15} class="shrink-0 mt-0.5" />
         <span>
-          New accounts on this instance are created by whoever runs it. Ask them to
-          add you, then come back and sign in.
+          {t("auth.signup.closed.body")}
         </span>
       </div>
       <button
@@ -172,7 +172,7 @@
                hover:bg-[var(--btn-success-hover)] motion-safe:active:scale-[0.98]
                focus-visible:ring-2 focus-visible:ring-[var(--btn-success)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
       >
-        Go to sign in
+        {t("auth.signup.closed.goToSignIn")}
       </button>
     </div>
   {:else}
@@ -196,7 +196,7 @@
           for="signup-username"
           class="text-micro font-semibold uppercase tracking-widest text-[var(--text-faint)]"
         >
-          Username
+          {t("auth.signup.username")}
         </label>
         <input
           id="signup-username"
@@ -225,7 +225,7 @@
           for="signup-email"
           class="text-micro font-semibold uppercase tracking-widest text-[var(--text-faint)]"
         >
-          Email
+          {t("auth.signup.email")}
         </label>
         <input
           id="signup-email"
@@ -254,7 +254,7 @@
           for="signup-password"
           class="text-micro font-semibold uppercase tracking-widest text-[var(--text-faint)]"
         >
-          Password
+          {t("auth.login.password")}
         </label>
         <div class="relative">
           <input
@@ -271,8 +271,8 @@
             type="button"
             onclick={() => (showPassword = !showPassword)}
             aria-pressed={showPassword}
-            aria-label={showPassword ? "Hide password" : "Show password"}
-            title={showPassword ? "Hide password" : "Show password"}
+            aria-label={showPassword ? t("auth.password.hide") : t("auth.password.show")}
+            title={showPassword ? t("auth.password.hide") : t("auth.password.show")}
             class="absolute inset-y-0 right-0 flex items-center px-3 text-[var(--text-faint)]
                    hover:text-[var(--text-muted)] transition-colors
                    focus-visible:outline-none focus-visible:text-[var(--accent)]"
@@ -345,7 +345,7 @@
                focus-visible:ring-2 focus-visible:ring-[var(--btn-success)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]
                disabled:opacity-55 disabled:cursor-not-allowed disabled:hover:bg-[var(--btn-success)]"
       >
-        {accountDone ? "Welcome aboard…" : loading ? "Creating account…" : "Create account"}
+        {accountDone ? t("auth.signup.welcome") : loading ? t("auth.signup.submitting") : t("auth.signup.submit")}
       </button>
     </form>
 
@@ -353,7 +353,7 @@
          your real next steps; the first ticks to done when signup succeeds. -->
     <div class="mt-8 pt-6 border-t border-[var(--border)]">
       <p class="text-micro font-semibold uppercase tracking-widest text-[var(--text-faint)] mb-2.5">
-        Getting started
+        {t("auth.signup.steps.title")}
       </p>
       <ul class="rounded-lg border border-[var(--border)] bg-[var(--surface)] overflow-hidden">
         {#each steps as step, i (step.title)}
@@ -371,10 +371,10 @@
               {step.title}
             </span>
             <span
-              class="text-micro font-medium capitalize tabular-nums"
+              class="text-micro font-medium tabular-nums"
               style="color: {statusCssColor(step.status)}"
             >
-              {step.status}
+              {t(`common.status.${step.status}`)}
             </span>
           </li>
         {/each}

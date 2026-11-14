@@ -5,6 +5,8 @@
 // not a patch applier and it does not need to round-trip: the raw text is
 // always one copy button away.
 
+import { t } from "../../i18n";
+
 export type DiffLineKind = "add" | "del" | "context" | "hunk" | "meta";
 
 export interface DiffLine {
@@ -52,14 +54,14 @@ function displayFor(oldPath: string, newPath: string): string {
   if (oldPath === "/dev/null") return newPath;
   if (newPath === "/dev/null") return oldPath;
   if (oldPath && newPath && oldPath !== newPath) return `${oldPath} -> ${newPath}`;
-  return newPath || oldPath || "(unknown file)";
+  return newPath || oldPath || t("viewers.diff.unknownFile");
 }
 
 function emptyFile(): DiffFile {
   return {
     oldPath: "",
     newPath: "",
-    display: "(unknown file)",
+    display: t("viewers.diff.unknownFile"),
     additions: 0,
     deletions: 0,
     binary: false,
@@ -196,8 +198,7 @@ export function parseUnifiedDiff(text: string): ParsedDiff {
 /** "3 files changed, +42 -7" — the one-line header above the diff. */
 export function summarizeDiff(diff: ParsedDiff): string {
   const count = diff.files.length;
-  const noun = count === 1 ? "file" : "files";
-  return `${count} ${noun} changed, +${diff.additions} -${diff.deletions}`;
+  return t("viewers.diff.summary", { count, additions: diff.additions, deletions: diff.deletions });
 }
 
 /** Cheap sniff used by the dispatcher when a .txt attachment might actually be

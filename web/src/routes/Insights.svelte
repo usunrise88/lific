@@ -22,6 +22,7 @@
   import Skeleton from "../lib/Skeleton.svelte";
   import { ChevronRight, TrendingUp, Users } from "lucide-svelte";
   import { getContext } from "svelte";
+  import { t } from "../lib/i18n";
 
   const topbarCtx = getContext<{
     set: (s: import("svelte").Snippet | undefined) => void;
@@ -61,7 +62,7 @@
     const projRes = await listProjects();
     if (!projRes.ok) { error = projRes.error; loading = false; return; }
     const found = projRes.data.find((p) => p.identifier === ident);
-    if (!found) { error = `Project ${ident} not found`; loading = false; return; }
+    if (!found) { error = t("insights.notFound", { identifier: ident }); loading = false; return; }
     project = found;
     await loadInsights();
     loading = false;
@@ -83,18 +84,12 @@
 
   // ── Distribution rows ─────────────────────────────────
 
-  const STATUS_LABEL: Record<string, string> = {
-    backlog: "Backlog", todo: "Todo", active: "Active", done: "Done", cancelled: "Cancelled",
-  };
-  const PRIORITY_LABEL: Record<string, string> = {
-    urgent: "Urgent", high: "High", medium: "Medium", low: "Low", none: "None",
-  };
 
   let statusItems = $derived(
     data
       ? (["backlog", "todo", "active", "done", "cancelled"] as const).map((k) => ({
           key: k,
-          label: STATUS_LABEL[k],
+          label: t(`common.status.${k}`),
           count: data!.status_counts[k],
         }))
       : [],
@@ -104,7 +99,7 @@
     data
       ? (["urgent", "high", "medium", "low", "none"] as const).map((k) => ({
           key: k,
-          label: PRIORITY_LABEL[k],
+          label: t(`common.priority.${k}`),
           count: data!.priority_counts[k],
         }))
       : [],
@@ -146,7 +141,7 @@
         {projectIdentifier}
       </button>
       <ChevronRight size={12} class="text-[var(--text-faint)]" />
-      <span class="text-body-sm font-medium text-[var(--text)]">Insights</span>
+      <span class="text-body-sm font-medium text-[var(--text)]">{t("insights.title")}</span>
     </div>
 
     <!-- Weeks selector: segmented control, matches Settings' theme/density
@@ -161,7 +156,7 @@
               : 'text-[var(--text-muted)] hover:text-[var(--text)]'}"
             onclick={() => pickWeeks(w)}
           >
-            {w}w
+            {t("insights.weeksShort", { count: w })}
           </button>
         {/each}
       </div>
@@ -231,28 +226,27 @@
         </section>
       </div>
     {:else if error}
-      <ErrorState title="Couldn't load insights" message={error}>
+      <ErrorState title={t("insights.loadError")} message={error}>
         <button
           class="text-body-sm font-medium text-[var(--btn-success-text)] bg-[var(--btn-success)] px-3 py-1.5 rounded-md hover:bg-[var(--btn-success-hover)] transition-colors"
           onclick={() => loadProject(projectIdentifier)}
         >
-          Try again
+          {t("common.retry")}
         </button>
         <button
           class="text-body-sm text-[var(--text-muted)] border border-[var(--border)] px-3 py-1.5 rounded-md hover:bg-[var(--bg-subtle)] transition-colors"
           onclick={() => navigate(`/${projectIdentifier}/overview`)}
         >
-          Project overview
+          {t("insights.projectOverview")}
         </button>
       </ErrorState>
     {:else if !hasAnyIssues}
       <div class="flex flex-col items-center py-20 gap-4 px-6 max-w-[480px] mx-auto text-center">
         <Mascot src="/LizzySleep2.png" nativeW={1000} nativeH={420} scale={0.25} />
         <div class="flex flex-col items-center gap-1.5">
-          <p class="text-heading font-medium text-[var(--text)]">Nothing to chart yet</p>
+          <p class="text-heading font-medium text-[var(--text)]">{t("insights.empty.title")}</p>
           <p class="text-body-sm text-[var(--text-muted)] leading-relaxed">
-            Insights fills in once this project has issues to measure — creation
-            trends, closures, and who's been doing the work.
+            {t("insights.empty.body")}
           </p>
         </div>
       </div>
@@ -262,9 +256,9 @@
         <section class="rounded-xl bg-[var(--surface)] shadow-[0_1px_2px_rgba(0,0,0,0.06)] p-5">
           <div class="flex items-center gap-2 mb-4">
             <TrendingUp size={15} class="text-[var(--text-muted)]" />
-            <h2 class="text-body-lg font-semibold text-[var(--text)]">Created vs. closed</h2>
+            <h2 class="text-body-lg font-semibold text-[var(--text)]">{t("insights.trend.title")}</h2>
             <span class="text-micro text-[var(--text-faint)] tabular-nums ml-auto">
-              last {data.weeks} weeks
+              {t("insights.lastWeeks", { count: data.weeks })}
             </span>
           </div>
           <TrendChart created={data.created_per_week} closed={data.closed_per_week} />
@@ -274,25 +268,25 @@
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch">
           <section class="rounded-xl bg-[var(--surface)] shadow-[0_1px_2px_rgba(0,0,0,0.06)] p-4 flex flex-col">
             <h3 class="text-micro font-semibold uppercase tracking-widest text-[var(--text-faint)] mb-3">
-              Status
+              {t("insights.card.status")}
             </h3>
             <DistributionList items={statusItems} icon={statusIconSnip} />
           </section>
 
           <section class="rounded-xl bg-[var(--surface)] shadow-[0_1px_2px_rgba(0,0,0,0.06)] p-4 flex flex-col">
             <h3 class="text-micro font-semibold uppercase tracking-widest text-[var(--text-faint)] mb-3">
-              Priority
+              {t("insights.card.priority")}
             </h3>
             <DistributionList items={priorityItems} icon={priorityIconSnip} />
           </section>
 
           <section class="rounded-xl bg-[var(--surface)] shadow-[0_1px_2px_rgba(0,0,0,0.06)] p-4 flex flex-col">
             <h3 class="text-micro font-semibold uppercase tracking-widest text-[var(--text-faint)] mb-3">
-              Module
+              {t("insights.card.module")}
             </h3>
-            <DistributionList items={moduleItems} emptyLabel="No modules yet" />
+            <DistributionList items={moduleItems} emptyLabel={t("insights.card.noModules")} />
             {#if moduleOverflow > 0}
-              <p class="text-micro text-[var(--text-faint)] mt-2">+{moduleOverflow} more</p>
+              <p class="text-micro text-[var(--text-faint)] mt-2">{t("insights.card.more", { count: moduleOverflow })}</p>
             {/if}
           </section>
         </div>
@@ -302,10 +296,10 @@
           <div class="flex items-center gap-2 mb-2">
             <Users size={14} class="text-[var(--text-muted)]" />
             <h3 class="text-micro font-semibold uppercase tracking-widest text-[var(--text-faint)]">
-              Top actors
+              {t("insights.actors.title")}
             </h3>
             <span class="text-micro text-[var(--text-faint)] tabular-nums ml-auto">
-              last {data.weeks} weeks
+              {t("insights.lastWeeks", { count: data.weeks })}
             </span>
           </div>
           <ActorList actors={data.top_actors} />

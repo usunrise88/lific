@@ -9,6 +9,7 @@
 
   import { ChevronRight } from "lucide-svelte";
   import JsonNode from "./JsonNode.svelte";
+  import { t } from "../../i18n";
 
   let {
     label = null,
@@ -52,8 +53,8 @@
   /** Collapsed summary: `{3 keys}` / `[12 items]`. */
   const summary = $derived(
     isArray
-      ? `[${childCount} ${childCount === 1 ? "item" : "items"}]`
-      : `{${childCount} ${childCount === 1 ? "key" : "keys"}}`,
+      ? `[${t("viewers.json.items", { count: childCount })}]`
+      : `{${t("viewers.json.keys", { count: childCount })}}`,
   );
 
   function scalarText(v: unknown): string {
@@ -92,7 +93,7 @@
           class="jn__row jn__more"
           onclick={() => (shown += CHILD_BUDGET)}
         >
-          Show {Math.min(CHILD_BUDGET, entries.length - shown)} more of {entries.length}
+          {t("viewers.json.showMore", { n: Math.min(CHILD_BUDGET, entries.length - shown), total: entries.length })}
         </button>
       {/if}
     {/if}

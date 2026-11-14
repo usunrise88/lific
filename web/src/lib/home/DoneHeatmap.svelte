@@ -2,6 +2,7 @@
   // LIF-507: a small, honest flex. Issues you or your agents moved to done,
   // one square per day, weeks as columns starting on Monday.
   import type { DayCount } from "../api";
+  import { t, locale } from "../i18n";
 
   let { days }: { days: DayCount[] } = $props();
 
@@ -32,21 +33,21 @@
   }
 
   function label(d: DayCount): string {
-    const date = new Date(`${d.date}T00:00:00`).toLocaleDateString("en-US", {
+    const date = new Date(`${d.date}T00:00:00`).toLocaleDateString(locale(), {
       weekday: "short",
       month: "short",
       day: "numeric",
     });
-    return `${date}: ${d.count} done`;
+    return t("home.heatmap.dayDone", { date, count: d.count });
   }
 </script>
 
 <div>
   <div class="flex items-baseline justify-between gap-2 mb-2.5">
-    <h2 class="text-body-sm font-semibold text-[var(--text)]">Your last 12 weeks</h2>
-    <span class="text-micro text-[var(--text-faint)] tabular-nums">{thisMonth} done this month</span>
+    <h2 class="text-body-sm font-semibold text-[var(--text)]">{t("home.heatmap.title")}</h2>
+    <span class="text-micro text-[var(--text-faint)] tabular-nums">{t("home.heatmap.thisMonth", { count: thisMonth })}</span>
   </div>
-  <div class="flex gap-[3px]" role="img" aria-label="Issues you and your agents finished each day">
+  <div class="flex gap-[3px]" role="img" aria-label={t("home.heatmap.aria")}>
     {#each columns as col, ci (ci)}
       <div class="flex-1 flex flex-col gap-[3px]">
         {#each col as cell, ri (ri)}

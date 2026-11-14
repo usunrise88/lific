@@ -945,6 +945,7 @@ impl HttpBackend {
                     &format!("/api/issues/{}/comments", issue.id),
                     &models::CreateComment {
                         content: content.clone(),
+                        for_agents: Vec::new(),
                     },
                 )
                 .await

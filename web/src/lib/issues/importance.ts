@@ -8,6 +8,7 @@
 // its causes (priority plus an age and idle cue) or a heat bar.
 
 import type { Issue } from "../api";
+import { t } from "../i18n";
 
 const PRIORITY_WEIGHT: Record<string, number> = { urgent: 100, high: 55, medium: 25, low: 10, none: 4 };
 const STATUS_MULT: Record<string, number> = { todo: 1.25, active: 1.15, backlog: 1.0 };
@@ -36,7 +37,7 @@ export function heat(score: number): number {
 
 /** "today", "12d", "3mo". */
 export function ageLabel(days: number): string {
-  if (days >= 60) return `${Math.round(days / 30)}mo`;
-  if (days >= 1) return `${days}d`;
-  return "today";
+  if (days >= 60) return t("issues.age.months", { count: Math.round(days / 30) });
+  if (days >= 1) return t("issues.age.days", { count: days });
+  return t("issues.age.today");
 }

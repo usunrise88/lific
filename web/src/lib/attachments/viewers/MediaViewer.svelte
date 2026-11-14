@@ -13,6 +13,7 @@
 
   import { attachmentThumbnailUrl, attachmentUrl } from "../../api";
   import FileChip from "./FileChip.svelte";
+  import { t } from "../../i18n";
 
   let {
     id,
@@ -40,7 +41,7 @@
 </script>
 
 {#if failed}
-  <FileChip {id} {filename} {sizeBytes} note="Playback not supported in this browser" />
+  <FileChip {id} {filename} {sizeBytes} note={t("viewers.media.unsupported")} />
 {:else}
   <figure class="mv" class:mv--audio={kind === "audio"}>
     {#if kind === "video"}

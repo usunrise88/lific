@@ -6,13 +6,14 @@
 
   import type { ActorStat } from "../api";
   import TimeAgo from "../TimeAgo.svelte";
+  import { t, formatNumber } from "../i18n";
 
   let { actors }: { actors: ActorStat[] } = $props();
 
   let maxActions = $derived(Math.max(1, ...actors.map((a) => a.actions)));
 
   function name(a: ActorStat): string {
-    return a.display_name || a.username || "system";
+    return a.display_name || a.username || t("insights.actors.system");
   }
 
   function initials(n: string): string {
@@ -25,7 +26,7 @@
 </script>
 
 {#if actors.length === 0}
-  <p class="text-body-sm text-[var(--text-faint)] py-2">No activity in this window</p>
+  <p class="text-body-sm text-[var(--text-faint)] py-2">{t("insights.actors.empty")}</p>
 {:else}
   <div class="flex flex-col gap-1">
     {#each actors as a (a.actor_user_id)}
@@ -48,16 +49,16 @@
                 class="text-micro font-semibold uppercase tracking-wider px-1 py-px rounded
                        bg-[var(--accent-subtle)] text-[var(--accent)] shrink-0"
               >
-                agent
+                {t("insights.actors.agent")}
               </span>
             {/if}
           </div>
           <div class="text-micro text-[var(--text-faint)]">
-            last seen <TimeAgo date={a.last_ts} />
+            {t("insights.actors.lastSeen.before")} <TimeAgo date={a.last_ts} />
           </div>
         </div>
         <span class="text-caption text-[var(--text-muted)] tabular-nums shrink-0">
-          {a.actions.toLocaleString()}
+          {formatNumber(a.actions)}
         </span>
         <span
           class="absolute bottom-0 left-1 h-[2px] rounded-full bg-[var(--accent)] opacity-30"

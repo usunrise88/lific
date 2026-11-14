@@ -1,4 +1,5 @@
 import type { Issue, RelationType } from "../api";
+import { t } from "../i18n";
 
 /** One relation group as seen from the issue being viewed. The API stores
  *  `blocks` and `duplicate` as source→target edges, so the inverse groups
@@ -11,11 +12,11 @@ export interface RelationKind {
 }
 
 export const RELATION_KINDS: RelationKind[] = [
-  { field: "blocked_by", label: "Blocked by", type: "blocks", inverse: true },
-  { field: "blocks", label: "Blocks", type: "blocks", inverse: false },
-  { field: "relates_to", label: "Related", type: "relates_to", inverse: false },
-  { field: "duplicates", label: "Duplicate of", type: "duplicate", inverse: false },
-  { field: "duplicated_by", label: "Duplicated by", type: "duplicate", inverse: true },
+  { field: "blocked_by", get label() { return t("issues.relation.blockedBy"); }, type: "blocks", inverse: true },
+  { field: "blocks", get label() { return t("issues.relation.blocks"); }, type: "blocks", inverse: false },
+  { field: "relates_to", get label() { return t("issues.relation.related"); }, type: "relates_to", inverse: false },
+  { field: "duplicates", get label() { return t("issues.relation.duplicateOf"); }, type: "duplicate", inverse: false },
+  { field: "duplicated_by", get label() { return t("issues.relation.duplicatedBy"); }, type: "duplicate", inverse: true },
 ];
 
 export function linkRequest(kind: RelationKind, self: string, other: string) {

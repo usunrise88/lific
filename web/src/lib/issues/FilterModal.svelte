@@ -9,6 +9,7 @@
   // Reads + mutates the shared IssueListState (`view`) directly, same as the
   // old inline popover did; data-derived inputs (labels, modules) come in as
   // props.
+  import { t } from "../i18n";
   import { X, Check, Layers, CircleDotDashed, Bot, User, UserCheck } from "lucide-svelte";
   import StatusIcon from "../StatusIcon.svelte";
   import PriorityIcon from "../PriorityIcon.svelte";
@@ -16,9 +17,9 @@
     STATUSES,
     PRIORITIES,
     STATUS_UNRESOLVED,
-    STATUS_DESCRIPTIONS,
-    UNRESOLVED_DESCRIPTION,
-    PRIORITY_DESCRIPTIONS,
+    statusDescription,
+    unresolvedDescription,
+    priorityDescription,
   } from "./grouping";
   import type { IssueListState } from "./state.svelte";
   import type { IssueAssignee, Label, Module } from "../api";
@@ -57,9 +58,9 @@
   // matches any checked row ("urgent" and "high" shows both). "Any" clears
   // the section.
   const ASSIGNEE_CHOICES = [
-    { value: ASSIGNEE_FILTER_ME, label: "Me", hint: "Issues that name you." },
-    { value: ASSIGNEE_FILTER_HUMAN, label: "Needs a person", hint: "For any person or for named people." },
-    { value: ASSIGNEE_FILTER_NONE, label: "Any agent", hint: "Unassigned. Agents can pick these up." },
+    { value: ASSIGNEE_FILTER_ME, label: t("issues.filter.assignee.me"), hint: t("issues.filter.assignee.meHint") },
+    { value: ASSIGNEE_FILTER_HUMAN, label: t("issues.filter.assignee.human"), hint: t("issues.filter.assignee.humanHint") },
+    { value: ASSIGNEE_FILTER_NONE, label: t("issues.assignee.anyAgent"), hint: t("issues.filter.assignee.noneHint") },
   ];
   let filterPeople = $derived.by(() => {
     const others = assignees.filter((a) => a.user_id !== $currentUser?.id);
@@ -119,7 +120,7 @@
       <div
         class="shrink-0 flex items-center gap-3 px-5 py-3.5 border-b border-[var(--border)]"
       >
-        <h2 class="text-body-lg font-semibold text-[var(--text)]">Filters</h2>
+        <h2 class="text-body-lg font-semibold text-[var(--text)]">{t("issues.filter.title")}</h2>
         {#if filterCount > 0}
           <span
             class="grid place-items-center min-w-[1.05rem] h-[1.05rem] px-1
@@ -133,14 +134,14 @@
                    transition-colors"
             onclick={() => view.clearFilters()}
           >
-            Clear all
+            {t("issues.filter.clearAll")}
           </button>
         {/if}
         <button
           class="ml-auto size-11 sm:size-7 grid place-items-center rounded-md
                  text-[var(--text-muted)] hover:text-[var(--text)]
                  hover:bg-[var(--bg-subtle)] transition-colors"
-          aria-label="Close filters"
+          aria-label={t("issues.filter.close")}
           onclick={close}
         >
           <X size={15} />
@@ -156,7 +157,7 @@
         <!-- STATUS -->
         <section>
           <div class="px-1 pb-1.5 text-micro uppercase tracking-widest font-semibold text-[var(--text-faint)]">
-            Status
+            {t("issues.field.status")}
           </div>
           <div class="flex flex-col gap-0.5">
             <!-- Any -->
@@ -169,8 +170,8 @@
             >
               <span class="size-4 mt-0.5 shrink-0"></span>
               <span class="flex-1 min-w-0">
-                <span class="block text-body-sm font-medium text-[var(--text)]">Any</span>
-                <span class="block text-caption text-[var(--text-faint)]">No status filter.</span>
+                <span class="block text-body-sm font-medium text-[var(--text)]">{t("issues.filter.any")}</span>
+                <span class="block text-caption text-[var(--text-faint)]">{t("issues.filter.noStatus")}</span>
               </span>
               {#if view.filterStatus.length === 0}
                 <Check size={14} class="mt-0.5 shrink-0 text-[var(--accent)]" />
@@ -187,8 +188,8 @@
             >
               <CircleDotDashed size={16} class="mt-0.5 shrink-0 text-[var(--accent)]" />
               <span class="flex-1 min-w-0">
-                <span class="block text-body-sm font-medium text-[var(--text)]">Unresolved</span>
-                <span class="block text-caption text-[var(--text-faint)]">{UNRESOLVED_DESCRIPTION}</span>
+                <span class="block text-body-sm font-medium text-[var(--text)]">{t("issues.filter.unresolved")}</span>
+                <span class="block text-caption text-[var(--text-faint)]">{unresolvedDescription()}</span>
               </span>
               {#if view.filterStatus.includes(STATUS_UNRESOLVED)}
                 <Check size={14} class="mt-0.5 shrink-0 text-[var(--accent)]" />
@@ -204,8 +205,8 @@
               >
                 <span class="mt-0.5 shrink-0"><StatusIcon status={s} size={16} /></span>
                 <span class="flex-1 min-w-0">
-                  <span class="block text-body-sm font-medium capitalize text-[var(--text)]">{s}</span>
-                  <span class="block text-caption text-[var(--text-faint)]">{STATUS_DESCRIPTIONS[s] ?? ""}</span>
+                  <span class="block text-body-sm font-medium text-[var(--text)]">{t(`common.status.${s}`)}</span>
+                  <span class="block text-caption text-[var(--text-faint)]">{statusDescription(s)}</span>
                 </span>
                 {#if active}
                   <Check size={14} class="mt-0.5 shrink-0 text-[var(--accent)]" />
@@ -218,7 +219,7 @@
         <!-- PRIORITY -->
         <section>
           <div class="px-1 pb-1.5 text-micro uppercase tracking-widest font-semibold text-[var(--text-faint)]">
-            Priority
+            {t("issues.field.priority")}
           </div>
           <div class="flex flex-col gap-0.5">
             <button
@@ -230,8 +231,8 @@
             >
               <span class="size-4 mt-0.5 shrink-0"></span>
               <span class="flex-1 min-w-0">
-                <span class="block text-body-sm font-medium text-[var(--text)]">Any</span>
-                <span class="block text-caption text-[var(--text-faint)]">No priority filter.</span>
+                <span class="block text-body-sm font-medium text-[var(--text)]">{t("issues.filter.any")}</span>
+                <span class="block text-caption text-[var(--text-faint)]">{t("issues.filter.noPriority")}</span>
               </span>
               {#if view.filterPriority.length === 0}
                 <Check size={14} class="mt-0.5 shrink-0 text-[var(--accent)]" />
@@ -248,10 +249,10 @@
                 <span class="mt-0.5 shrink-0"><PriorityIcon priority={p} size={16} /></span>
                 <span class="flex-1 min-w-0">
                   <span
-                    class="block text-body-sm font-medium capitalize"
+                    class="block text-body-sm font-medium"
                     style="color: {priorityCssColor(p)}"
-                  >{p}</span>
-                  <span class="block text-caption text-[var(--text-faint)]">{PRIORITY_DESCRIPTIONS[p] ?? ""}</span>
+                  >{t(`common.priority.${p}`)}</span>
+                  <span class="block text-caption text-[var(--text-faint)]">{priorityDescription(p)}</span>
                 </span>
                 {#if active}
                   <Check size={14} class="mt-0.5 shrink-0 text-[var(--accent)]" />
@@ -264,7 +265,7 @@
         <!-- ASSIGNEE (LIF-147) -->
         <section data-testid="filter-assignee">
           <div class="px-1 pb-1.5 text-micro uppercase tracking-widest font-semibold text-[var(--text-faint)]">
-            Assignee
+            {t("issues.assignee.label")}
           </div>
           <div class="flex flex-col gap-0.5">
             <button
@@ -274,8 +275,8 @@
             >
               <span class="size-4 mt-0.5 shrink-0"></span>
               <span class="flex-1 min-w-0">
-                <span class="block text-body-sm font-medium text-[var(--text)]">Any</span>
-                <span class="block text-caption text-[var(--text-faint)]">No assignee filter.</span>
+                <span class="block text-body-sm font-medium text-[var(--text)]">{t("issues.filter.any")}</span>
+                <span class="block text-caption text-[var(--text-faint)]">{t("issues.filter.noAssignee")}</span>
               </span>
               {#if view.filterAssignee.length === 0}<Check size={14} class="mt-0.5 shrink-0 text-[var(--accent)]" />{/if}
             </button>
@@ -326,7 +327,7 @@
         {#if labels.length > 0}
           <section>
             <div class="px-1 pb-1.5 text-micro uppercase tracking-widest font-semibold text-[var(--text-faint)]">
-              Label
+              {t("issues.field.label")}
             </div>
             <div class="flex flex-col gap-0.5">
               <button
@@ -335,7 +336,7 @@
                 onclick={() => (view.filterLabel = [])}
               >
                 <span class="size-2.5 shrink-0"></span>
-                <span class="flex-1 text-body-sm font-medium text-[var(--text)]">Any</span>
+                <span class="flex-1 text-body-sm font-medium text-[var(--text)]">{t("issues.filter.any")}</span>
                 {#if view.filterLabel.length === 0}<Check size={14} class="shrink-0 text-[var(--accent)]" />{/if}
               </button>
               {#each labels as l (l.id)}
@@ -358,7 +359,7 @@
         {#if modules.length > 0}
           <section>
             <div class="px-1 pb-1.5 text-micro uppercase tracking-widest font-semibold text-[var(--text-faint)]">
-              Module
+              {t("issues.field.module")}
             </div>
             <div class="flex flex-col gap-0.5">
               <button
@@ -367,7 +368,7 @@
                 onclick={() => (view.filterModule = [])}
               >
                 <span class="size-4 shrink-0"></span>
-                <span class="flex-1 text-body-sm font-medium text-[var(--text)]">Any</span>
+                <span class="flex-1 text-body-sm font-medium text-[var(--text)]">{t("issues.filter.any")}</span>
                 {#if view.filterModule.length === 0}<Check size={14} class="shrink-0 text-[var(--accent)]" />{/if}
               </button>
               {#each modules as m (m.id)}
@@ -399,11 +400,11 @@
                pb-[max(0.625rem,env(safe-area-inset-bottom))] sm:pb-2.5"
       >
         <span class="inline-flex items-center gap-1">
-          <kbd class="font-mono">esc</kbd> close
+          <kbd class="font-mono">esc</kbd> {t("issues.filter.closeHint")}
         </span>
-        <span class="hidden sm:inline">Pick several to match any of them</span>
+        <span class="hidden sm:inline">{t("issues.filter.multiHint")}</span>
         <span class="ml-auto">
-          {filterCount > 0 ? `${filterCount} active` : "No filters applied"}
+          {filterCount > 0 ? t("issues.filter.active", { count: filterCount }) : t("issues.filter.none")}
         </span>
       </div>
     </div>

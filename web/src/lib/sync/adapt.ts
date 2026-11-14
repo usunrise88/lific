@@ -66,6 +66,7 @@ export function toIssue(row: IssueRow, projectId: number): Issue {
     waits: row.waits,
     needs_human: row.needs_human ?? false,
     assignees: row.assignees,
+    parked: row.parked,
   };
   adapted.set(row, issue);
   return issue;

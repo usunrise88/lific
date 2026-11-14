@@ -27,6 +27,7 @@
   import { canDeleteAttachment, deleteConfirmMessage } from "./files/files";
   import { projectRole } from "./projectRole.svelte";
   import { toast } from "./toast/toast.svelte";
+  import { t } from "./i18n";
   import { Paperclip, Trash2 } from "lucide-svelte";
   import AttachmentView from "./attachments/viewers/AttachmentView.svelte"; // LIF-418
 
@@ -122,10 +123,10 @@
     deletingId = null;
     confirmingId = null;
     if (!res.ok) {
-      toast(`Couldn't delete ${a.filename}: ${res.error}`, { kind: "error" });
+      toast(t("files.toast.deleteFailed", { filename: a.filename, error: res.error }), { kind: "error" });
       return;
     }
-    toast(`Deleted ${a.filename}.`, { kind: "success" });
+    toast(t("files.toast.deleted", { filename: a.filename }), { kind: "success" });
     await load();
   }
 
@@ -150,7 +151,7 @@
   <section class="att">
     <header class="att__head">
       <Paperclip size={14} />
-      <h3 class="att__title">Attachments</h3>
+      <h3 class="att__title">{t("files.attachments.title")}</h3>
       <span class="att__count">{attachments.length}</span>
     </header>
 
@@ -179,8 +180,8 @@
               <button
                 type="button"
                 class="att__delete"
-                title="Delete {a.filename}"
-                aria-label="Delete {a.filename}"
+                title={t("files.deleteNamed", { filename: a.filename })}
+                aria-label={t("files.deleteNamed", { filename: a.filename })}
                 disabled={deletingId === a.id}
                 onclick={() => void startDelete(a)}
               >
@@ -208,8 +209,8 @@
               <button
                 type="button"
                 class="att__delete"
-                title="Delete {a.filename}"
-                aria-label="Delete {a.filename}"
+                title={t("files.deleteNamed", { filename: a.filename })}
+                aria-label={t("files.deleteNamed", { filename: a.filename })}
                 disabled={deletingId === a.id}
                 onclick={() => void startDelete(a)}
               >
@@ -228,7 +229,7 @@
       {#if pending}
         <div class="att__confirm">
           <span class="att__confirm-text">
-            Delete {pending.filename}? {deleteConfirmMessage(confirmingRefs)}
+            {t("files.deleteConfirm.question", { filename: pending.filename })} {deleteConfirmMessage(confirmingRefs)}
           </span>
           <button
             type="button"
@@ -236,14 +237,14 @@
             disabled={deletingId === pending.id}
             onclick={() => void confirmDelete(pending)}
           >
-            {deletingId === pending.id ? "Deleting..." : "Delete"}
+            {deletingId === pending.id ? t("files.deleting") : t("common.delete")}
           </button>
           <button
             type="button"
             class="att__confirm-cancel"
             onclick={() => (confirmingId = null)}
           >
-            Cancel
+            {t("common.cancel")}
           </button>
         </div>
       {/if}
@@ -264,7 +265,7 @@
     class="att__lightbox"
     role="dialog"
     aria-modal="true"
-    aria-label="Image preview"
+    aria-label={t("files.imagePreview")}
     tabindex="-1"
     onclick={() => (lightboxSrc = null)}
   >

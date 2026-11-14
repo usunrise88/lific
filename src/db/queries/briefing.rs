@@ -56,6 +56,7 @@ pub fn issues_created_since(
         "SELECT p.identifier || '-' || i.sequence, i.title, i.status, i.priority
          FROM issues i JOIN projects p ON p.id = i.project_id
          WHERE i.project_id = ?1 AND i.created_at > ?2 AND i.deleted_at IS NULL
+           AND NOT EXISTS (SELECT 1 FROM fork_issue_parked fp WHERE fp.issue_id = i.id)
          ORDER BY i.created_at DESC, i.sequence DESC",
     )?;
     let rows = stmt.query_map(rusqlite::params![project_id, since], |row| {
@@ -197,6 +198,7 @@ pub fn issues_with_due_waits(
           WHERE i.project_id = ?1
             AND i.deleted_at IS NULL
             AND i.status NOT IN ('done', 'cancelled')
+            AND NOT EXISTS (SELECT 1 FROM fork_issue_parked fp WHERE fp.issue_id = i.id)
             AND w.kind = 'date'
             AND w.earliest <= ?2
           GROUP BY i.id

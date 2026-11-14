@@ -8,10 +8,11 @@
   // popover state are read and mutated directly on it. Data-derived inputs
   // (option lists, tallies, count label) and the few component-owned bits
   // (navigate, searchInputEl, inline-create trigger) come in as props.
+  import { t } from "../i18n";
   import type { IssueAssignee, Label, Module } from "../api";
   import {
     Plus, Search, ChevronDown, Signal,
-    List as ListIcon, LayoutGrid, SlidersHorizontal, HelpCircle,
+    List as ListIcon, LayoutGrid, Hourglass, SlidersHorizontal, HelpCircle,
     ArrowDown, ArrowUp, Hash, Clock, History, Check, Zap, PenLine,
     SlidersVertical, Rows3, Layers, MoreHorizontal,
     Square, SquareMinus, SquareCheck,
@@ -25,6 +26,7 @@
   import SavedViews from "./SavedViews.svelte";
   import type { SortField } from "./sort";
   import type { GroupBy, Density, LaneBy } from "./grouping";
+  import { STATUSES } from "./grouping";
   import type { IssueListState } from "./state.svelte";
   import { toggleShortcutHelp } from "../shortcutHelpState.svelte";
 
@@ -32,6 +34,8 @@
     view,
     projectIdentifier,
     layout,
+    parkedMode = false,
+    parkedCount = null,
     navigate,
     statusCounts,
     countsLoading = false,
@@ -56,6 +60,10 @@
     view: IssueListState;
     projectIdentifier: string;
     layout: "list" | "board";
+    /** Fork: the list shows parked issues only. */
+    parkedMode?: boolean;
+    /** Fork: parked issues in the project; null while loading. */
+    parkedCount?: number | null;
     navigate: (path: string) => void;
     statusCounts: { status: string; count: number }[];
     /** LIF-246: true until the counts fetch resolves — swaps the tally
@@ -109,28 +117,41 @@
   // LIF-153: the chip's number is capped so its box has a known maximum
   // width below sm, where the row's whole slack is ~58px. Three glyphs is
   // the ceiling, and "99+" reads as "a lot" just as well as "137" does.
+  function sortFieldShort(field: SortField): string {
+    return field === "age"
+      ? t("issues.sort.age")
+      : field === "updated"
+        ? t("issues.sort.updated")
+        : field === "number"
+          ? t("issues.sort.numberShort")
+          : t("issues.field.priority");
+  }
+
   let changedLabel = $derived(changedCount > 99 ? "99+" : String(changedCount));
 
   // LIF-308: status counts are server truth (rather than the capped row
   // fetch), so All/Open/Closed stay accurate even for large projects. While
   // they load, omit the numbers instead of presenting a misleading zero.
   let issueSubTabs = $derived.by<SubTab[]>(() => {
+    if (parkedMode) {
+      return [{ id: "all", label: t("parked.tab"), count: parkedCount }];
+    }
     if (countsLoading) {
       return [
-        { id: "all", label: "All", count: null },
-        { id: "recent", label: "Recent" },
-        { id: "open", label: "Open", count: null },
-        { id: "closed", label: "Closed", count: null },
+        { id: "all", label: t("common.all"), count: null },
+        { id: "recent", label: t("issues.tabs.recent") },
+        { id: "open", label: t("common.open"), count: null },
+        { id: "closed", label: t("issues.tabs.closed"), count: null },
       ];
     }
 
     const countFor = (status: string) =>
       statusCounts.find((entry) => entry.status === status)?.count ?? 0;
     return [
-      { id: "all", label: "All", count: statusCounts.reduce((sum, entry) => sum + entry.count, 0) },
-      { id: "recent", label: "Recent" },
-      { id: "open", label: "Open", count: countFor("backlog") + countFor("todo") + countFor("active") },
-      { id: "closed", label: "Closed", count: countFor("done") + countFor("cancelled") },
+      { id: "all", label: t("common.all"), count: statusCounts.reduce((sum, entry) => sum + entry.count, 0) },
+      { id: "recent", label: t("issues.tabs.recent") },
+      { id: "open", label: t("common.open"), count: countFor("backlog") + countFor("todo") + countFor("active") },
+      { id: "closed", label: t("issues.tabs.closed"), count: countFor("done") + countFor("cancelled") },
     ];
   });
 
@@ -209,7 +230,7 @@
       <Breadcrumbs
         segments={[
           { label: projectIdentifier, href: `#/${projectIdentifier}/overview`, mono: true, hideBelowSm: true },
-          { label: layout === "board" ? "Board" : "Issues" },
+          { label: layout === "board" ? t("issues.topbar.board") : t("issues.sidebar.issues") },
         ]}
       />
     </div>
@@ -230,14 +251,14 @@
       <button
         class="flex items-center gap-1 px-2 py-0.5 rounded
                text-caption font-medium transition
-               {layout === 'list'
+               {layout === 'list' && !parkedMode
           ? 'bg-[var(--surface)] text-[var(--text)] shadow-[0_1px_2px_rgba(0,0,0,0.16),0_1px_1px_rgba(0,0,0,0.10)]'
           : 'text-[var(--text-muted)] hover:text-[var(--text)]'}"
-        aria-pressed={layout === "list"}
+        aria-pressed={layout === "list" && !parkedMode}
         onclick={() => navigate(`/${projectIdentifier}/issues`)}
       >
         <ListIcon size={11} class="shrink-0" />
-        <span class="sr-only md:not-sr-only">List</span>
+        <span class="sr-only md:not-sr-only">{t("issues.topbar.list")}</span>
       </button>
       <button
         class="flex items-center gap-1 px-2 py-0.5 rounded
@@ -249,8 +270,27 @@
         onclick={() => navigate(`/${projectIdentifier}/board`)}
       >
         <LayoutGrid size={11} class="shrink-0" />
-        <span class="sr-only md:not-sr-only">Board</span>
+        <span class="sr-only md:not-sr-only">{t("issues.topbar.board")}</span>
       </button>
+      <!-- Fork: Parked mode, the set-aside issues. -->
+      <Tooltip content={t("parked.modeHint")} placement="bottom">
+        <button
+          class="flex items-center gap-1 px-2 py-0.5 rounded
+                 text-caption font-medium transition
+                 {parkedMode
+            ? 'bg-[var(--surface)] text-[var(--text)] shadow-[0_1px_2px_rgba(0,0,0,0.16),0_1px_1px_rgba(0,0,0,0.10)]'
+            : 'text-[var(--text-muted)] hover:text-[var(--text)]'}"
+          aria-pressed={parkedMode}
+          data-testid="mode-parked"
+          onclick={() => navigate(`/${projectIdentifier}/parked`)}
+        >
+          <Hourglass size={11} class="shrink-0" />
+          <span class="sr-only md:not-sr-only">{t("parked.mode")}</span>
+          {#if parkedCount}
+            <span class="tabular-nums text-[var(--text-faint)]">{parkedCount}</span>
+          {/if}
+        </button>
+      </Tooltip>
     </div>
 
     <!-- LIF-161: per-status tallies (server truth, immune to the list fetch
@@ -273,7 +313,7 @@
         {#each statusCounts as { status, count } (status)}
           {#if count > 0}
             <Tooltip
-              content={`${count} ${status}${view.filterStatus.includes(status) ? "  ·  click to remove from filter" : ""}`}
+              content={t(view.filterStatus.includes(status) ? "issues.topbar.statusCountActive" : "issues.topbar.statusCount", { count, status: STATUSES.includes(status) ? t(`issues.statusValue.${status}`) : status })}
               placement="bottom"
             >
               <button
@@ -306,7 +346,7 @@
        LIF-DOC-14 §7 popover language, and the trigger carries
        a small accent badge with the count of active filters. -->
   <div class="relative">
-    <Tooltip content={view.filterOpen ? null : "Filter"} placement="bottom">
+    <Tooltip content={view.filterOpen ? null : t("issues.topbar.filter")} placement="bottom">
       <button
         class="h-7 flex items-center gap-1.5 px-2 rounded-md
                text-caption font-medium transition-colors
@@ -325,7 +365,7 @@
         }}
       >
         <SlidersVertical size={12} class="shrink-0" />
-        <span>Filter</span>
+        <span>{t("issues.topbar.filter")}</span>
         {#if filterCount > 0}
           <span
             class="grid place-items-center min-w-[1.05rem] h-[1.05rem] px-1
@@ -364,7 +404,7 @@
          being ambiguous next to the total-count number beside it. -->
     {#if layout === "list" && changedCount > 0}
       <Tooltip
-        content={`${changedCount} updated since you last looked  ·  click to step through`}
+        content={t("issues.topbar.changedTooltip", { count: changedCount })}
         placement="bottom"
       >
         <button
@@ -373,7 +413,7 @@
                  text-[var(--accent)] bg-[var(--accent-subtle)]
                  hover:bg-[var(--accent)] hover:text-[var(--accent-text)]
                  transition-colors"
-          aria-label={`${changedCount} updated since you last looked. Focus the next one.`}
+          aria-label={t("issues.topbar.changedAria", { count: changedCount })}
           onclick={(e) => {
             e.stopPropagation();
             view.overflowOpen = false;
@@ -385,7 +425,7 @@
             aria-hidden="true"
           ></span>
           <span>{changedLabel}</span>
-          <span class="hidden md:inline">updated</span>
+          <span class="hidden md:inline">{t("issues.topbar.updated")}</span>
         </button>
       </Tooltip>
     {/if}
@@ -425,7 +465,7 @@
                text-[var(--text-muted)] hover:text-[var(--text)]
                hover:bg-[var(--bg-subtle)] transition-colors
                {view.overflowOpen ? 'text-[var(--text)] bg-[var(--bg-subtle)]' : ''}"
-        aria-label="View options"
+        aria-label={t("issues.topbar.viewOptions")}
         aria-expanded={view.overflowOpen}
         aria-controls={OVERFLOW_PANEL_ID}
         bind:this={overflowTriggerEl}
@@ -462,7 +502,7 @@
       <Tooltip
         content={view.sortOpen
           ? null
-          : `Sort: ${view.sortField === "age" ? "Age" : view.sortField === "updated" ? "Updated" : view.sortField === "number" ? "Issue #" : "Priority"} ${view.sortDir === "asc" ? "ascending" : "descending"}`}
+          : t(view.sortDir === "asc" ? "issues.sort.tooltipAsc" : "issues.sort.tooltipDesc", { field: sortFieldShort(view.sortField) })}
         placement="bottom"
       >
         <button
@@ -489,15 +529,9 @@
                unchanged. The "Sort:" qualifier only appears in the panel,
                where a row reading just "Priority" would be indistinguishable
                from a grouping choice; in the row it would be noise. -->
-          <span class="md:hidden">Sort:</span>
+          <span class="md:hidden">{t("issues.sort.prefix")}</span>
           <span>
-            {view.sortField === "age"
-              ? "Age"
-              : view.sortField === "updated"
-                ? "Updated"
-                : view.sortField === "number"
-                  ? "Issue #"
-                  : "Priority"}
+            {sortFieldShort(view.sortField)}
           </span>
         </button>
       </Tooltip>
@@ -513,7 +547,7 @@
           <div class="px-3 pt-1 pb-1.5 text-[var(--text-faint)]
                       text-micro uppercase tracking-widest
                       font-semibold">
-            Sort by
+            {t("issues.sort.title")}
           </div>
           {#snippet sortRow(field: SortField, label: string, Icon: typeof Hash)}
             {@const active = view.sortField === field}
@@ -540,14 +574,14 @@
               {/if}
             </button>
           {/snippet}
-          {@render sortRow("priority", "Priority", Signal)}
-          {@render sortRow("age", "Age", Clock)}
-          {@render sortRow("updated", "Updated", History)}
-          {@render sortRow("number", "Issue number", Hash)}
+          {@render sortRow("priority", t("issues.field.priority"), Signal)}
+          {@render sortRow("age", t("issues.sort.age"), Clock)}
+          {@render sortRow("updated", t("issues.sort.updated"), History)}
+          {@render sortRow("number", t("issues.sort.number"), Hash)}
           <div class="px-3 pt-2 pb-1 mt-1 text-micro
                       text-[var(--text-faint)] border-t
                       border-[var(--border)] leading-snug">
-            Click the active row to flip direction.
+            {t("issues.sort.hint")}
           </div>
         </div>
       {/if}
@@ -557,7 +591,7 @@
          horizontal bands (module / priority) on top of the status columns. -->
     {#if layout === "board"}
     <div class="relative max-md:[&>span]:w-full">
-      <Tooltip content={view.lanesOpen ? null : "Swimlanes"} placement="bottom">
+      <Tooltip content={view.lanesOpen ? null : t("issues.lanes.tooltip")} placement="bottom">
         <button
           class="h-7 flex items-center gap-1 px-2 rounded-md
                  text-caption font-medium
@@ -576,7 +610,7 @@
           <!-- LIF-350: see the sort trigger — labels stay on below sm now
                that these live in the overflow panel. -->
           <span>
-            {view.laneBy === "none" ? "Lanes" : view.laneBy === "module" ? "Module" : "Priority"}
+            {view.laneBy === "none" ? t("issues.lanes.label") : view.laneBy === "module" ? t("issues.field.module") : t("issues.field.priority")}
           </span>
         </button>
       </Tooltip>
@@ -590,7 +624,7 @@
           onclick={(e) => e.stopPropagation()}
         >
           <div class="px-3 pt-1 pb-1.5 text-[var(--text-faint)] text-micro uppercase tracking-widest font-semibold">
-            Group rows by
+            {t("issues.lanes.title")}
           </div>
           {#snippet laneRow(val: LaneBy, label: string, Icon: typeof Layers | null)}
             {@const active = view.laneBy === val}
@@ -608,13 +642,13 @@
               {#if active}<Check size={13} class="text-[var(--accent)]" />{/if}
             </button>
           {/snippet}
-          {@render laneRow("none", "None", null)}
-          {@render laneRow("module", "Module", Layers)}
-          {@render laneRow("priority", "Priority", Signal)}
+          {@render laneRow("none", t("common.none"), null)}
+          {@render laneRow("module", t("issues.field.module"), Layers)}
+          {@render laneRow("priority", t("issues.field.priority"), Signal)}
           <div class="px-3 pt-2 pb-1 mt-1 text-micro
                       text-[var(--text-faint)] border-t
                       border-[var(--border)] leading-snug">
-            Rows always show, even at zero — drag a card in to assign it.
+            {t("issues.lanes.hint")}
           </div>
         </div>
       {/if}
@@ -624,7 +658,7 @@
     <!-- LIF-191: Display options — group-by + density. List view only. -->
     {#if layout !== "board"}
     <div class="relative max-md:[&>span]:w-full">
-      <Tooltip content={view.displayOpen ? null : "Display options"} placement="bottom">
+      <Tooltip content={view.displayOpen ? null : t("issues.display.tooltip")} placement="bottom">
         <!-- LIF-350: a bare 28px square in the row at sm and up; a labeled,
              full-width row inside the overflow panel below it. The `max-sm:`
              utilities all sit inside the breakpoint's media query, so the
@@ -639,7 +673,7 @@
           onclick={(e) => { e.stopPropagation(); view.displayOpen = !view.displayOpen; view.sortOpen = false; view.newMenuOpen = false; }}
         >
           <SlidersHorizontal size={14} class="shrink-0" />
-          <span class="md:hidden">Display</span>
+          <span class="md:hidden">{t("issues.display.label")}</span>
         </button>
       </Tooltip>
       {#if view.displayOpen}
@@ -652,9 +686,9 @@
           onclick={(e) => e.stopPropagation()}
         >
           <div class="px-3 pt-1 pb-1.5 text-[var(--text-faint)] text-micro uppercase tracking-widest font-semibold">
-            Group by
+            {t("issues.display.groupBy")}
           </div>
-          {#each [["status", "Status"], ["priority", "Priority"], ["module", "Module"], ["none", "None"]] as [val, label]}
+          {#each [["status", t("issues.field.status")], ["priority", t("issues.field.priority")], ["module", t("issues.field.module")], ["none", t("common.none")]] as [val, label]}
             <button
               class="w-full flex items-center justify-between gap-2 px-3 py-1.5 text-left transition-colors
                      {view.groupBy === val
@@ -668,9 +702,9 @@
           {/each}
 
           <div class="px-3 pt-2.5 pb-1.5 mt-1 text-[var(--text-faint)] text-micro uppercase tracking-widest font-semibold border-t border-[var(--border)]">
-            Density
+            {t("issues.display.density")}
           </div>
-          {#each [["compact", "Compact"], ["comfortable", "Comfortable"]] as [val, label]}
+          {#each [["compact", t("issues.display.compact")], ["comfortable", t("issues.display.comfortable")]] as [val, label]}
             <button
               class="w-full flex items-center justify-between gap-2 px-3 py-1.5 text-left transition-colors
                      {view.density === val
@@ -707,7 +741,7 @@
           <!-- svelte-ignore a11y_autofocus -->
           <input
             type="text"
-            placeholder="Search issues..."
+            placeholder={t("issues.topbar.searchPlaceholder")}
             enterkeyhint="search"
             bind:this={searchInputEl}
             bind:value={view.searchQuery}
@@ -730,9 +764,9 @@
         </div>
       </div>
     {:else}
-      <Tooltip content="Search  ·  /" placement="bottom">
+      <Tooltip content={t("issues.topbar.searchTooltip")} placement="bottom">
         <button
-          aria-label="Search issues"
+          aria-label={t("issues.topbar.search")}
           class="touch-target size-7 flex items-center justify-center rounded-md
                  text-[var(--text-muted)] hover:text-[var(--text)]
                  hover:bg-[var(--bg-subtle)] transition-colors"
@@ -748,7 +782,7 @@
          topbar-local popover with its own hand-maintained list. Hidden
          below md since there's no keyboard to shortcut with on touch. -->
     <div class="relative hidden md:block">
-      <Tooltip content="Shortcuts  ·  ?" placement="bottom">
+      <Tooltip content={t("issues.topbar.shortcutsTooltip")} placement="bottom">
         <button
           class="size-7 flex items-center justify-center rounded-md
                  text-[var(--text-muted)] hover:text-[var(--text)]
@@ -781,7 +815,7 @@
                  bg-[var(--btn-success)] hover:bg-[var(--btn-success-hover)]
                  transition-colors focus:outline-none
                  motion-safe:active:scale-[0.97]"
-          aria-label="New issue"
+          aria-label={t("issues.topbar.newIssue")}
           onclick={(e) => {
             e.stopPropagation();
             view.newMenuOpen = false;
@@ -794,7 +828,7 @@
             class="motion-safe:transition-transform
                    motion-safe:group-hover:rotate-90"
           />
-          <span class="hidden md:inline">New</span>
+          <span class="hidden md:inline">{t("issues.topbar.new")}</span>
           <kbd
             class="hidden md:grid ml-0.5 place-items-center min-w-[1.05rem] h-[1.05rem]
                    rounded bg-white/20 font-mono text-micro leading-none"
@@ -809,7 +843,7 @@
                  text-[var(--btn-success-text)] bg-[var(--btn-success)]
                  hover:bg-[var(--btn-success-hover)] transition-colors
                  focus:outline-none motion-safe:active:scale-[0.97]"
-          aria-label="More create options"
+          aria-label={t("issues.topbar.moreCreate")}
           aria-haspopup="menu"
           aria-expanded={view.newMenuOpen}
           onclick={(e) => {
@@ -851,7 +885,7 @@
             }}
           >
             <Zap size={14} class="text-[var(--success)]" />
-            <span class="flex-1">Quick create</span>
+            <span class="flex-1">{t("issues.topbar.quickCreate")}</span>
             <kbd
               class="px-1.5 py-0.5 rounded border border-[var(--border)]
                      bg-[var(--bg-subtle)] text-[var(--text)] font-mono
@@ -871,7 +905,7 @@
             }}
           >
             <PenLine size={14} class="text-[var(--text-muted)]" />
-            <span class="flex-1">Open full editor</span>
+            <span class="flex-1">{t("issues.topbar.fullEditor")}</span>
           </button>
 
           <div class="my-1 h-px bg-[var(--border)]"></div>
@@ -879,7 +913,7 @@
             class="px-3 pb-1 pt-0.5 text-micro uppercase tracking-widest
                    font-semibold text-[var(--text-faint)]"
           >
-            New in status
+            {t("issues.topbar.newInStatus")}
           </div>
           {#each ["backlog", "todo", "active"] as s}
             <button
@@ -893,7 +927,7 @@
               }}
             >
               <StatusIcon status={s} size={14} />
-              <span class="flex-1">{s}</span>
+              <span class="flex-1">{t(`issues.statusValue.${s}`)}</span>
             </button>
           {/each}
         </div>
@@ -921,8 +955,8 @@
                  glyph instead of a native checkbox. -->
             <Tooltip
               content={selectionState === "all"
-                ? "Clear selection  ·  Esc"
-                : "Select all visible issues  ·  Ctrl+A"}
+                ? t("issues.bulk.clear")
+                : t("issues.topbar.selectAllTooltip")}
               placement="bottom"
             >
               <button
@@ -944,7 +978,7 @@
                 {:else}
                   <Square size={14} class="shrink-0" />
                 {/if}
-                <span>{selectionState === "all" ? "All selected" : "Select all"}</span>
+                <span>{selectionState === "all" ? t("issues.topbar.allSelected") : t("issues.topbar.selectAll")}</span>
                 <span class="text-micro tabular-nums font-normal
                              {selectionState === 'none' ? 'text-[var(--text-faint)]' : 'text-[var(--text-muted)]'}">
                   {selectionState === "some" ? `${selectedCount}/${selectableCount}` : selectableCount}

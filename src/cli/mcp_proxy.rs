@@ -114,6 +114,38 @@ struct HttpForwarder {
     client: reqwest::Client,
     endpoint: String,
     credential: Option<String>,
+    /// Fork: where this session runs (`repo@host`), sent as
+    /// `X-Lific-Workspace` so the server keeps one agent per place.
+    workspace: Option<String>,
+}
+
+/// Fork: `repo@host` for the working directory, or `LIFIC_WORKSPACE` when
+/// set (empty turns it off).
+fn workspace_label() -> Option<String> {
+    if let Ok(explicit) = std::env::var("LIFIC_WORKSPACE") {
+        return crate::db::queries::agent_workspaces::normalize(&explicit);
+    }
+    let output = |cmd: &str, args: &[&str]| {
+        std::process::Command::new(cmd)
+            .args(args)
+            .stderr(std::process::Stdio::null())
+            .output()
+            .ok()
+            .filter(|o| o.status.success())
+            .and_then(|o| String::from_utf8(o.stdout).ok())
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+    };
+    let top = output("git", &["rev-parse", "--show-toplevel"])
+        .map(std::path::PathBuf::from)
+        .or_else(|| std::env::current_dir().ok())?;
+    let repo = top.file_name()?.to_string_lossy().into_owned();
+    let host = output("hostname", &[])
+        .or_else(|| std::fs::read_to_string("/etc/hostname").ok())
+        .map(|h| h.trim().split('.').next().unwrap_or_default().to_string())
+        .unwrap_or_default();
+    let label = if host.is_empty() { repo } else { format!("{repo}@{host}") };
+    crate::db::queries::agent_workspaces::normalize(&label)
 }
 
 impl Forwarder for HttpForwarder {
@@ -130,6 +162,9 @@ impl Forwarder for HttpForwarder {
         }
         if let Some(credential) = &self.credential {
             request = request.bearer_auth(credential);
+        }
+        if let Some(workspace) = &self.workspace {
+            request = request.header(crate::db::queries::agent_workspaces::HEADER, workspace);
         }
 
         let response = request.send().await.map_err(ForwardError::unreachable)?;
@@ -511,6 +546,7 @@ pub async fn run(url: String, credential: Option<String>) -> Result<(), Box<dyn 
         client,
         endpoint,
         credential,
+        workspace: workspace_label(),
     };
 
     tracing::info!(
@@ -806,6 +842,7 @@ mod tests {
             client: reqwest::Client::new(),
             endpoint: format!("http://{address}/mcp"),
             credential: None,
+            workspace: None,
         };
 
         let requests = format!(

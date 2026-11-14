@@ -20,6 +20,7 @@
   import type { Label } from "./api";
   import { colorForName, safeLabelColor } from "./labelColors";
   import ColorPicker from "./ColorPicker.svelte";
+  import { t } from "./i18n";
 
   let {
     attached,
@@ -29,11 +30,11 @@
     open = $bindable(false),
     onOpen,
     onCreate,
-    emptyText = "None",
+    emptyText = t("common.none"),
     emptyItalic = false,
     hideEmptyWhenEditable = false,
     popoverWidth = "w-[180px]",
-    emptyPickerText = "No labels defined",
+    emptyPickerText = t("labels.picker.empty"),
   }: {
     /** Names of labels currently attached to the object. */
     attached: string[];
@@ -139,7 +140,7 @@
                      inline-flex items-center justify-center opacity-60
                      hover:opacity-100 transition-opacity"
               onclick={(e) => { e.stopPropagation(); onToggle(name); }}
-              title="Remove label"
+              title={t("labels.picker.remove")}
             >
               <X size={10} />
             </button>
@@ -158,7 +159,7 @@
                text-[var(--text-faint)] hover:border-[var(--accent)]
                hover:text-[var(--accent)] flex items-center justify-center
                transition-colors"
-        title="Add label"
+        title={t("labels.picker.add")}
         onclick={toggleOpen}
       >
         <Plus size={12} />
@@ -183,7 +184,7 @@
             bind:this={inputEl}
             bind:value={query}
             type="text"
-            placeholder="Filter or create…"
+            placeholder={t("labels.picker.filter")}
             class="w-full px-2 py-1 text-body-sm rounded
                    border border-[var(--border)] bg-[var(--bg)]
                    text-[var(--text)] placeholder:text-[var(--text-faint)]
@@ -220,7 +221,7 @@
           {/each}
           {#if onCreate && filtered.length === 0 && !canCreate}
             <div class="px-3 py-2 text-body-sm text-[var(--text-faint)]">
-              {trimmed ? "No match" : emptyPickerText}
+              {trimmed ? t("labels.picker.noMatch") : emptyPickerText}
             </div>
           {/if}
         {/if}
@@ -238,7 +239,7 @@
             disabled={creating}
             onclick={doCreate}
           >
-            {creating ? "Creating…" : `Create “${trimmed}”`}
+            {creating ? t("labels.picker.creating") : t("labels.picker.create", { name: trimmed })}
           </button>
         </div>
       {/if}

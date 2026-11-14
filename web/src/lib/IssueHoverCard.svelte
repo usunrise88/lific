@@ -18,6 +18,7 @@
   // forwarding its own mouseenter/mouseleave so hovering the card
   // itself (e.g. to read a long title) keeps it open.
 
+  import { t } from "./i18n";
   import { tick } from "svelte";
   import { fetchIssueCached, fetchModuleCached, type CachedIssue } from "./references";
   import StatusIcon from "./StatusIcon.svelte";
@@ -159,14 +160,14 @@
 >
   {#if cached === null}
     <div class="flex items-center gap-2 text-body-sm text-[var(--text-faint)]">
-      <span class="hc-spinner" aria-hidden="true"></span> Loading…
+      <span class="hc-spinner" aria-hidden="true"></span> {t("common.loading")}
     </div>
   {:else if cached.status === "unavailable"}
     <!-- Quiet, not an error: covers both a deleted issue (404) and one
          the current viewer just doesn't have access to (403) — see
          references.ts's CachedIssue. -->
     <p class="text-body-sm text-[var(--text-faint)] italic m-0">
-      {identifier} isn't available
+      {t("issues.hover.unavailable", { identifier })}
     </p>
   {:else}
     {@const issue = cached.issue}
@@ -191,7 +192,7 @@
         </p>
       {:else}
         <p class="text-caption text-[var(--text-faint)] italic mt-1.5 mb-0 pt-1.5 border-t border-[var(--border)]">
-          No description
+          {t("issues.noDescription")}
         </p>
       {/if}
     {/if}

@@ -9,6 +9,7 @@
 
   import { FileText, Download } from "lucide-svelte";
   import { downloadAttachment, formatBytes } from "../../api";
+  import { t } from "../../i18n";
 
   let {
     id,
@@ -27,7 +28,7 @@
 <button
   type="button"
   class="fc"
-  title="Download {filename}"
+  title={t("viewers.download", { name: filename })}
   onclick={() => void downloadAttachment(id, filename)}
 >
   <span class="fc__icon"><FileText size={15} /></span>

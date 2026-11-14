@@ -35,6 +35,8 @@
     type DiffRow,
   } from "../lib/linediff";
   import { getContext } from "svelte";
+  import { t, locale, formatNumber } from "../lib/i18n";
+  import { relationLabel } from "../lib/feed";
 
   const PAGE_SIZE = 50;
 
@@ -84,7 +86,7 @@
     const projRes = await listProjects();
     if (!projRes.ok) { error = projRes.error; loading = false; return; }
     const found = projRes.data.find((p) => p.identifier === ident);
-    if (!found) { error = `Project ${ident} not found`; loading = false; return; }
+    if (!found) { error = t("projectActivity.notFound", { identifier: ident }); loading = false; return; }
     project = found;
 
     const [feedRes, actorRes] = await Promise.all([
@@ -162,10 +164,10 @@
 
   function dayLabel(d: Date): string {
     const now = new Date();
-    if (d.toDateString() === now.toDateString()) return "Today";
+    if (d.toDateString() === now.toDateString()) return t("common.today");
     const yesterday = new Date(now.getTime() - 86_400_000);
-    if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
-    return d.toLocaleDateString("en-US", {
+    if (d.toDateString() === yesterday.toDateString()) return t("common.yesterday");
+    return d.toLocaleDateString(locale(), {
       weekday: "short",
       month: "short",
       day: "numeric",
@@ -176,35 +178,52 @@
   // ── Presentation helpers ─────────────────────────────
 
   function actorName(a: Activity): string {
-    return a.actor_display_name || a.actor_username || "system";
+    return a.actor_display_name || a.actor_username || t("projectActivity.system");
   }
 
   function shortValue(v: string | null, max = 60): string {
-    if (!v) return "(none)";
+    if (!v) return t("projectActivity.noneValue");
     const flat = v.replace(/\n+/g, " ").trim();
-    if (!flat) return "(none)";
+    if (!flat) return t("projectActivity.noneValue");
     return flat.length > max ? flat.slice(0, max) + "…" : flat;
   }
 
+  const ENTITY_TYPES = ["issue", "page", "comment", "module", "label", "folder", "plan", "project"];
+
+  /** Display name of an entity type (lowercase, as it reads mid-sentence). */
+  function entityName(type: string): string {
+    return ENTITY_TYPES.includes(type) ? t(`projectActivity.entity.${type}`) : type;
+  }
+
+  // The phrase between the actor and the entity ("{actor} created issue LIF-1").
   function verb(a: Activity): string {
     switch (a.action) {
       case "create":
-        return a.entity_type === "comment" ? "commented on" : `created ${a.entity_type}`;
+        return a.entity_type === "comment" ? t("projectActivity.verb.commented") : t("projectActivity.verb.created", { entity: entityName(a.entity_type) });
       case "delete":
-        return a.entity_type === "comment" ? "deleted a comment on" : `deleted ${a.entity_type}`;
+        return a.entity_type === "comment" ? t("projectActivity.verb.deletedComment") : t("projectActivity.verb.deleted", { entity: entityName(a.entity_type) });
       case "update":
-        return a.entity_type === "comment" ? "edited a comment on" : `changed ${a.field} on`;
+        return a.entity_type === "comment" ? t("projectActivity.verb.editedComment") : t("projectActivity.verb.changed", { field: String(a.field) });
       case "attach":
-        return "labeled";
+        return t("projectActivity.verb.labeled");
       case "detach":
-        return "unlabeled";
+        return t("projectActivity.verb.unlabeled");
       case "link":
-        return `linked ${(a.field ?? "relates_to").replace("_", " ")}`;
+        return t("projectActivity.verb.linked", { relation: relationLabel(a.field) });
       case "unlink":
-        return `unlinked ${(a.field ?? "relates_to").replace("_", " ")}`;
+        return t("projectActivity.verb.unlinked", { relation: relationLabel(a.field) });
       default:
         return a.action;
     }
+  }
+
+  const ISSUE_STATUSES = ["backlog", "todo", "active", "done", "cancelled"];
+  const PRIORITIES = ["urgent", "high", "medium", "low", "none"];
+  function statusName(v: string | null): string {
+    return v && ISSUE_STATUSES.includes(v) ? t(`common.status.${v}`) : (v ?? "");
+  }
+  function priorityName(v: string | null): string {
+    return v && PRIORITIES.includes(v) ? t(`common.priority.${v}`) : (v ?? "");
   }
 
   function entityDestination(a: Activity): string | null {
@@ -234,13 +253,13 @@
   }
 
   function ordinal(n: number): string {
-    const s = ["th", "st", "nd", "rd"];
-    const v = n % 100;
-    return n + (s[(v - 20) % 10] ?? s[v] ?? s[0]);
+    const cat = new Intl.PluralRules(locale(), { type: "ordinal" }).select(n);
+    const form = cat === "one" || cat === "two" || cat === "few" ? cat : "other";
+    return t(`projectActivity.ordinal.${form}`, { n });
   }
 
   function actorStatName(s: ActorStat): string {
-    return s.display_name || s.username || "system";
+    return s.display_name || s.username || t("projectActivity.system");
   }
 
   function initials(name: string): string {
@@ -316,7 +335,7 @@
       </button>
       <ChevronRight size={12} class="text-[var(--text-faint)]" />
       <span class="text-body-sm font-medium text-[var(--text)]">
-        Activity
+        {t("projectActivity.title")}
       </span>
       {#if !loading}
         <span
@@ -336,12 +355,12 @@
                  text-[var(--accent)] bg-[var(--accent-subtle)]
                  pl-2.5 pr-1 py-0.5 rounded-full"
         >
-          {active ? actorStatName(active) : "?"} only
+          {t("projectActivity.filter.only", { name: active ? actorStatName(active) : "?" })}
           <button
             class="size-4 flex items-center justify-center rounded-full
                    hover:bg-[var(--accent)] hover:text-[var(--accent-text)]
                    transition-colors"
-            title="Clear actor filter"
+            title={t("projectActivity.filter.clear")}
             onclick={() => { filterActor = undefined; }}
           >
             ×
@@ -400,28 +419,26 @@
         </aside>
       </div>
     {:else if error}
-      <ErrorState title="Couldn't load activity" message={error}>
+      <ErrorState title={t("projectActivity.loadError")} message={error}>
         <button
           class="text-body-sm font-medium text-[var(--btn-success-text)] bg-[var(--btn-success)] px-3 py-1.5 rounded-md hover:bg-[var(--btn-success-hover)] transition-colors"
           onclick={() => loadProject(projectIdentifier)}
         >
-          Try again
+          {t("common.retry")}
         </button>
         <button
           class="text-body-sm text-[var(--text-muted)] border border-[var(--border)] px-3 py-1.5 rounded-md hover:bg-[var(--bg-subtle)] transition-colors"
           onclick={() => navigate(`/${projectIdentifier}/overview`)}
         >
-          Project overview
+          {t("projectActivity.projectOverview")}
         </button>
       </ErrorState>
     {:else if items.length === 0}
       <div class="flex flex-col items-center py-20 gap-3 px-6 max-w-[480px] mx-auto text-center">
         <History size={32} class="text-[var(--text-faint)]" />
-        <p class="text-body-lg text-[var(--text-muted)]">No activity yet</p>
+        <p class="text-body-lg text-[var(--text-muted)]">{t("projectActivity.empty.title")}</p>
         <p class="text-body-sm text-[var(--text-faint)] leading-relaxed">
-          Every change in this project lands here — who did it, what
-          changed, and whether it came through the web UI, an agent over
-          MCP, the API, or the CLI.
+          {t("projectActivity.empty.body")}
         </p>
       </div>
     {:else}
@@ -473,7 +490,7 @@
                                  uppercase tracking-wider px-1 py-px rounded
                                  bg-[var(--accent-subtle)] text-[var(--accent)] mx-0.5"
                         >
-                          agent
+                          {t("projectActivity.agent")}
                         </span>
                       {/if}
                       {verb(a)}
@@ -499,13 +516,13 @@
                         <span class="text-[var(--text-faint)]">→</span>
                         <span class="inline-flex items-center gap-1 align-middle mx-0.5">
                           <StatusIcon status={a.new_value ?? ""} size={12} />
-                          <span class="capitalize text-[var(--text)]">{a.new_value}</span>
+                          <span class="text-[var(--text)]">{statusName(a.new_value)}</span>
                         </span>
                       {:else if a.action === "update" && a.field === "priority"}
                         <span class="text-[var(--text-faint)]">→</span>
                         <span class="inline-flex items-center gap-1 align-middle mx-0.5">
                           <PriorityIcon priority={a.new_value ?? "none"} size={12} />
-                          <span class="capitalize text-[var(--text)]">{a.new_value}</span>
+                          <span class="text-[var(--text)]">{priorityName(a.new_value)}</span>
                         </span>
                       {:else if a.action === "attach" || a.action === "detach"}
                         <span
@@ -520,7 +537,7 @@
                         </span>
                       {:else if a.action === "create" && a.entity_type === "comment"}
                         <span class="text-[var(--text-faint)] italic">
-                          “{shortValue(a.new_value, 48)}”
+                          {t("projectActivity.quoted", { text: shortValue(a.new_value, 48) })}
                         </span>
                       {:else if a.action === "update" && a.field !== "description" && a.field !== "content"}
                         <span class="text-[var(--text-faint)]">{shortValue(a.old_value, 24)}</span>
@@ -548,20 +565,20 @@
                         <!-- When -->
                         <div>
                           <p class="text-micro font-semibold uppercase tracking-widest text-[var(--text-faint)] mb-1">
-                            When
+                            {t("projectActivity.record.when")}
                           </p>
                           <p class="text-body-sm text-[var(--text)] m-0">
                             {formatDate(a.ts)}
                           </p>
                           <p class="text-micro font-mono text-[var(--text-faint)] m-0 mt-0.5">
-                            {a.ts} UTC
+                            {t("projectActivity.record.utc", { ts: a.ts })}
                           </p>
                         </div>
 
                         <!-- Who -->
                         <div>
                           <p class="text-micro font-semibold uppercase tracking-widest text-[var(--text-faint)] mb-1">
-                            Who
+                            {t("projectActivity.record.who")}
                           </p>
                           <p class="text-body-sm text-[var(--text)] m-0">
                             {actorName(a)}
@@ -574,16 +591,15 @@
                                        uppercase tracking-wider px-1 py-px rounded
                                        bg-[var(--accent-subtle)] text-[var(--accent)] ml-1"
                               >
-                                agent
+                                {t("projectActivity.agent")}
                               </span>
                             {/if}
-                            <span class="text-[var(--text-muted)]">via {a.transport}</span>
+                            <span class="text-[var(--text-muted)]">{t("projectActivity.via", { transport: a.transport })}</span>
                           </p>
                           {#if standing}
                             <p class="text-micro text-[var(--text-muted)] m-0 mt-0.5">
-                              {standing.stat.actions.toLocaleString()} action{standing.stat.actions === 1 ? "" : "s"}
-                              in this project · {ordinal(standing.rank)} most active
-                              · last seen <TimeAgo date={standing.stat.last_ts} />
+                              {t("projectActivity.record.standing.before", { actions: t("projectActivity.record.actions", { count: standing.stat.actions }), rank: ordinal(standing.rank) })}
+                              <TimeAgo date={standing.stat.last_ts} />
                             </p>
                           {/if}
                         </div>
@@ -591,11 +607,11 @@
                         <!-- What -->
                         <div class="sm:col-span-2">
                           <p class="text-micro font-semibold uppercase tracking-widest text-[var(--text-faint)] mb-1">
-                            What
+                            {t("projectActivity.record.what")}
                           </p>
                           <p class="text-body-sm text-[var(--text)] m-0 flex items-center gap-1.5 flex-wrap">
                             {@render entityIcon(a.entity_type, 13)}
-                            <span class="capitalize">{a.entity_type}</span>
+                            <span class="capitalize">{entityName(a.entity_type)}</span>
                             <span class="font-mono text-caption text-[var(--text-muted)]">
                               {a.entity_label ?? `#${a.entity_id}`}
                             </span>
@@ -606,7 +622,7 @@
                                        text-[var(--accent)] hover:underline"
                                 onclick={(e) => { e.stopPropagation(); navigate(dest); }}
                               >
-                                Open <ArrowUpRight size={11} />
+                                {t("common.open")} <ArrowUpRight size={11} />
                               </button>
                             {/if}
                           </p>
@@ -627,7 +643,7 @@
                               >
                                 {#if expandedDiff.unchanged}
                                   <p class="px-3 py-2 m-0 text-[var(--text-faint)] italic">
-                                    No line-level changes
+                                    {t("projectActivity.diff.noChanges")}
                                   </p>
                                 {/if}
                                 {#each expandedDiff.rows as row, i (i)}
@@ -638,7 +654,7 @@
                                     >
                                       <span class="h-px flex-1 bg-[var(--border)]"></span>
                                       <span class="text-micro text-[var(--text-faint)] tabular-nums">
-                                        {row.count} unchanged line{row.count === 1 ? "" : "s"}
+                                        {t("projectActivity.diff.unchanged", { count: row.count })}
                                       </span>
                                       <span class="h-px flex-1 bg-[var(--border)]"></span>
                                     </div>
@@ -699,7 +715,7 @@
               onclick={loadMore}
             >
               <ChevronDown size={12} />
-              {loadingMore ? "Loading..." : "Load more"}
+              {loadingMore ? t("projectActivity.loadingMore") : t("projectActivity.loadMore")}
             </button>
           {/if}
         </div>
@@ -711,7 +727,7 @@
               class="text-micro font-semibold uppercase tracking-widest
                      text-[var(--text-muted)]"
             >
-              Actors
+              {t("projectActivity.actors")}
             </span>
             <span class="text-micro text-[var(--text-faint)] tabular-nums">
               {actors.length}
@@ -728,7 +744,7 @@
                        {active
                   ? 'bg-[var(--accent-subtle)]'
                   : 'hover:bg-[var(--bg-subtle)]'}"
-                title="{active ? 'Clear filter' : `Show only ${name}`} · most via {s.top_transport}"
+                title={active ? t("projectActivity.rail.titleClear", { transport: s.top_transport }) : t("projectActivity.rail.titleShow", { name, transport: s.top_transport })}
                 onclick={() => toggleActorFilter(s)}
               >
                 <div class="flex items-center gap-2.5">
@@ -752,16 +768,16 @@
                                  px-1 py-px rounded bg-[var(--accent-subtle)]
                                  text-[var(--accent)] shrink-0"
                         >
-                          agent
+                          {t("projectActivity.agent")}
                         </span>
                       {/if}
                     </div>
                     <div class="text-micro text-[var(--text-faint)]">
-                      via {s.top_transport} · <TimeAgo date={s.last_ts} />
+                      {t("projectActivity.rail.via.before", { transport: s.top_transport })} <TimeAgo date={s.last_ts} />
                     </div>
                   </div>
                   <span class="text-caption text-[var(--text-muted)] tabular-nums shrink-0">
-                    {s.actions.toLocaleString()}
+                    {formatNumber(s.actions)}
                   </span>
                 </div>
                 <!-- Relative-volume bar along the bottom edge. -->

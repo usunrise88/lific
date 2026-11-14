@@ -2,6 +2,9 @@
   import Login from "./routes/Login.svelte";
   import Signup from "./routes/Signup.svelte";
   import Home from "./routes/Home.svelte";
+  import Feed from "./routes/Feed.svelte";
+  import ForMe from "./routes/ForMe.svelte";
+  import { locale as currentLocale, onLocaleChange, t } from "./lib/i18n";
   import Settings from "./routes/Settings.svelte";
   import InstanceSettings from "./routes/InstanceSettings.svelte";
   import IssueList from "./routes/IssueList.svelte";
@@ -96,6 +99,9 @@
   // anything under the new route mounts and starts fetching.
   setPublicProject(publicProjectOf(initialRoute));
   let route = $state(initialRoute);
+
+  let localeKey = $state(currentLocale());
+  $effect(() => onLocaleChange((code) => (localeKey = code)));
   function applyRoute(next: string) {
     setPublicProject(publicProjectOf(next));
     route = next;
@@ -485,6 +491,8 @@
     // redirect onto the canonical routes above.
     | { type: "public-redirect"; to: string }
     | { type: "app"; page: "home" }
+    | { type: "app"; page: "feed" }
+    | { type: "app"; page: "for-me" }
     | { type: "app"; page: "settings" }
     | { type: "app"; page: "instance-settings" }
     | { type: "app"; page: "project-new" }
@@ -492,6 +500,7 @@
     | { type: "app"; page: "project-settings"; project: string }
     | { type: "app"; page: "issues"; project: string }
     | { type: "app"; page: "board"; project: string }
+    | { type: "app"; page: "parked"; project: string }
     | { type: "app"; page: "graph"; project: string }
     | {
         type: "app";
@@ -568,6 +577,12 @@
     if (r === "/") {
       return { type: "app", page: "home" };
     }
+    if (r === "/feed") {
+      return { type: "app", page: "feed" };
+    }
+    if (r === "/for-me") {
+      return { type: "app", page: "for-me" };
+    }
     if (r === "/settings") {
       return { type: "app", page: "settings" };
     }
@@ -598,6 +613,12 @@
     const boardMatch = r.match(/^\/([A-Za-z][A-Za-z0-9_-]*)\/board$/i);
     if (boardMatch) {
       return { type: "app", page: "board", project: boardMatch[1] };
+    }
+
+    // Fork: /{IDENTIFIER}/parked, the issue list's Parked mode
+    const parkedMatch = r.match(/^\/([A-Za-z][A-Za-z0-9_-]*)\/parked$/i);
+    if (parkedMatch) {
+      return { type: "app", page: "parked", project: parkedMatch[1] };
     }
 
     // Project-scoped: /{IDENTIFIER}/graph (dependency graph — LIF-363)
@@ -758,7 +779,7 @@
   // a prop update on the already-mounted component.
   let routeTransitionKey = $derived(
     parsed.type === "app"
-      ? parsed.page === "board"
+      ? parsed.page === "board" || parsed.page === "parked"
         ? "issues"
         : parsed.page
       : parsed.type === "public"
@@ -770,6 +791,9 @@
   }
 </script>
 
+<!-- Fork: a language switch re-renders the interface in place (state in
+     this script, like the route and the realtime socket, survives). -->
+{#key localeKey}
 {#if parsed.type === "public-redirect"}
   <!-- Replaced by the effect above before the next frame. -->
 {:else if parsed.type === "public"}
@@ -817,15 +841,15 @@
       {/key}
       {#snippet failed(_error: unknown, reset: () => void)}
         <ErrorState
-          title="Something went wrong"
-          message="An unexpected error interrupted this page. Trying again usually clears it."
+          title={t("errors.generic.title")}
+          message={t("errors.generic.message")}
         >
           <button
             class="text-body-sm font-medium text-[var(--btn-success-text)] bg-[var(--btn-success)]
                    px-3 py-1.5 rounded-md hover:bg-[var(--btn-success-hover)] transition-colors"
             onclick={reset}
           >
-            Try again
+            {t("common.retry")}
           </button>
         </ErrorState>
       {/snippet}
@@ -854,15 +878,15 @@
 {:else if parsed.type === "not-found"}
   <Layout {navigate} {route} bind:onProjectChange>
     <ErrorState
-      title="Page not found"
-      message="We couldn't find that page. The link may be wrong, or it has moved."
+      title={t("errors.notFound.title")}
+      message={t("errors.notFound.message")}
     >
       <button
         class="text-body-sm font-medium text-[var(--btn-success-text)] bg-[var(--btn-success)]
                px-3 py-1.5 rounded-md hover:bg-[var(--btn-success-hover)] transition-colors"
         onclick={() => navigate("/")}
       >
-        Back to home
+        {t("errors.notFound.backHome")}
       </button>
     </ErrorState>
   </Layout>
@@ -888,6 +912,10 @@
         {realtimeActivityReady}
         {realtimeActivityRevision}
       />
+    {:else if parsed.page === "feed"}
+      <Feed {navigate} />
+    {:else if parsed.page === "for-me"}
+      <ForMe {navigate} />
     {:else if parsed.page === "settings"}
       <Settings {navigate} />
     {:else if parsed.page === "instance-settings"}
@@ -898,7 +926,7 @@
       <ProjectImport {navigate} />
     {:else if parsed.page === "project-settings"}
       <ProjectSettings {navigate} projectIdentifier={parsed.project} {onProjectChange} />
-    {:else if parsed.page === "issues" || parsed.page === "board"}
+    {:else if parsed.page === "issues" || parsed.page === "board" || parsed.page === "parked"}
       <!-- Single IssueList instance shared across the list/board routes.
            Rendering them as one branch keeps Svelte from unmounting +
            remounting the component when toggling views — a remount would
@@ -908,6 +936,7 @@
         {navigate}
         projectIdentifier={parsed.project}
         layout={parsed.page === "board" ? "board" : "list"}
+        parkedMode={parsed.page === "parked"}
       />
     {:else if parsed.page === "graph"}
       <DependencyGraph {navigate} projectIdentifier={parsed.project} />
@@ -955,22 +984,22 @@
            can't leak internal state to the user. -->
       {#snippet failed(_error: unknown, reset: () => void)}
         <ErrorState
-          title="Something went wrong"
-          message="An unexpected error interrupted this page. Trying again usually clears it."
+          title={t("errors.generic.title")}
+          message={t("errors.generic.message")}
         >
           <button
             class="text-body-sm font-medium text-[var(--btn-success-text)] bg-[var(--btn-success)]
                    px-3 py-1.5 rounded-md hover:bg-[var(--btn-success-hover)] transition-colors"
             onclick={reset}
           >
-            Try again
+            {t("common.retry")}
           </button>
           <button
             class="text-body-sm text-[var(--text-muted)] border border-[var(--border)]
                    px-3 py-1.5 rounded-md hover:bg-[var(--bg-subtle)] transition-colors"
             onclick={() => location.reload()}
           >
-            Reload
+            {t("common.reload")}
           </button>
         </ErrorState>
       {/snippet}
@@ -981,3 +1010,4 @@
 <!-- LIF-243: single global toast host, outside the route branches so it
      survives navigation and renders on auth screens too. -->
 <Toaster />
+{/key}

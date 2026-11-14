@@ -21,7 +21,9 @@
     type UserSummary,
     type InstanceSettings,
     type InstanceSettingsPatch,
+    type LogoTarget,
   } from "../lib/api";
+  import { logoTarget } from "../lib/logoTarget.svelte";
   import {
     RECENT_AUTH_ERROR,
     needsReauth,
@@ -32,9 +34,11 @@
   import { createSaveQueue } from "../lib/saveQueue";
   import { disposePatch, drainStep, takePending } from "../lib/pendingPatch";
   import SettingsTabs from "../lib/SettingsTabs.svelte";
+  import AgentManifestEditor from "../lib/AgentManifestEditor.svelte";
   import Skeleton from "../lib/Skeleton.svelte";
   import TimeAgo from "../lib/TimeAgo.svelte";
   import { toast } from "../lib/toast/toast.svelte";
+  import { t } from "../lib/i18n";
   import { ShieldCheck, Lock, SlidersHorizontal, Check, AlertTriangle, DoorOpen, DoorClosed, Users, ShieldPlus, ShieldMinus, UserMinus, UserPlus, RotateCcw, Archive, ArchiveRestore } from "lucide-svelte";
   import { getContext, onMount } from "svelte";
 
@@ -69,6 +73,7 @@
   let fMessage = $state("");
   let fAutoLogin = $state(false);
   let fAuthzEnforced = $state(false);
+  let fLogoTarget = $state<LogoTarget>("repo");
 
   let saving = $state(false);
   let saveError = $state("");
@@ -83,6 +88,7 @@
     fMessage = s.login_message ?? "";
     fAutoLogin = s.web_auto_login;
     fAuthzEnforced = s.authz_enforced;
+    fLogoTarget = s.logo_target ?? "repo";
   }
 
   onMount(async () => {
@@ -120,8 +126,8 @@
     archived = archived.filter((a) => a.id !== entry.id);
     toast(
       res.data.was_public
-        ? `Unarchived ${res.data.identifier}. It was public before; publish it again from its settings if you want it public.`
-        : `Unarchived ${res.data.identifier}.`,
+        ? t("instance.archived.toast.wasPublic", { identifier: res.data.identifier })
+        : t("instance.archived.toast.done", { identifier: res.data.identifier }),
       { kind: "success" },
     );
   }
@@ -148,6 +154,10 @@
     if (patch.allow_signup !== undefined) fSignups = from.allow_signup;
     if (patch.web_auto_login !== undefined) fAutoLogin = from.web_auto_login;
     if (patch.authz_enforced !== undefined) fAuthzEnforced = from.authz_enforced;
+    if (patch.logo_target !== undefined) {
+      fLogoTarget = from.logo_target ?? "repo";
+      logoTarget.value = fLogoTarget;
+    }
   }
 
   /** One save. `recover` is false once the password prompt has already
@@ -282,6 +292,12 @@
     if (settings && v !== fAutoLogin) {
       fAutoLogin = v;
       commit({ web_auto_login: v });
+    }
+  }
+  function setLogoTarget(v: LogoTarget) {
+    if (settings && v !== fLogoTarget) {
+      fLogoTarget = v;
+      commit({ logo_target: v });
     }
   }
   function setAuthzEnforced(v: boolean) {
@@ -486,10 +502,21 @@
     // Only worth saying if the prompt is still on screen. An ordinary failure
     // clears the prompt and reports itself through `saveError`/`rowError`.
     if (!landed && !reauthError && reauthFor) {
-      reauthError = "That still was not accepted. Sign out and sign back in, then try again.";
+      reauthError = t("instance.reauth.stillRejected");
     }
     reauthBusy = false;
   }
+
+  // Bring a refused settings change's prompt into view and focus it: it is
+  // the only way forward, and the controls above stay locked until it is
+  // answered or cancelled.
+  let settingsReauthEl = $state<HTMLDivElement | null>(null);
+  $effect(() => {
+    const el = settingsReauthEl;
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.querySelector<HTMLInputElement>('input[type="password"]')?.focus({ preventScroll: true });
+  });
 
   function cancelReauth() {
     // An abandoned settings change must not leave its control asserting a
@@ -565,9 +592,77 @@
   }
 </script>
 
+{#snippet reauthForm(target: ReauthTarget)}
+  <!-- The password prompt for a refused change. Rendered beside what was
+       refused: under the settings for a settings change, under Members for
+       the member actions. -->
+  <div class="flex items-start gap-2 text-caption text-[var(--text)]">
+    <Lock size={13} class="shrink-0 mt-0.5 text-[var(--text-muted)]" />
+    <p class="leading-relaxed">
+      {#if target.kind === "create"}
+        {t("instance.reauth.create.before")} <span class="font-mono">@{target.username}</span>{t("instance.reauth.create.after")}
+      {:else if target.kind === "promote"}
+        {t("instance.reauth.promote.before")} <span class="font-mono">@{target.username}</span>{t("instance.reauth.promote.after")}
+      {:else if target.kind === "reactivate"}
+        {t("instance.reauth.restore.before")} <span class="font-mono">@{target.username}</span>{t("instance.reauth.restore.after")}
+      {:else}
+        {t("instance.reauth.settings")}
+      {/if}
+      {#if target.kind === "settings"}
+        {t("instance.reauth.settingsWhy")}
+      {:else}
+        {t("instance.reauth.grantWhy")}
+      {/if}
+    </p>
+  </div>
+  {#if autoReauthNote}
+    <p class="text-caption text-[var(--text-muted)]" role="status">
+      {t("instance.reauth.autoFailed", { reason: autoReauthNote })}
+    </p>
+  {/if}
+  {#if reauthError}
+    <p class="text-caption text-[var(--error)] flex items-center gap-1" role="alert">
+      <AlertTriangle size={12} /> {reauthError}
+    </p>
+  {/if}
+  <div class="flex items-center gap-2 flex-wrap">
+    <label class="flex-1 min-w-[180px]">
+      <span class="sr-only">{t("instance.reauth.passwordLabel")}</span>
+      <input
+        bind:value={reauthPassword}
+        type="password"
+        placeholder={t("instance.reauth.passwordPlaceholder")}
+        autocomplete="current-password"
+        disabled={reauthBusy}
+        class="w-full px-3 py-1.5 text-body-sm rounded-md border border-[var(--border)]
+               bg-[var(--bg)] text-[var(--text)] outline-none focus-visible:ring-2
+               focus-visible:ring-[var(--accent)] disabled:opacity-50"
+        onkeydown={(e) => { if (e.key === 'Enter') submitReauth(); }}
+      />
+    </label>
+    <button
+      class="text-body-sm font-medium text-[var(--btn-success-text)] bg-[var(--btn-success)]
+             px-3 py-1.5 rounded-md hover:bg-[var(--btn-success-hover)] transition-colors
+             disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+      disabled={reauthBusy || !reauthPassword}
+      onclick={submitReauth}
+    >
+      {reauthBusy ? t("instance.reauth.verifying") : t("instance.reauth.submit")}
+    </button>
+    <button
+      class="text-body-sm text-[var(--text-muted)] px-3 py-1.5 rounded-md hover:bg-[var(--surface)] transition-colors disabled:opacity-50 shrink-0"
+      disabled={reauthBusy}
+      onclick={cancelReauth}
+    >
+      {t("common.cancel")}
+    </button>
+  </div>
+{/snippet}
+
+
 {#snippet topbarContent()}
   <div class="flex items-center gap-3 px-6 py-2 w-full">
-    <span class="text-body-sm font-medium text-[var(--text)]">Settings</span>
+    <span class="text-body-sm font-medium text-[var(--text)]">{t("settings.title")}</span>
   </div>
 {/snippet}
 
@@ -620,24 +715,23 @@
           <div class="size-12 rounded-full bg-[var(--bg-subtle)] grid place-items-center mb-4">
             <Lock size={20} class="text-[var(--text-faint)]" />
           </div>
-          <h2 class="text-[1rem] font-semibold text-[var(--text)]">Admins only</h2>
+          <h2 class="text-[1rem] font-semibold text-[var(--text)]">{t("instance.gate.title")}</h2>
           <p class="text-body text-[var(--text-muted)] mt-1 max-w-[36ch]">
-            Instance settings are visible to administrators of this instance.
+            {t("instance.gate.body")}
           </p>
           <button
             class="mt-5 text-body-sm font-medium text-[var(--btn-success-text)] bg-[var(--btn-success)]
                    px-3 py-1.5 rounded-md hover:bg-[var(--btn-success-hover)] transition-colors"
             onclick={() => navigate("/settings")}
           >
-            Back to account
+            {t("instance.gate.back")}
           </button>
         </div>
       {:else}
         <section class="mb-8 animate-reveal delay-100">
-          <h1 class="font-display text-title tracking-tight text-[var(--text)] leading-none">Instance</h1>
+          <h1 class="font-display text-title tracking-tight text-[var(--text)] leading-none">{t("instance.title")}</h1>
           <p class="text-body text-[var(--text-muted)] mt-2">
-            Settings for the Lific instance at <span class="font-mono text-[var(--text)]">{host}</span>.
-            Changes apply immediately.
+            {t("instance.intro.before")} <span class="font-mono text-[var(--text)]">{host}</span>{t("instance.intro.after")}
           </p>
         </section>
 
@@ -653,14 +747,14 @@
         >
           <div class="flex items-center gap-2 mb-5">
             <SlidersHorizontal size={15} class="text-[var(--text-muted)]" />
-            <h2 class="text-body-lg font-semibold text-[var(--text)]">Settings</h2>
+            <h2 class="text-body-lg font-semibold text-[var(--text)]">{t("instance.form.title")}</h2>
             <span class="font-mono text-micro text-[var(--text-faint)] px-1.5 py-0.5 rounded bg-[var(--bg-subtle)]">v{__APP_VERSION__}</span>
           </div>
 
           <div class="flex flex-col gap-6 max-w-[560px]">
             <!-- Name -->
             <label class="block">
-              <span class="block text-micro font-semibold uppercase tracking-widest text-[var(--text)] mb-1.5">Instance name</span>
+              <span class="block text-micro font-semibold uppercase tracking-widest text-[var(--text)] mb-1.5">{t("instance.name.label")}</span>
               <input
                 bind:value={fName}
                 onblur={commitName}
@@ -669,13 +763,13 @@
                 class="w-full px-3 py-2 text-body rounded-md border border-[var(--border)] bg-[var(--bg)] text-[var(--text)]
                        outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
               />
-              <span class="block text-caption text-[var(--text)] mt-1.5">Shown on the sign-in screen. Leave blank to use the host.</span>
+              <span class="block text-caption text-[var(--text)] mt-1.5">{t("instance.name.hint")}</span>
             </label>
 
             <!-- Signups: a real status, so each state carries its own color
                  (green = open/permissive, amber = gated) + an icon. -->
             <div>
-              <span class="block text-micro font-semibold uppercase tracking-widest text-[var(--text)] mb-1.5">Sign-ups</span>
+              <span class="block text-micro font-semibold uppercase tracking-widest text-[var(--text)] mb-1.5">{t("instance.signups.label")}</span>
               <div class="inline-flex gap-1 p-1 rounded-xl bg-[var(--bg)] shadow-[inset_0_1px_2px_rgba(0,0,0,0.10)]">
                 <button
                   type="button"
@@ -688,7 +782,7 @@
                   onclick={() => setSignups(true)}
                 >
                   <DoorOpen size={16} class="shrink-0" />
-                  Open
+                  {t("instance.signups.open")}
                 </button>
                 <button
                   type="button"
@@ -701,21 +795,21 @@
                   onclick={() => setSignups(false)}
                 >
                   <DoorClosed size={16} class="shrink-0" />
-                  Closed
+                  {t("instance.signups.closed")}
                 </button>
               </div>
               <span class="block text-caption text-[var(--text)] mt-2 leading-relaxed">
                 {#if fSignups}
-                  Anyone can create their own account{parseDomains(fDomains).length ? " from an allowed domain" : ""}.
+                  {parseDomains(fDomains).length ? t("instance.signups.openHintDomains") : t("instance.signups.openHint")}
                 {:else}
-                  New accounts are created by an admin only. The sign-in screen shows a closed notice.
+                  {t("instance.signups.closedHint")}
                 {/if}
               </span>
             </div>
 
             <!-- Email domain allowlist -->
             <label class="block">
-              <span class="block text-micro font-semibold uppercase tracking-widest text-[var(--text)] mb-1.5">Allowed signup domains</span>
+              <span class="block text-micro font-semibold uppercase tracking-widest text-[var(--text)] mb-1.5">{t("instance.domains.label")}</span>
               <input
                 bind:value={fDomains}
                 onblur={commitDomains}
@@ -723,12 +817,12 @@
                 class="w-full px-3 py-2 text-body font-mono rounded-md border border-[var(--border)] bg-[var(--bg)] text-[var(--text)]
                        outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
               />
-              <span class="block text-caption text-[var(--text)] mt-1.5">Comma-separated. Leave blank to allow any email domain.</span>
+              <span class="block text-caption text-[var(--text)] mt-1.5">{t("instance.domains.hint")}</span>
             </label>
 
             <!-- Session lifetime -->
             <label class="block">
-              <span class="block text-micro font-semibold uppercase tracking-widest text-[var(--text)] mb-1.5">Session lifetime</span>
+              <span class="block text-micro font-semibold uppercase tracking-widest text-[var(--text)] mb-1.5">{t("instance.session.label")}</span>
               <div class="flex items-center gap-2">
                 <input
                   type="number"
@@ -739,25 +833,52 @@
                   class="w-24 px-3 py-2 text-body rounded-md border border-[var(--border)] bg-[var(--bg)] text-[var(--text)]
                          outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
                 />
-                <span class="text-body text-[var(--text)]">days</span>
+                <span class="text-body text-[var(--text)]">{t("instance.session.days")}</span>
               </div>
-              <span class="block text-caption text-[var(--text)] mt-1.5">How long a sign-in stays valid before re-authenticating (1 to 365).</span>
+              <span class="block text-caption text-[var(--text)] mt-1.5">{t("instance.session.hint")}</span>
             </label>
 
             <!-- Login message -->
             <label class="block">
-              <span class="block text-micro font-semibold uppercase tracking-widest text-[var(--text)] mb-1.5">Login message</span>
+              <span class="block text-micro font-semibold uppercase tracking-widest text-[var(--text)] mb-1.5">{t("instance.loginMessage.label")}</span>
               <textarea
                 bind:value={fMessage}
                 onblur={commitMessage}
                 rows="2"
                 maxlength="280"
-                placeholder="Lific Issue tracker. Ask I.T. for access"
+                placeholder={t("instance.loginMessage.placeholder")}
                 class="w-full px-3 py-2 text-body rounded-md border border-[var(--border)] bg-[var(--bg)] text-[var(--text)]
                        outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] resize-none"
               ></textarea>
-              <span class="block text-caption text-[var(--text)] mt-1.5">A short note shown on the sign-in screen. Leave blank for none.</span>
+              <span class="block text-caption text-[var(--text)] mt-1.5">{t("instance.loginMessage.hint")}</span>
             </label>
+
+            <!-- Fork: where the sidebar logo leads. -->
+            <div>
+              <span class="block text-micro font-semibold uppercase tracking-widest text-[var(--text)] mb-1.5">{t("instance.logo.label")}</span>
+              <div class="inline-flex flex-wrap gap-1 p-1 rounded-xl bg-[var(--bg)] shadow-[inset_0_1px_2px_rgba(0,0,0,0.10)]">
+                {#each [["repo", t("instance.logo.repo")], ["home", t("instance.logo.home")], ["feed", t("instance.logo.feed")], ["for-me", t("instance.logo.forMe")]] as [value, label] (value)}
+                  <button
+                    type="button"
+                    aria-pressed={fLogoTarget === value}
+                    class="px-3.5 py-2 rounded-lg text-body-sm font-semibold transition-all motion-safe:active:scale-[0.98]
+                           {fLogoTarget === value
+                      ? 'bg-[var(--surface)] text-[var(--text)] shadow-[0_1px_2px_rgba(0,0,0,0.10)] ring-1 ring-[var(--border)]'
+                      : 'text-[var(--text-muted)] hover:text-[var(--text)]'}"
+                    onclick={() => setLogoTarget(value as LogoTarget)}
+                  >{label}</button>
+                {/each}
+              </div>
+              <span class="block text-caption text-[var(--text)] mt-2">
+                {fLogoTarget === "repo"
+                  ? t("instance.logo.hint.repo")
+                  : fLogoTarget === "home"
+                    ? t("instance.logo.hint.home")
+                    : fLogoTarget === "feed"
+                      ? t("instance.logo.hint.feed")
+                      : t("instance.logo.hint.forMe")}
+              </span>
+            </div>
 
             <!-- Single-user mode (LIF-215): auto-sign-in the web UI as the
                  admin. A real auth bypass, so it's set apart with a divider and
@@ -767,7 +888,7 @@
                  box, NOT by tinting this 11px label amber — orange-600 is only
                  ~3.4:1 on the light surface and would fail AA. -->
             <div class="pt-6 mt-1 border-t border-[var(--border)]">
-              <span class="block text-micro font-semibold uppercase tracking-widest text-[var(--text)] mb-1.5">Single-user mode</span>
+              <span class="block text-micro font-semibold uppercase tracking-widest text-[var(--text)] mb-1.5">{t("instance.autoLogin.label")}</span>
               <div class="inline-flex gap-1 p-1 rounded-xl bg-[var(--bg)] shadow-[inset_0_1px_2px_rgba(0,0,0,0.10)]">
                 <button
                   type="button"
@@ -780,7 +901,7 @@
                   onclick={() => setAutoLogin(false)}
                 >
                   <DoorClosed size={16} class="shrink-0" />
-                  Require sign-in
+                  {t("instance.autoLogin.off")}
                 </button>
                 <button
                   type="button"
@@ -793,20 +914,20 @@
                   onclick={() => setAutoLogin(true)}
                 >
                   <DoorOpen size={16} class="shrink-0" />
-                  Skip web sign-in
+                  {t("instance.autoLogin.on")}
                 </button>
               </div>
               <span class="block text-caption text-[var(--text)] mt-2 leading-relaxed">
                 {#if fAutoLogin}
-                  The web UI signs in as the admin automatically — no login screen.
+                  {t("instance.autoLogin.onHint")}
                 {:else}
-                  Everyone signs in with their account as normal.
+                  {t("instance.autoLogin.offHint")}
                 {/if}
               </span>
               {#if fAutoLogin}
                 <div class="flex items-start gap-2 text-caption text-[var(--warn-text)] bg-[color-mix(in_oklab,var(--warn)_12%,var(--bg))] px-3 py-2 rounded-lg mt-2 max-w-[42ch]">
                   <AlertTriangle size={13} class="shrink-0 mt-0.5" />
-                  <span>Anyone who can reach this site becomes admin without a password. Only enable on a private or local instance. REST and MCP are unaffected.</span>
+                  <span>{t("instance.autoLogin.warning")}</span>
                 </div>
               {/if}
             </div>
@@ -818,7 +939,7 @@
             <div class="pt-6 mt-1 border-t border-[var(--border)]">
               <span class="flex items-center gap-1.5 text-micro font-semibold uppercase tracking-widest text-[var(--text)] mb-1.5">
                 <Users size={12} />
-                Project permissions
+                {t("instance.authz.label")}
               </span>
               <div class="inline-flex gap-1 p-1 rounded-xl bg-[var(--bg)] shadow-[inset_0_1px_2px_rgba(0,0,0,0.10)]">
                 <button
@@ -832,7 +953,7 @@
                   onclick={() => setAuthzEnforced(false)}
                 >
                   <DoorOpen size={16} class="shrink-0" />
-                  Off
+                  {t("instance.authz.off")}
                 </button>
                 <button
                   type="button"
@@ -845,27 +966,21 @@
                   onclick={() => setAuthzEnforced(true)}
                 >
                   <DoorClosed size={16} class="shrink-0" />
-                  Enforced
+                  {t("instance.authz.on")}
                 </button>
               </div>
               <span class="block text-caption text-[var(--text)] mt-2 leading-relaxed max-w-[42ch]">
-                When on, only project members can see or edit a project. Add yourself as lead to your projects before enabling.
+                {t("instance.authz.hint")}
               </span>
               {#if fAuthzEnforced}
                 <div class="flex items-start gap-2 text-caption text-[var(--warn-text)] bg-[color-mix(in_oklab,var(--warn)_12%,var(--bg))] px-3 py-2 rounded-lg mt-2 max-w-[42ch]">
                   <AlertTriangle size={13} class="shrink-0 mt-0.5" />
-                  <span>Anyone not added as a project member (via that project's Settings → Members) loses access to it immediately, including you if you aren't a lead yet.</span>
+                  <span>{t("instance.authz.warning")}</span>
                 </div>
               {/if}
             </div>
           </div>
 
-          {#if reauthFor?.kind === "settings"}
-            <p class="text-caption text-[var(--text-muted)] mt-4 flex items-center gap-1" role="status">
-              <Lock size={12} /> That change needs a recent sign-in. Confirm your password under
-              <strong>Members</strong> below and it will be saved.
-            </p>
-          {/if}
           {#if saveError}
             <p class="text-caption text-[var(--error)] mt-4 flex items-center gap-1" role="alert"><AlertTriangle size={12} /> {saveError}</p>
           {/if}
@@ -875,24 +990,45 @@
             {#if saving}
               <span class="inline-flex items-center gap-1.5 text-[var(--text-muted)]">
                 <span class="size-3 rounded-full border-2 border-[var(--border)] border-t-[var(--accent)] animate-spin"></span>
-                Saving…
+                {t("common.saving")}
               </span>
             {:else if savedAt}
-              <span class="inline-flex items-center gap-1 text-[var(--success)]"><Check size={13} /> Saved</span>
+              <span class="inline-flex items-center gap-1 text-[var(--success)]"><Check size={13} /> {t("common.saved")}</span>
             {:else if !saveError}
-              <span class="text-[var(--text-muted)]">Changes save automatically.</span>
+              <span class="text-[var(--text-muted)]">{t("instance.form.autosave")}</span>
             {/if}
           </div>
         </fieldset>
+
+        <!-- A settings change refused for an old session: say so where the
+             change was made, and take the password right here. -->
+        {#if reauthFor?.kind === "settings"}
+          <div
+            bind:this={settingsReauthEl}
+            class="mt-3 rounded-xl border border-[color-mix(in_oklab,var(--warn)_45%,var(--border))]
+                   bg-[color-mix(in_oklab,var(--warn)_10%,var(--surface))] p-4 flex flex-col gap-2"
+            role="alert"
+          >
+            <p class="m-0 text-body-sm font-semibold text-[var(--warn-text)] flex items-center gap-1.5">
+              <Lock size={14} /> {t("instance.reauth.notSaved")}
+            </p>
+            {@render reauthForm(reauthFor)}
+          </div>
+        {/if}
+
+        <!-- ── AGENT MANIFEST (fork) ──────────────────────── -->
+        {#if user}
+          <AgentManifestEditor userId={user.id} autoLogin={webAutoLogin} />
+        {/if}
 
         <!-- ── MEMBERS ────────────────────────────────────── -->
         <section class="mt-10 animate-reveal delay-250">
           <div class="flex items-center gap-2 mb-1">
             <ShieldCheck size={16} class="text-[var(--text-muted)]" />
-            <h2 class="text-[1rem] font-semibold text-[var(--text)]">Members</h2>
+            <h2 class="text-[1rem] font-semibold text-[var(--text)]">{t("instance.members.title")}</h2>
           </div>
           <p class="text-body text-[var(--text-muted)] mb-5 leading-relaxed">
-            {users.length} {users.length === 1 ? "person" : "people"} on this instance · {adminCount} admin.
+            {t("instance.members.summary", { count: users.length, admins: adminCount })}
           </p>
 
           <div class="rounded-xl bg-[var(--surface)] shadow-[0_1px_2px_rgba(0,0,0,0.06)] overflow-hidden">
@@ -901,7 +1037,7 @@
               <input
                 bind:value={newUsername}
                 disabled={reauthFor !== null || reauthBusy}
-                placeholder="username"
+                placeholder={t("instance.members.usernamePlaceholder")}
                 autocomplete="off"
                 class="flex-1 min-w-[150px] px-3 py-1.5 text-body-sm font-mono rounded-md border border-[var(--border)]
                        bg-[var(--bg)] text-[var(--text)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
@@ -910,7 +1046,7 @@
                 bind:value={newPassword}
                 disabled={reauthFor !== null || reauthBusy}
                 type="password"
-                placeholder="password"
+                placeholder={t("instance.members.passwordPlaceholder")}
                 autocomplete="new-password"
                 class="flex-1 min-w-[150px] px-3 py-1.5 text-body-sm rounded-md border border-[var(--border)]
                        bg-[var(--bg)] text-[var(--text)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
@@ -923,14 +1059,14 @@
                 onclick={submitCreate}
               >
                 <UserPlus size={14} />
-                {creating ? "Creating…" : "Create"}
+                {creating ? t("instance.members.creating") : t("common.create")}
               </button>
             </div>
             {#if createError}
               <div class="px-4 py-2 text-caption text-[var(--error)] bg-[var(--error-bg)]" role="alert">{createError}</div>
             {:else if createdName}
               <div class="px-4 py-2 text-caption text-[var(--success)]" role="status">
-                Created <span class="font-mono">@{createdName}</span>. Share the password with them; they can change it in their settings.
+                {t("instance.members.created.before")} <span class="font-mono">@{createdName}</span>{t("instance.members.created.after")}
               </div>
             {/if}
 
@@ -938,66 +1074,9 @@
                  server refused for staleness, names which action is waiting,
                  and leaves that action's inputs alone so confirming resumes it
                  unchanged. -->
-            {#if reauthFor}
+            {#if reauthFor && reauthFor.kind !== "settings"}
               <div class="px-4 py-3 border-t border-[var(--border)] bg-[var(--bg-subtle)] flex flex-col gap-2">
-                <div class="flex items-start gap-2 text-caption text-[var(--text)]">
-                  <Lock size={13} class="shrink-0 mt-0.5 text-[var(--text-muted)]" />
-                  <p class="leading-relaxed">
-                    Verify it's you to
-                    {#if reauthFor.kind === "create"}
-                      create <span class="font-mono">@{reauthFor.username}</span>.
-                    {:else if reauthFor.kind === "promote"}
-                      make <span class="font-mono">@{reauthFor.username}</span> an admin.
-                    {:else if reauthFor.kind === "reactivate"}
-                      restore <span class="font-mono">@{reauthFor.username}</span>.
-                    {:else}
-                      save that instance setting.
-                    {/if}
-                    Expanding access needs a recent sign-in, and you have been signed in for a while.
-                  </p>
-                </div>
-                {#if autoReauthNote}
-                  <p class="text-caption text-[var(--text-muted)]" role="status">
-                    Signing you in automatically did not work ({autoReauthNote}).
-                  </p>
-                {/if}
-                {#if reauthError}
-                  <p class="text-caption text-[var(--error)] flex items-center gap-1" role="alert">
-                    <AlertTriangle size={12} /> {reauthError}
-                  </p>
-                {/if}
-                <div class="flex items-center gap-2 flex-wrap">
-                  <label class="flex-1 min-w-[180px]">
-                    <span class="sr-only">Your current password</span>
-                    <input
-                      bind:value={reauthPassword}
-                      type="password"
-                      placeholder="your current password"
-                      autocomplete="current-password"
-                      disabled={reauthBusy}
-                      class="w-full px-3 py-1.5 text-body-sm rounded-md border border-[var(--border)]
-                             bg-[var(--bg)] text-[var(--text)] outline-none focus-visible:ring-2
-                             focus-visible:ring-[var(--accent)] disabled:opacity-50"
-                      onkeydown={(e) => { if (e.key === 'Enter') submitReauth(); }}
-                    />
-                  </label>
-                  <button
-                    class="text-body-sm font-medium text-[var(--btn-success-text)] bg-[var(--btn-success)]
-                           px-3 py-1.5 rounded-md hover:bg-[var(--btn-success-hover)] transition-colors
-                           disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
-                    disabled={reauthBusy || !reauthPassword}
-                    onclick={submitReauth}
-                  >
-                    {reauthBusy ? "Verifying…" : "Confirm and continue"}
-                  </button>
-                  <button
-                    class="text-body-sm text-[var(--text-muted)] px-3 py-1.5 rounded-md hover:bg-[var(--surface)] transition-colors disabled:opacity-50 shrink-0"
-                    disabled={reauthBusy}
-                    onclick={cancelReauth}
-                  >
-                    Cancel
-                  </button>
-                </div>
+                {@render reauthForm(reauthFor)}
               </div>
             {/if}
 
@@ -1010,14 +1089,14 @@
                   <div class="text-body text-[var(--text)] truncate leading-tight">
                     {u.display_name || u.username}
                     {#if u.id === user?.id}
-                      <span class="text-caption text-[var(--text-faint)]">(you)</span>
+                      <span class="text-caption text-[var(--text-faint)]">{t("instance.members.you")}</span>
                     {/if}
                   </div>
                   <div class="text-caption font-mono text-[var(--text-faint)] truncate leading-tight mt-0.5">@{u.username}</div>
                 </div>
                 {#if !u.is_active}
                   <span class="text-micro font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full shrink-0 text-[var(--warn-text)] bg-[color-mix(in_oklab,var(--warn)_15%,var(--bg))]">
-                    Deactivated
+                    {t("instance.members.deactivated")}
                   </span>
                 {/if}
                 <span
@@ -1026,7 +1105,7 @@
                     ? 'text-[var(--accent)] bg-[var(--accent-subtle)]'
                     : 'text-[var(--text-muted)] bg-[var(--bg-subtle)]'}"
                 >
-                  {u.is_admin ? "Admin" : "Member"}
+                  {u.is_admin ? t("settings.role.admin") : t("settings.role.member")}
                 </span>
                 <span class="hidden sm:block text-caption text-[var(--text-faint)] tabular-nums shrink-0 w-[5.5rem] text-right">
                   <TimeAgo date={u.created_at} />
@@ -1048,14 +1127,14 @@
                         {#if rowBusy === u.id}
                           …
                         {:else}
-                          {pending.kind === "demote" ? "Demote" : "Deactivate"}
+                          {pending.kind === "demote" ? t("instance.members.demote") : t("instance.members.deactivate")}
                         {/if}
                       </button>
                       <button
                         class="text-caption text-[var(--text-muted)] px-2 py-1 rounded-md hover:bg-[var(--bg-subtle)] transition-colors"
                         onclick={() => { pending = null; }}
                       >
-                        Cancel
+                        {t("common.cancel")}
                       </button>
                     </div>
                   {:else}
@@ -1065,8 +1144,8 @@
                           class="size-7 grid place-items-center rounded-md text-[var(--text-muted)]
                                  hover:text-[var(--warn-text)] hover:bg-[var(--bg-subtle)] transition-colors"
                           onclick={() => { pending = { id: u.id, kind: "demote" }; rowError = null; }}
-                          title="Remove instance admin"
-                          aria-label="Remove instance admin from {u.display_name || u.username}"
+                          title={t("instance.members.demoteTitle")}
+                          aria-label={t("instance.members.demoteAria", { name: u.display_name || u.username })}
                         >
                           <ShieldMinus size={14} />
                         </button>
@@ -1077,8 +1156,8 @@
                                  disabled:opacity-40 disabled:cursor-not-allowed"
                           disabled={rowBusy === u.id || creating || saving || settingsReplayInFlight || reauthFor !== null || reauthBusy}
                           onclick={() => runGrant(u, attemptPromote)}
-                          title="Make instance admin"
-                          aria-label="Make {u.display_name || u.username} an instance admin"
+                          title={t("instance.members.promoteTitle")}
+                          aria-label={t("instance.members.promoteAria", { name: u.display_name || u.username })}
                         >
                           <ShieldPlus size={14} />
                         </button>
@@ -1088,8 +1167,8 @@
                           class="size-7 grid place-items-center rounded-md text-[var(--text-muted)]
                                  hover:text-[var(--error)] hover:bg-[var(--error-bg)] transition-colors"
                           onclick={() => { pending = { id: u.id, kind: "deactivate" }; rowError = null; }}
-                          title="Deactivate account"
-                          aria-label="Deactivate {u.display_name || u.username}"
+                          title={t("instance.members.deactivateTitle")}
+                          aria-label={t("instance.members.deactivateAria", { name: u.display_name || u.username })}
                         >
                           <UserMinus size={14} />
                         </button>
@@ -1100,8 +1179,8 @@
                                  disabled:opacity-40 disabled:cursor-not-allowed"
                           disabled={rowBusy === u.id || creating || saving || settingsReplayInFlight || reauthFor !== null || reauthBusy}
                           onclick={() => runGrant(u, attemptReactivate)}
-                          title="Restore account"
-                          aria-label="Restore {u.display_name || u.username}"
+                          title={t("instance.members.restoreTitle")}
+                          aria-label={t("instance.members.restoreAria", { name: u.display_name || u.username })}
                         >
                           <RotateCcw size={14} />
                         </button>
@@ -1116,8 +1195,7 @@
             {/each}
           </div>
           <p class="text-caption text-[var(--text-faint)] mt-2 max-w-[60ch] leading-relaxed">
-            Deactivating an account ends its sessions and revokes its API keys and tokens. Nothing it wrote is
-            removed. The last admin who can still sign in cannot be demoted or deactivated.
+            {t("instance.members.footer")}
           </p>
         </section>
 
@@ -1125,18 +1203,17 @@
         <section class="mt-10 animate-reveal delay-300">
           <div class="flex items-center gap-2 mb-1">
             <Archive size={16} class="text-[var(--text-muted)]" />
-            <h2 class="text-[1rem] font-semibold text-[var(--text)]">Archived projects</h2>
+            <h2 class="text-[1rem] font-semibold text-[var(--text)]">{t("instance.archived.title")}</h2>
           </div>
           <p class="text-body text-[var(--text-muted)] mb-5 leading-relaxed">
-            Projects archived from their settings live as one compressed file each on the server.
-            Unarchiving brings one back with its members and history, as a private project.
+            {t("instance.archived.intro")}
           </p>
 
           <div class="rounded-xl bg-[var(--surface)] shadow-[0_1px_2px_rgba(0,0,0,0.06)] overflow-hidden">
             {#if archivedError}
               <div class="px-4 py-3 text-caption text-[var(--error)]" role="alert">{archivedError}</div>
             {:else if archived.length === 0}
-              <div class="px-4 py-6 text-body-sm text-[var(--text-faint)] text-center">No archived projects.</div>
+              <div class="px-4 py-6 text-body-sm text-[var(--text-faint)] text-center">{t("instance.archived.empty")}</div>
             {:else}
               {#each archived as a, i (a.id)}
                 <div class="px-4 py-3 {i > 0 ? 'border-t border-[var(--border)]' : ''}">
@@ -1149,14 +1226,14 @@
                         {#if a.emoji}<span class="mr-1">{a.emoji}</span>{/if}{a.name}
                       </div>
                       <div class="text-caption text-[var(--text-faint)] truncate leading-tight mt-0.5">
-                        {a.issue_count} issue{a.issue_count === 1 ? "" : "s"} · {a.page_count} page{a.page_count === 1 ? "" : "s"} ·
-                        {formatBytes(a.size_bytes)} · archived <TimeAgo date={a.archived_at} />{#if a.archived_by_name}{" "}by {a.archived_by_name}{/if}
+                        {t("instance.archived.issues", { count: a.issue_count })} · {t("instance.archived.pages", { count: a.page_count })} ·
+                        {formatBytes(a.size_bytes)} · {t("instance.archived.archivedWhen")} <TimeAgo date={a.archived_at} />{#if a.archived_by_name}{" "}{t("instance.archived.by", { name: a.archived_by_name })}{/if}
                       </div>
                     </div>
                     {#if !a.file_present}
                       <span class="text-micro font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full shrink-0 text-[var(--error)] bg-[var(--error-bg)]"
                             title={a.file_name}>
-                        File missing
+                        {t("instance.archived.fileMissing")}
                       </span>
                     {/if}
                     <button
@@ -1166,7 +1243,7 @@
                       onclick={() => unarchive(a)}
                     >
                       <ArchiveRestore size={14} />
-                      {unarchivingId === a.id ? "Unarchiving…" : "Unarchive"}
+                      {unarchivingId === a.id ? t("instance.archived.unarchiving") : t("instance.archived.unarchive")}
                     </button>
                   </div>
                   {#if unarchiveErrors[a.id]}
@@ -1177,8 +1254,7 @@
             {/if}
           </div>
           <p class="text-caption text-[var(--text-faint)] mt-2 max-w-[60ch] leading-relaxed">
-            Files are kept in <span class="font-mono">archived-projects/</span> next to the database and are included in backups.
-            Each one is an ordinary project archive, so it can also be imported on another instance.
+            {t("instance.archived.footer.before")} <span class="font-mono">archived-projects/</span> {t("instance.archived.footer.after")}
           </p>
         </section>
       {/if}

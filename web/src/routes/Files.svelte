@@ -27,8 +27,8 @@
     type ProjectAttachment,
   } from "../lib/api";
   import {
-    MIME_FILTERS,
-    SORT_OPTIONS,
+    mimeFilters,
+    sortOptions,
     canDeleteAttachment,
     deleteConfirmMessage,
     entityChipLabel,
@@ -37,6 +37,7 @@
     uploaderOptions,
   } from "../lib/files/files";
   import { projectRole, loadProjectRole } from "../lib/projectRole.svelte";
+  import { t } from "../lib/i18n";
   import { startAutoRefresh } from "../lib/autoRefresh.svelte";
   import TimeAgo from "../lib/TimeAgo.svelte";
   import ErrorState from "../lib/ErrorState.svelte";
@@ -170,7 +171,7 @@
       (p) => p.identifier.toLowerCase() === ident.toLowerCase(),
     );
     if (!found) {
-      error = `Project ${ident} not found`;
+      error = t("files.projectNotFound", { ident });
       loading = false;
       return;
     }
@@ -248,13 +249,13 @@
     deletingId = null;
     confirmingId = null;
     if (!res.ok) {
-      toast(`Couldn't delete the file: ${res.error}`, { kind: "error" });
+      toast(t("files.toast.deleteFileFailed", { error: res.error }), { kind: "error" });
       return;
     }
     toast(
       referenceCount > 0
-        ? `File deleted, along with ${referenceCount} reference${referenceCount === 1 ? "" : "s"}.`
-        : "File deleted.",
+        ? t("files.toast.fileDeletedRefs", { count: referenceCount })
+        : t("files.toast.fileDeleted"),
       { kind: "success" },
     );
     // Refresh both lists: a deleted file leaves the listing, and deleting an
@@ -301,7 +302,7 @@
       </button>
     {/each}
     {#if entities.length === 0}
-      <span class="text-micro text-[var(--text-faint)]">no references</span>
+      <span class="text-micro text-[var(--text-faint)]">{t("files.noReferences")}</span>
     {/if}
   </div>
 {/snippet}
@@ -317,7 +318,7 @@
         {projectIdentifier}
       </button>
       <ChevronRight size={12} class="text-[var(--text-faint)]" />
-      <span class="text-body-sm font-medium text-[var(--text)]">Files</span>
+      <span class="text-body-sm font-medium text-[var(--text)]">{t("files.title")}</span>
       {#if !loading}
         <span class="ml-1 text-micro text-[var(--text-faint)] font-medium tabular-nums">
           {totalCount}
@@ -326,7 +327,7 @@
     </div>
     {#if !loading}
       <span class="text-caption text-[var(--text-faint)] tabular-nums">
-        {formatBytes(totalBytes)} total
+        {t("files.totalBytes", { size: formatBytes(totalBytes) })}
       </span>
     {/if}
   </div>
@@ -348,20 +349,20 @@
           {/each}
         </div>
       {:else if error}
-        <ErrorState title="Couldn't load files" message={error}>
+        <ErrorState title={t("files.loadError")} message={error}>
           <button
             class="text-body-sm font-medium text-[var(--btn-success-text)] bg-[var(--btn-success)]
                    px-3 py-1.5 rounded-md hover:bg-[var(--btn-success-hover)] transition-colors"
             onclick={() => loadProject(projectIdentifier)}
           >
-            Try again
+            {t("common.retry")}
           </button>
         </ErrorState>
       {:else}
         <!-- Filters: type chips, uploader, sort, and what it all adds up to. -->
         <div class="flex flex-wrap items-center gap-2 mb-5">
           <div class="flex flex-wrap items-center gap-1">
-            {#each MIME_FILTERS as chip (chip.label)}
+            {#each mimeFilters() as chip (chip.label)}
               <button
                 class="text-caption px-2.5 py-1 rounded-full border transition-colors
                        {mimeFilter === chip.value
@@ -379,10 +380,10 @@
           <select
             class="h-7 px-2 rounded-md text-caption bg-[var(--bg)]
                    border border-[var(--border)] text-[var(--text-muted)]"
-            aria-label="Filter by uploader"
+            aria-label={t("files.filter.uploader")}
             bind:value={uploaderFilter}
           >
-            <option value="">All uploaders</option>
+            <option value="">{t("files.filter.allUploaders")}</option>
             {#each uploaders as name (name)}
               <option value={name}>{name}</option>
             {/each}
@@ -391,10 +392,10 @@
           <select
             class="h-7 px-2 rounded-md text-caption bg-[var(--bg)]
                    border border-[var(--border)] text-[var(--text-muted)]"
-            aria-label="Sort files"
+            aria-label={t("files.sort.label")}
             bind:value={sort}
           >
-            {#each SORT_OPTIONS as option (option.value)}
+            {#each sortOptions() as option (option.value)}
               <option value={option.value}>{option.label}</option>
             {/each}
           </select>
@@ -402,7 +403,7 @@
 
         <div class="flex items-baseline gap-2 mb-3">
           <span class="text-body-sm text-[var(--text)] font-medium tabular-nums">
-            {totalCount} file{totalCount === 1 ? "" : "s"}
+            {t("files.count", { count: totalCount })}
           </span>
           <span class="text-caption text-[var(--text-faint)] tabular-nums">
             {formatBytes(totalBytes)}
@@ -412,10 +413,9 @@
         {#if items.length === 0}
           <div class="flex flex-col items-center py-20 gap-3 text-center">
             <Paperclip size={32} class="text-[var(--text-faint)]" />
-            <p class="text-body-lg text-[var(--text-muted)]">No files here yet</p>
+            <p class="text-body-lg text-[var(--text-muted)]">{t("files.empty.title")}</p>
             <p class="text-body-sm text-[var(--text-faint)] max-w-[420px]">
-              Files appear once they are attached to an issue, page, or comment
-              in this project.
+              {t("files.empty.body")}
             </p>
           </div>
         {:else}
@@ -428,7 +428,7 @@
                     class="size-5 flex items-center justify-center rounded
                            text-[var(--text-faint)] hover:text-[var(--text)]
                            hover:bg-[var(--bg-subtle)] transition-colors shrink-0"
-                    title={expanded ? "Hide where this is used" : "Show where this is used"}
+                    title={expanded ? t("files.usage.hide") : t("files.usage.show")}
                     aria-expanded={expanded}
                     onclick={() => toggleExpand(row)}
                   >
@@ -444,7 +444,7 @@
                   <button
                     class="min-w-0 flex-1 text-left text-body-sm text-[var(--text)]
                            truncate hover:text-[var(--accent)] transition-colors"
-                    title="Download {row.filename}"
+                    title={t("files.downloadNamed", { filename: row.filename })}
                     onclick={() => void downloadAttachment(row.id, row.filename)}
                   >
                     {row.filename}
@@ -458,7 +458,7 @@
                     {formatBytes(row.size_bytes)}
                   </span>
                   <span class="hidden md:block text-caption text-[var(--text-muted)] w-24 truncate shrink-0">
-                    {row.uploader ?? "unknown"}
+                    {row.uploader ?? t("files.unknownUploader")}
                   </span>
                   <span class="text-caption text-[var(--text-faint)] w-16 text-right shrink-0">
                     <TimeAgo date={row.created_at} />
@@ -469,7 +469,7 @@
                       class="size-6 flex items-center justify-center rounded shrink-0
                              text-[var(--text-faint)] hover:text-[var(--error)]
                              hover:bg-[var(--bg-subtle)] transition-colors"
-                      title="Delete {row.filename}"
+                      title={t("files.deleteNamed", { filename: row.filename })}
                       disabled={deletingId === row.id}
                       onclick={() =>
                         (confirmingId = confirmingId === row.id ? null : row.id)}
@@ -493,14 +493,14 @@
                       disabled={deletingId === row.id}
                       onclick={() => confirmDelete(row.id, shownEntities(row).length)}
                     >
-                      {deletingId === row.id ? "Deleting…" : "Delete"}
+                      {deletingId === row.id ? t("files.deletingEllipsis") : t("common.delete")}
                     </button>
                     <button
                       class="text-caption text-[var(--text-muted)] px-2 py-1 rounded-md
                              hover:bg-[var(--bg-subtle)] transition-colors"
                       onclick={() => (confirmingId = null)}
                     >
-                      Cancel
+                      {t("common.cancel")}
                     </button>
                   </div>
                 {/if}
@@ -509,14 +509,14 @@
                   <div class="mt-2 ml-8 flex flex-col gap-2">
                     <div class="flex flex-col gap-1">
                       <span class="text-micro uppercase tracking-widest text-[var(--text-faint)] font-semibold">
-                        Used by
+                        {t("files.usage.usedBy")}
                       </span>
                       {@render entityChips(shownEntities(row))}
                     </div>
                     {#if links[row.id]?.duplicates?.length}
                       <div class="flex flex-col gap-1">
                         <span class="text-micro uppercase tracking-widest text-[var(--text-faint)] font-semibold">
-                          Identical file also attached to
+                          {t("files.usage.duplicates")}
                         </span>
                         {#each links[row.id]!.duplicates as duplicate (duplicate.id)}
                           <div class="flex items-center gap-2">
@@ -545,7 +545,7 @@
                 disabled={loadingMore}
                 onclick={() => project && loadPage(project.id, false)}
               >
-                {loadingMore ? "Loading…" : "Load more"}
+                {loadingMore ? t("common.loading") : t("files.loadMore")}
               </button>
             </div>
           {/if}
@@ -566,7 +566,7 @@
             {/if}
             <TriangleAlert size={14} class="text-[var(--error)]" />
             <span class="text-body-sm font-medium text-[var(--text)]">
-              Pending cleanup
+              {t("files.orphans.title")}
             </span>
             <span class="text-caption text-[var(--text-faint)] tabular-nums">
               {orphans.length}
@@ -578,13 +578,11 @@
 
           {#if orphansOpen}
             <p class="text-caption text-[var(--text-muted)] mt-2 mb-3 max-w-[560px]">
-              Uploads by this project's members that were never attached to
-              anything. The server deletes them automatically once their grace
-              window runs out.
+              {t("files.orphans.body")}
             </p>
             {#if orphans.length === 0}
               <p class="text-caption text-[var(--text-faint)]">
-                Nothing waiting to be swept.
+                {t("files.orphans.empty")}
               </p>
             {:else}
               <div class="flex flex-col divide-y divide-[var(--border)]">
@@ -601,7 +599,7 @@
                       {formatBytes(orphan.size_bytes)}
                     </span>
                     <span class="hidden md:block text-caption text-[var(--text-muted)] w-24 truncate shrink-0">
-                      {orphan.uploader ?? "unknown"}
+                      {orphan.uploader ?? t("files.unknownUploader")}
                     </span>
                     <span class="text-caption w-40 text-right shrink-0 text-[var(--text-muted)]">
                       {formatSweepCountdown(orphan.seconds_until_sweep)}
@@ -611,7 +609,7 @@
                         class="size-6 flex items-center justify-center rounded shrink-0
                                text-[var(--text-faint)] hover:text-[var(--error)]
                                hover:bg-[var(--bg-subtle)] transition-colors"
-                        title="Delete {orphan.filename} now"
+                        title={t("files.deleteNow", { filename: orphan.filename })}
                         disabled={deletingId === orphan.id}
                         onclick={() =>
                           (confirmingId = confirmingId === orphan.id ? null : orphan.id)}
@@ -632,14 +630,14 @@
                         disabled={deletingId === orphan.id}
                         onclick={() => confirmDelete(orphan.id, 0)}
                       >
-                        {deletingId === orphan.id ? "Deleting…" : "Delete"}
+                        {deletingId === orphan.id ? t("files.deletingEllipsis") : t("common.delete")}
                       </button>
                       <button
                         class="text-caption text-[var(--text-muted)] px-2 py-1 rounded-md
                                hover:bg-[var(--bg-subtle)] transition-colors"
                         onclick={() => (confirmingId = null)}
                       >
-                        Cancel
+                        {t("common.cancel")}
                       </button>
                     </div>
                   {/if}

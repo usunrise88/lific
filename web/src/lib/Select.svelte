@@ -1,12 +1,13 @@
 <script lang="ts">
   import { ChevronDown, Check } from "lucide-svelte";
+  import { t } from "./i18n";
 
   type Option = { value: string | number | null; label: string; [key: string]: unknown };
 
   let {
     options,
     value = $bindable(null),
-    placeholder = "Select...",
+    placeholder = t("app.select.placeholder"),
     size = "md",
     class: className = "",
     renderOption,

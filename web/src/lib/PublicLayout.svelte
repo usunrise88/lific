@@ -13,6 +13,7 @@
   // `Layout` provides, so IssueList and PageList mount here unchanged.
   import { listProjects, type Project } from "./api";
   import ProjectIcon from "./ProjectIcon.svelte";
+  import { t } from "./i18n";
   import ErrorState from "./ErrorState.svelte";
   import { getPreference, setPreference, resolveTheme, type ThemePreference } from "./theme";
   import {
@@ -109,11 +110,11 @@
   );
   let pagesActive = $derived(isActive(`/${projectIdentifier}/pages`));
 
-  let mobileSection = $derived(issuesActive ? "Issues" : pagesActive ? "Pages" : null);
+  let mobileSection = $derived(issuesActive ? t("publicView.nav.issues") : pagesActive ? t("publicView.nav.pages") : null);
 
   const entries = $derived([
-    { href: `/${projectIdentifier}/issues`, label: "Issues", Icon: List, active: issuesActive },
-    { href: `/${projectIdentifier}/pages`, label: "Pages", Icon: FileText, active: pagesActive },
+    { href: `/${projectIdentifier}/issues`, label: t("publicView.nav.issues"), Icon: List, active: issuesActive },
+    { href: `/${projectIdentifier}/pages`, label: t("publicView.nav.pages"), Icon: FileText, active: pagesActive },
   ]);
 </script>
 
@@ -139,9 +140,9 @@
           class="inline-flex items-center gap-1 font-mono text-micro tracking-tight text-[var(--text-faint)]
                  px-1.5 py-0.5 rounded-md bg-[var(--bg-subtle)]
                  group-hover:bg-[var(--surface)] transition-colors"
-          title="Anyone with the link can read this project"
+          title={t("publicView.badge.title")}
         >
-          <Globe size={10} /> public
+          <Globe size={10} /> {t("publicView.badge.label")}
         </span>
       </a>
       <button
@@ -149,8 +150,8 @@
                text-[var(--text-faint)] hover:text-[var(--text)]
                hover:bg-[var(--bg-subtle)] transition-colors"
         onclick={toggleSidebar}
-        title="Collapse sidebar"
-        aria-label="Collapse sidebar"
+        title={t("publicView.sidebar.collapse")}
+        aria-label={t("publicView.sidebar.collapse")}
       >
         <PanelLeftClose size={15} />
       </button>
@@ -159,7 +160,7 @@
     <nav class="flex-1 px-2 py-1 overflow-y-auto">
       <div class="flex items-center justify-between px-2 pt-1.5 pb-1">
         <span class="text-micro font-semibold uppercase tracking-widest text-[var(--text-faint)]">
-          Project
+          {t("publicView.sidebar.project")}
         </span>
       </div>
 
@@ -208,7 +209,7 @@
         {/if}
       {:else if projectError}
         <p class="px-2.5 py-2 text-body-sm text-[var(--text-faint)]">
-          This project isn't public.
+          {t("publicView.notPublic.short")}
         </p>
       {:else}
         <div class="px-2.5 py-2 flex flex-col gap-2">
@@ -224,17 +225,17 @@
         class="flex-1 min-w-0 flex items-center gap-2 px-2 py-1.5 rounded-md text-left
                text-body-sm text-[var(--text-muted)] hover:text-[var(--text)]
                hover:bg-[var(--bg-subtle)] transition-colors"
-        title="Sign in to edit or comment"
+        title={t("publicView.signIn.title")}
       >
         <LogIn size={14} class="shrink-0" />
-        Sign in
+        {t("publicView.signIn.label")}
       </a>
       <button
         class="size-8 shrink-0 grid place-items-center rounded-md
                text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-subtle)] transition-colors"
         onclick={cycleTheme}
-        title="Theme: {themePref}"
-        aria-label="Cycle theme, current: {themePref}"
+        title={t("appearance.themeCycle.title", { theme: t(`appearance.themeCycle.${themePref}`) })}
+        aria-label={t("appearance.themeCycle.aria", { theme: t(`appearance.themeCycle.${themePref}`) })}
       >
         {#if themePref === "system"}
           <Monitor size={15} />
@@ -255,7 +256,7 @@
       <button
         class="size-11 shrink-0 grid place-items-center rounded-lg
                text-[var(--text-muted)] active:bg-[var(--bg-subtle)] transition-colors"
-        aria-label={navOpen ? "Close navigation" : "Open navigation"}
+        aria-label={navOpen ? t("publicView.nav.close") : t("publicView.nav.open")}
         aria-expanded={navOpen}
         onclick={() => (navOpen = !navOpen)}
       >
@@ -286,7 +287,7 @@
         class="mr-2 inline-flex items-center gap-1 font-mono text-micro text-[var(--text-faint)]
                px-1.5 py-0.5 rounded-md bg-[var(--bg-subtle)]"
       >
-        <Globe size={10} /> public
+        <Globe size={10} /> {t("publicView.badge.label")}
       </span>
     </header>
 
@@ -313,12 +314,12 @@
             class="flex-1 flex items-center gap-2 px-3 py-2.5 rounded-md text-body
                    text-[var(--text-muted)] active:bg-[var(--bg-subtle)]"
           >
-            <LogIn size={16} class="shrink-0" /> Sign in
+            <LogIn size={16} class="shrink-0" /> {t("publicView.signIn.label")}
           </a>
           <button
             class="size-10 grid place-items-center rounded-md text-[var(--text-muted)]"
             onclick={cycleTheme}
-            aria-label="Cycle theme, current: {themePref}"
+            aria-label={t("appearance.themeCycle.aria", { theme: t(`appearance.themeCycle.${themePref}`) })}
           >
             {#if themePref === "system"}
               <Monitor size={16} />
@@ -341,8 +342,8 @@
                      text-[var(--text-faint)] hover:text-[var(--text)]
                      hover:bg-[var(--bg-subtle)] transition-colors"
               onclick={toggleSidebar}
-              title="Expand sidebar"
-              aria-label="Expand sidebar"
+              title={t("publicView.sidebar.expand")}
+              aria-label={t("publicView.sidebar.expand")}
             >
               <PanelLeftOpen size={15} />
             </button>
@@ -362,15 +363,15 @@
           <!-- A private project and a missing one answer identically, on
                purpose (see src/api/public.rs), so this says neither. -->
           <ErrorState
-            title="This project isn't public"
-            message="There is nothing to show here without signing in. If you were sent this link, the project may have been unpublished or the address may be wrong."
+            title={t("publicView.notPublic.title")}
+            message={t("publicView.notPublic.body")}
           >
             <a
               href="#/login"
               class="text-body-sm font-medium text-[var(--btn-success-text)] bg-[var(--btn-success)]
                      px-3 py-1.5 rounded-md hover:bg-[var(--btn-success-hover)] transition-colors"
             >
-              Sign in
+              {t("publicView.signIn.label")}
             </a>
           </ErrorState>
         {:else}

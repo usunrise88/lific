@@ -179,6 +179,7 @@ fn issue_change(row: &Row) -> rusqlite::Result<IssueChange> {
         waits: Vec::new(),
         needs_human: false,
         assignees: Vec::new(),
+        parked: None,
     })
 }
 
@@ -363,12 +364,14 @@ pub fn list_changes(
     let mut issue_labels = labels_by_issue(conn, &issue_ids)?;
     let mut issue_waits = super::waits::waits_by_issue(conn, &issue_ids)?;
     let mut issue_assignments = super::assignees::assignments_by_issue(conn, &issue_ids)?;
+    let mut issue_parked = super::parked::by_issue(conn, &issue_ids)?;
     let mut page_labels = labels_by_page(conn, &page_ids)?;
     for change in &mut changes {
         match change {
             Change::Issue(issue) => {
                 issue.labels = issue_labels.remove(&issue.id).unwrap_or_default();
                 issue.waits = issue_waits.remove(&issue.id).unwrap_or_default();
+                issue.parked = issue_parked.remove(&issue.id);
                 if let Some(a) = issue_assignments.remove(&issue.id) {
                     issue.needs_human = a.needs_human;
                     issue.assignees = a.assignees;
@@ -435,9 +438,11 @@ pub fn index_rows(
     let mut issue_labels = labels_by_issue(conn, &issue_ids)?;
     let mut issue_waits = super::waits::waits_by_issue(conn, &issue_ids)?;
     let mut issue_assignments = super::assignees::assignments_by_issue(conn, &issue_ids)?;
+    let mut issue_parked = super::parked::by_issue(conn, &issue_ids)?;
     for issue in &mut issues {
         issue.labels = issue_labels.remove(&issue.id).unwrap_or_default();
         issue.waits = issue_waits.remove(&issue.id).unwrap_or_default();
+        issue.parked = issue_parked.remove(&issue.id);
         if let Some(a) = issue_assignments.remove(&issue.id) {
             issue.needs_human = a.needs_human;
             issue.assignees = a.assignees;

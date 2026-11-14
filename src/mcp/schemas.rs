@@ -72,6 +72,10 @@ pub struct ListIssuesInput {
     pub statuses: Option<Vec<String>>,
     #[schemars(description = "none (free for agents), human (needs a person), me, or a username")]
     pub assignee: Option<String>,
+    #[schemars(
+        description = "true: only parked issues (set aside, left out of every other listing)"
+    )]
+    pub parked: Option<bool>,
 }
 
 #[derive(Debug, Default, Deserialize, JsonSchema)]
@@ -81,6 +85,24 @@ pub struct GetIssueInput {
     pub identifier: String,
     #[schemars(description = "recent (default, last 3), all (newest 500), or none (count only)")]
     pub include_comments: Option<String>,
+}
+
+/// Fork: `check_inbox`.
+#[derive(Debug, Default, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct CheckInboxInput {
+    #[schemars(description = "Look without marking messages as read (default false)")]
+    pub peek: Option<bool>,
+    #[schemars(description = "Max messages (default 10, cap 50)")]
+    pub limit: Option<i64>,
+}
+
+/// Fork: `get_manifest`.
+#[derive(Debug, Default, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct GetManifestInput {
+    #[schemars(description = "Project identifier to fill in (e.g. LIF); defaults to the bound project")]
+    pub project: Option<String>,
 }
 
 #[derive(Debug, Default, Deserialize, JsonSchema)]
@@ -134,7 +156,7 @@ pub struct CreateIssueInput {
     #[schemars(description = "Due date, YYYY-MM-DD")]
     pub target_date: Option<String>,
     #[schemars(
-        description = "Who must do it: [\"human\"] for any person, or usernames (\"me\" is you). Omit to leave it to agents"
+        description = "Who must do it: [\"human\"] for any person, or usernames of people or agents (\"me\" is you). Omit to leave it to any agent"
     )]
     pub assignees: Option<Vec<String>>,
     #[schemars(
@@ -201,13 +223,19 @@ pub struct UpdateIssueInput {
     )]
     pub expected_seq: Option<i64>,
     #[schemars(
-        description = "Replace who must do it: [] frees it for agents, [\"human\"] any person, or usernames (\"me\" is you)"
+        description = "Replace who must do it: [] frees it for any agent, [\"human\"] any person, or usernames of people or agents (\"me\" is you)"
     )]
     pub assignees: Option<Vec<String>>,
     #[schemars(
         description = "How you verified the work (markdown), only with status=done. Saved as a verification comment"
     )]
     pub evidence: Option<String>,
+    #[schemars(
+        description = "true parks the issue (set aside: off the board, stats and agents' lists); false brings it back"
+    )]
+    pub parked: Option<bool>,
+    #[schemars(description = "Why it is parked, with parked=true")]
+    pub park_reason: Option<String>,
 }
 
 #[derive(Debug, Default, Deserialize, JsonSchema)]
@@ -224,6 +252,8 @@ pub struct BulkUpdateInput {
     pub filter_module: Option<String>,
     #[schemars(description = "Only issues with this label")]
     pub filter_label: Option<String>,
+    #[schemars(description = "true: only parked issues; parked ones are skipped otherwise")]
+    pub filter_parked: Option<bool>,
     // ── Target (fields to set on every matching issue) ──
     #[schemars(description = "Status to set")]
     pub set_status: Option<String>,
@@ -233,6 +263,10 @@ pub struct BulkUpdateInput {
     pub set_module: Option<String>,
     #[schemars(description = "Assignment to set, as in update_issue")]
     pub set_assignees: Option<Vec<String>>,
+    #[schemars(description = "true parks every match, false brings them back")]
+    pub set_parked: Option<bool>,
+    #[schemars(description = "Why, with set_parked=true")]
+    pub park_reason: Option<String>,
 }
 
 #[derive(Debug, Default, Deserialize, JsonSchema)]

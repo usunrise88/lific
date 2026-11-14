@@ -11,6 +11,7 @@
   import FileChip from "./FileChip.svelte";
   import { whenVisible } from "./visible";
   import { getAttachmentPreview, type SqlitePreviewTable } from "../../api";
+  import { formatNumber, t } from "../../i18n";
 
   let {
     id,
@@ -39,33 +40,33 @@
 {:else}
   <div use:whenVisible={{ onVisible: () => void load(), enabled: tables === null }}>
     {#if tables === null}
-      <FileChip {id} {filename} {sizeBytes} note="Reading schema..." />
+      <FileChip {id} {filename} {sizeBytes} note={t("viewers.sqlite.reading")} />
     {:else}
       <ViewerFrame
         {id}
         {filename}
         {sizeBytes}
-        meta={`${tables.length} ${tables.length === 1 ? "table" : "tables"}`}
+        meta={t("viewers.sqlite.tables", { count: tables.length })}
         tone="flush"
       >
         {#snippet icon()}<Database size={14} />{/snippet}
 
         {#if tables.length === 0}
-          <p class="sv__note">This database has no tables.</p>
+          <p class="sv__note">{t("viewers.sqlite.empty")}</p>
         {:else}
           <div class="sv__scroll">
             <table class="sv__table">
               <thead>
                 <tr>
-                  <th scope="col">Table</th>
-                  <th scope="col" class="sv__num-col">Rows</th>
+                  <th scope="col">{t("viewers.sqlite.table")}</th>
+                  <th scope="col" class="sv__num-col">{t("viewers.sqlite.rows")}</th>
                 </tr>
               </thead>
               <tbody>
-                {#each tables as t (t.name)}
+                {#each tables as table (table.name)}
                   <tr>
-                    <td class="sv__name">{t.name}</td>
-                    <td class="sv__num-col">{t.rows.toLocaleString()}</td>
+                    <td class="sv__name">{table.name}</td>
+                    <td class="sv__num-col">{formatNumber(table.rows)}</td>
                   </tr>
                 {/each}
               </tbody>

@@ -43,6 +43,7 @@
   } from "lucide-svelte";
   import { getContext } from "svelte";
   import { pageTitle, PAGE_TITLE_CONTEXT } from "../lib/pageTitle";
+  import { t, locale } from "../lib/i18n";
 
   // LIF-226: metadata sidebar is an off-canvas panel below md, toggled from
   // the topbar; statically docked at md+.
@@ -106,12 +107,12 @@
   let statusOpen = $state(false);
 
   const STATUSES: { value: string; label: string }[] = [
-    { value: "active", label: "Active" },
-    { value: "planned", label: "Planned" },
-    { value: "paused", label: "Paused" },
-    { value: "backlog", label: "Backlog" },
-    { value: "done", label: "Done" },
-    { value: "cancelled", label: "Cancelled" },
+    { value: "active", label: t("modules.status.active") },
+    { value: "planned", label: t("modules.status.planned") },
+    { value: "paused", label: t("modules.status.paused") },
+    { value: "backlog", label: t("modules.status.backlog") },
+    { value: "done", label: t("modules.status.done") },
+    { value: "cancelled", label: t("modules.status.cancelled") },
   ];
 
   // Status vocabulary for the issues list inside the module —
@@ -142,7 +143,7 @@
     // Pull the issues for this module. Using the existing module_id
     // filter on listIssues keeps the load efficient even for very
     // populous modules — server-side filter, no client trim.
-    const issuesRes = await listIssues({ project_id: mod.project_id, module_id: mod.id, limit: 500 });
+    const issuesRes = await listIssues({ project_id: mod.project_id, module_id: mod.id, parked: false, limit: 500 });
     if (issuesRes.ok) issues = issuesRes.data;
 
     loading = false;
@@ -160,14 +161,14 @@
     const res = await updateModule(mod.id, { [field]: value });
     if (res.ok) {
       mod = res.data;
-      lastSaved = new Date().toLocaleTimeString([], {
+      lastSaved = new Date().toLocaleTimeString(locale(), {
         hour: "2-digit",
         minute: "2-digit",
       });
     } else {
       // Error-only: name/description/status/emoji are optimistic inline edits;
       // surface the failure so it can't vanish silently (LIF-284).
-      toast(`Couldn't save module: ${res.error}`, { kind: "error" });
+      toast(t("modules.detail.saveFailed", { error: res.error }), { kind: "error" });
     }
     saving = false;
   }
@@ -214,7 +215,7 @@
       navigate(`/${projectIdentifier}/modules`);
       return true;
     }
-    toast(`Couldn't delete module: ${res.error}`, { kind: "error" });
+    toast(t("modules.detail.deleteFailed", { error: res.error }), { kind: "error" });
     return false;
   }
 
@@ -291,7 +292,7 @@
         <Breadcrumbs
           segments={[
             { label: projectIdentifier, href: `#/${projectIdentifier}/overview`, mono: true, hideBelowSm: true, copy: projectIdentifier },
-            { label: "Modules", href: `#/${projectIdentifier}/modules` },
+            { label: t("modules.title"), href: `#/${projectIdentifier}/modules` },
             { label: mod.name },
           ]}
         />
@@ -309,9 +310,9 @@
 
         <span class="hidden sm:inline text-caption text-[var(--text-faint)] sm:min-w-[5rem] text-right">
           {#if saving}
-            <span class="animate-pulse">Saving...</span>
+            <span class="animate-pulse">{t("modules.detail.saving")}</span>
           {:else if lastSaved}
-            Saved at {lastSaved}
+            {t("modules.detail.savedAt", { time: lastSaved })}
           {/if}
         </span>
 
@@ -325,15 +326,15 @@
             onclick={newIssueInModule}
           >
             <Plus size={13} class="shrink-0" />
-            <span class="hidden sm:inline">Issue</span>
+            <span class="hidden sm:inline">{t("modules.detail.newIssue")}</span>
           </button>
 
           <DeleteMenu
-            noun="module"
+            noun={t("modules.detail.deleteNoun")}
             label={mod.name}
             confirmBody={issues.length === 0
-              ? "This module is empty. It will be removed."
-              : `${issues.length} issue${issues.length === 1 ? "" : "s"} will be unassigned from this module but not deleted.`}
+              ? t("modules.detail.deleteEmpty")
+              : t("modules.detail.deleteBody", { count: issues.length })}
             onDelete={handleDelete}
             align="right"
           />
@@ -344,7 +345,7 @@
           class="md:hidden size-9 grid place-items-center rounded-md
                  text-[var(--text-muted)] hover:text-[var(--text)]
                  hover:bg-[var(--bg-subtle)] transition-colors"
-          aria-label="Show details"
+          aria-label={t("modules.detail.showDetails")}
           aria-expanded={propsOpen}
           onclick={() => (propsOpen = true)}
         >
@@ -422,18 +423,18 @@
     </div>
   </div>
 {:else if error}
-  <ErrorState title="Couldn't load this module" message={error}>
+  <ErrorState title={t("modules.detail.loadError")} message={error}>
     <button
       class="text-body-sm font-medium text-[var(--btn-success-text)] bg-[var(--btn-success)] px-3 py-1.5 rounded-md hover:bg-[var(--btn-success-hover)] transition-colors"
       onclick={() => loadModule(moduleId)}
     >
-      Try again
+      {t("common.retry")}
     </button>
     <button
       class="text-body-sm text-[var(--text-muted)] border border-[var(--border)] px-3 py-1.5 rounded-md hover:bg-[var(--bg-subtle)] transition-colors"
       onclick={() => navigate(`/${projectIdentifier}/modules`)}
     >
-      Back to modules
+      {t("modules.detail.back")}
     </button>
   </ErrorState>
 {:else if mod}
@@ -507,7 +508,7 @@
               <div class="shrink-0 flex flex-col items-center gap-1 pl-2">
                 <ProgressRing value={progress.frac} size={56} stroke={5} color="var(--success)" />
                 <span class="text-micro text-[var(--text-muted)] tabular-nums">
-                  {progress.done}/{progress.total} done
+                  {t("modules.card.progress", { done: progress.done, total: progress.total })}
                 </span>
               </div>
             {/if}
@@ -522,9 +523,9 @@
               value={mod.description}
               {editable}
               {saving}
-              placeholder="Describe this module... (markdown supported)"
-              emptyEditCta="Click to describe this module..."
-              emptyReadText="No description"
+              placeholder={t("modules.detail.descPlaceholder")}
+              emptyEditCta={t("modules.detail.descCta")}
+              emptyReadText={t("modules.detail.noDescription")}
               proseMinHeight="60px"
               onSave={saveDescription}
             />
@@ -538,7 +539,7 @@
             <div class="flex items-baseline justify-between mb-3 pb-2">
               <div class="flex items-baseline gap-2">
                 <h2 class="text-micro font-semibold uppercase tracking-widest text-[var(--text-muted)]">
-                  Issues
+                  {t("modules.detail.issues")}
                 </h2>
                 <span class="text-micro text-[var(--text-faint)] tabular-nums">
                   {issues.length}
@@ -560,7 +561,7 @@
               <div class="py-10 flex flex-col items-center gap-3">
                 <Mascot src="/LizzySleep2.png" nativeW={1000} nativeH={420} scale={0.18} />
                 <p class="text-body text-[var(--text-muted)]">
-                  Nothing assigned here yet
+                  {t("modules.detail.emptyIssues")}
                 </p>
                 {#if editable}
                   <button
@@ -571,7 +572,7 @@
                     onclick={newIssueInModule}
                   >
                     <Plus size={14} />
-                    Add the first issue
+                    {t("modules.detail.addFirst")}
                   </button>
                 {/if}
               </div>
@@ -613,7 +614,7 @@
         {#if propsOpen}
           <button
             class="md:hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-[1px]"
-            aria-label="Close details"
+            aria-label={t("modules.detail.closeDetails")}
             onclick={() => (propsOpen = false)}
           ></button>
         {/if}
@@ -633,7 +634,7 @@
             <button
               class="size-9 grid place-items-center rounded-md text-[var(--text-muted)]
                      hover:text-[var(--text)] hover:bg-[var(--bg-subtle)] transition-colors"
-              aria-label="Close details"
+              aria-label={t("modules.detail.closeDetails")}
               onclick={() => (propsOpen = false)}
             >
               <X size={18} />
@@ -642,7 +643,7 @@
           <!-- Status -->
           <div class="mb-5">
             <p class="text-micro font-semibold uppercase tracking-widest text-[var(--text-faint)] mb-2">
-              Status
+              {t("modules.detail.status")}
             </p>
             <div class="relative">
               <button
@@ -693,7 +694,7 @@
           <div class="flex flex-col gap-4">
             <div>
               <p class="text-micro font-semibold uppercase tracking-widest text-[var(--text-faint)] mb-0.5">
-                Created
+                {t("modules.detail.created")}
               </p>
               <p class="text-body-sm text-[var(--text-muted)] leading-snug m-0">
                 {formatDate(mod.created_at)}
@@ -701,7 +702,7 @@
             </div>
             <div>
               <p class="text-micro font-semibold uppercase tracking-widest text-[var(--text-faint)] mb-0.5">
-                Updated
+                {t("modules.detail.updated")}
               </p>
               <p class="text-body-sm text-[var(--text-muted)] leading-snug m-0">
                 {formatDate(mod.updated_at)}

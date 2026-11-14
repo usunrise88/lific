@@ -117,7 +117,7 @@ fn create_and_get_show_who_must_do_it() {
 }
 
 #[test]
-fn a_bots_me_is_its_owner_and_bots_cannot_be_named() {
+fn a_bots_me_is_its_owner_and_an_agent_can_be_named() {
     let s = setup();
     let out = as_user(&s.bot, || {
         s.m.create_issue(Parameters(CreateIssueInput {
@@ -131,7 +131,17 @@ fn a_bots_me_is_its_owner_and_bots_cannot_be_named() {
     assert!(get(&s, "MEM-1").contains("Assigned: @maintainer"));
 
     let out = create(&s, "Hand to the agent", Some(names(&["maintainer-codex"])));
-    assert!(out.contains("only people can be assigned"), "{out}");
+    assert!(out.starts_with("Created MEM-2"), "{out}");
+    // Others see whose it is; the named agent sees it is its own.
+    assert!(get(&s, "MEM-2").contains("Assigned: @maintainer-codex (only that agent works on it)"));
+    let rows = list(&s, &s.maintainer, "@maintainer-codex");
+    assert!(rows.contains("for:@maintainer-codex"), "{rows}");
+    let mine = list(&s, &s.bot, "@maintainer-codex");
+    assert!(mine.contains("MEM-2") && mine.contains("for:you"), "{mine}");
+    let inbox = as_user(&s.bot, || {
+        s.m.check_inbox(Parameters(crate::mcp::schemas::CheckInboxInput::default()))
+    });
+    assert!(inbox.contains("MEM-2") && inbox.contains("assigned to you by"), "{inbox}");
 }
 
 #[test]

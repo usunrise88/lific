@@ -181,6 +181,7 @@ fn create_for_parent(
     identity: &Option<crate::resolve_caller::ResolvedIdentity>,
     parent: CommentParent,
     content: &str,
+    for_agents: &[i64],
 ) -> Result<Json<Comment>, LificError> {
     let user = require_user(identity)?;
     let (comment, project_id) = db.transaction(|conn| {
@@ -188,7 +189,7 @@ fn create_for_parent(
         authz::require_project_or_workspace_role_conn(conn, identity, project_id, Role::Viewer)?;
         let member_scoped = authz::authz_enforced_conn(conn)?;
         let actor = CommentActor::from(&user);
-        let comment = comments::create_comment_with_mentions(
+        let comment = comments::create_comment_for_agents(
             conn,
             parent,
             project_id,
@@ -196,6 +197,7 @@ fn create_for_parent(
             AttachmentActor::Authenticated(actor),
             content,
             member_scoped,
+            for_agents,
         )?;
         Ok((comment, project_id))
     })?;
@@ -233,6 +235,7 @@ pub(super) async fn create_comment(
         &identity,
         CommentParent::Issue(issue_id),
         &input.content,
+        &input.for_agents,
     )
 }
 
@@ -258,6 +261,7 @@ pub(super) async fn create_page_comment(
         &identity,
         CommentParent::Page(page_id),
         &input.content,
+        &[],
     )
 }
 

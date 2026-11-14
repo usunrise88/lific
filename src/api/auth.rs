@@ -449,10 +449,11 @@ pub(super) async fn instance_info(
     State(db): State<DbPool>,
     Extension(auth_cfg): Extension<crate::config::AuthConfig>,
 ) -> Result<Json<serde_json::Value>, LificError> {
-    let (settings, has_users) = with_read(&db, |conn| {
+    let (settings, has_users, logo_target) = with_read(&db, |conn| {
         let settings = crate::db::queries::settings::get(conn)?;
         let has_users = crate::db::queries::users::has_human_users(conn)?;
-        Ok((settings, has_users))
+        let logo_target = crate::db::queries::fork_settings::logo_target(conn)?;
+        Ok((settings, has_users, logo_target))
     })?;
     // Public surface: only non-sensitive fields the auth screen needs. The
     // domain allowlist and session lifetime stay behind the admin endpoint.
@@ -467,6 +468,8 @@ pub(super) async fn instance_info(
         // the SPA's bootstrap signal, not the stored setting (the admin
         // settings endpoint keeps reporting the real DB flag).
         "web_auto_login": settings.web_auto_login || !auth_cfg.required,
+        // Fork: where the sidebar logo leads (repo, home, feed, for-me).
+        "logo_target": logo_target,
     })))
 }
 
@@ -492,8 +495,19 @@ pub(super) async fn instance_settings_get(
     Extension(identity): Extension<Option<crate::resolve_caller::ResolvedIdentity>>,
 ) -> Result<Json<serde_json::Value>, LificError> {
     require_admin(&identity)?;
-    let s = with_read(&db, crate::db::queries::settings::get)?;
-    Ok(Json(settings_json(&s)))
+    let (s, logo_target) = with_read(&db, |conn| {
+        Ok((
+            crate::db::queries::settings::get(conn)?,
+            crate::db::queries::fork_settings::logo_target(conn)?,
+        ))
+    })?;
+    Ok(Json(with_logo_target(settings_json(&s), logo_target)))
+}
+
+/// Fork: add the fork-only `logo_target` to the admin settings JSON.
+fn with_logo_target(mut json: serde_json::Value, logo_target: String) -> serde_json::Value {
+    json["logo_target"] = serde_json::Value::String(logo_target);
+    json
 }
 
 #[derive(serde::Deserialize)]
@@ -508,6 +522,8 @@ pub(super) struct InstanceSettingsPatchReq {
     /// authorization. Off by default; flipping it takes effect on the very
     /// next request (see `src/authz.rs`'s runtime-read doc comment).
     authz_enforced: Option<bool>,
+    /// Fork: where the sidebar logo leads (`repo`, `home`, `feed`, `for-me`).
+    logo_target: Option<String>,
 }
 
 /// PATCH /api/instance/settings: partial update, admin only, and only from a
@@ -560,22 +576,27 @@ pub(super) async fn instance_settings_patch(
         authz_enforced: input.authz_enforced,
     };
     let authz_enforced = input.authz_enforced;
+    let logo_target = input.logo_target;
     // The reachability guard above is a precheck on the request; the
     // authorization check and the persisted mutation are one transaction, so a
     // lockdown cannot land between them.
-    let (s, authz_changed) = db.transaction(move |tx| {
+    let (s, authz_changed, logo) = db.transaction(move |tx| {
         let fresh = crate::auth::revalidate_recent_session(tx, &session_token, admin.id)?;
         crate::auth::require_fresh_admin(&fresh)?;
         let previous_authz_enforced = crate::db::queries::settings::get(tx)?.authz_enforced;
         let settings = crate::db::queries::settings::update(tx, patch)?;
         let authz_changed =
             authz_enforced.is_some_and(|_| settings.authz_enforced != previous_authz_enforced);
-        Ok((settings, authz_changed))
+        if let Some(target) = &logo_target {
+            crate::db::queries::fork_settings::set_logo_target(tx, target)?;
+        }
+        let logo = crate::db::queries::fork_settings::logo_target(tx)?;
+        Ok((settings, authz_changed, logo))
     })?;
     if authz_changed {
         realtime.send(RealtimeEvent::ResyncRequired);
     }
-    Ok(Json(settings_json(&s)))
+    Ok(Json(with_logo_target(settings_json(&s), logo)))
 }
 
 pub(super) async fn auth_me(

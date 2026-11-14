@@ -22,7 +22,10 @@
   } from "./api";
   import { fuzzyMatch } from "./fuzzy";
   import { MENTION_RE } from "./mentions";
-  import { MessageSquare, CornerDownLeft, MoreHorizontal } from "lucide-svelte";
+  import { MessageSquare, CornerDownLeft, MoreHorizontal, Bot, Check, Clock } from "lucide-svelte";
+  import AgentRecipients from "./AgentRecipients.svelte";
+  import { agentLabel } from "./agents";
+  import type { IssueAgents } from "./api";
   import { fly } from "svelte/transition";
   import { tick, onDestroy, onMount } from "svelte";
   import {
@@ -33,6 +36,7 @@
   import { createComposerAttachments } from "./attachments/composer.svelte";
   import AttachComposer from "./attachments/AttachComposer.svelte";
   import AttachTrigger from "./attachments/AttachTrigger.svelte";
+  import { t } from "./i18n";
   import {
     canManageComment,
     commentKeyboardAction,
@@ -50,7 +54,7 @@
     currentUser = null,
     onUpdate,
     onDelete,
-    placeholder = "Write a comment\u2026",
+    placeholder = t("comments.placeholder"),
     // LIF-263: project the comments belong to. When set, the composer
     // fetches @mention candidates and offers autocomplete. Null (workspace
     // pages) disables mentions entirely.
@@ -72,10 +76,14 @@
     // its budget on it, because two issues can hold the same number of
     // comments and a walk abandoned on one route must not resume on the next.
     parentKey = "",
+    // Fork: agents on this issue (agent inbox). When set, the composer can
+    // address agents, they join the @mention roster, and each comment shows
+    // which agents it reached and whether they have read it.
+    agentInfo = null,
   }: {
     comments: Comment[];
     editable?: boolean;
-    onSubmit: (content: string) => Promise<Comment | null>;
+    onSubmit: (content: string, forAgents?: number[]) => Promise<Comment | null>;
     currentUser?: { id: number } | null;
     onUpdate?: (id: number, content: string) => Promise<Comment | null>;
     onDelete?: (id: number) => Promise<boolean>;
@@ -86,7 +94,10 @@
     loadingOlder?: boolean;
     onLoadOlder?: (() => void) | undefined;
     parentKey?: string;
+    agentInfo?: IssueAgents | null;
   } = $props();
+
+  let agentPicks = $state<number[]>([]);
 
   // Only a partial thread may advertise itself as one.
   let showOlderControl = $derived(hasOlder && onLoadOlder !== undefined);
@@ -176,17 +187,24 @@
   // + display name, and is keyboard-first (↑/↓/Enter/Tab select, Esc
   // dismisses). Selecting replaces the active `@token` with `@username `.
 
-  let candidates = $state<MentionCandidate[]>([]);
+  let peopleCandidates = $state<MentionCandidate[]>([]);
+  // Fork: agents join the roster, so @agent autocompletes and renders as a mention.
+  let candidates = $derived<MentionCandidate[]>([
+    ...peopleCandidates,
+    ...(agentInfo?.available ?? [])
+      .filter((a) => !peopleCandidates.some((p) => p.user_id === a.id))
+      .map((a) => ({ user_id: a.id, username: a.username, display_name: agentLabel(a) })),
+  ]);
 
   $effect(() => {
     const pid = projectId;
     if (pid == null) {
-      candidates = [];
+      peopleCandidates = [];
       return;
     }
     let cancelled = false;
     listMentionCandidates(pid).then((r) => {
-      if (!cancelled && r.ok) candidates = r.data;
+      if (!cancelled && r.ok) peopleCandidates = r.data;
     });
     return () => {
       cancelled = true;
@@ -324,10 +342,11 @@
   async function submit() {
     if (!canSend) return;
     submitting = true;
-    const created = await onSubmit(draft.trim());
+    const created = await onSubmit(draft.trim(), agentPicks);
     submitting = false;
     if (created) {
       draft = "";
+      agentPicks = [];
       // The draft the alt-text chips point into is gone, so the offer goes
       // with it rather than lingering over an empty composer.
       attach.destroy();
@@ -514,12 +533,12 @@
 
 <section class="cmt">
   <header class="cmt__head">
-    <h2 class="cmt__title">Comments</h2>
+    <h2 class="cmt__title">{t("comments.title")}</h2>
     {#if comments.length > 0}
       <span
         class="cmt__count"
         title={showOlderControl
-          ? `${comments.length} newest shown, older comments not loaded yet`
+          ? t("comments.newestShown", { count: comments.length })
           : undefined}
       >{comments.length}{showOlderControl ? "+" : ""}</span>
     {/if}
@@ -534,7 +553,7 @@
         disabled={loadingOlder}
         aria-busy={loadingOlder}
       >
-        {loadingOlder ? "Loading older comments\u2026" : "Load older comments"}
+        {loadingOlder ? t("comments.older.loading") : t("comments.older.load")}
       </button>
     </div>
   {/if}
@@ -550,18 +569,18 @@
               <a href="#comment-{comment.id}" class="cmt__anchor">#{comment.id}</a>
               <span class="cmt__author">{author}</span>
               {#if comment.kind === "verification"}
-                <span class="cmt__kind" title="Evidence recorded when this issue was closed">Verification</span>
+                <span class="cmt__kind" title={t("comments.verification.title")}>{t("comments.verification.label")}</span>
               {/if}
               <span class="cmt__time"><TimeAgo date={comment.created_at} /></span>
               {#if commentWasEdited(comment)}
-                <span class="cmt__edited" title={`Edited ${comment.updated_at}`}>edited</span>
+                <span class="cmt__edited" title={t("comments.editedTitle", { time: comment.updated_at })}>{t("comments.edited")}</span>
               {/if}
               {#if canManageComment(comment, currentUser, onUpdate !== undefined && onDelete !== undefined)}
                 <div class="cmt__menu-wrap">
                   <button
                     type="button"
                     class="cmt__menu-button"
-                    aria-label={`Comment ${comment.id} actions`}
+                    aria-label={t("comments.menu.label", { id: comment.id })}
                     aria-haspopup="menu"
                     aria-expanded={menuId === comment.id}
                     onclick={() => {
@@ -571,18 +590,18 @@
                     onkeydown={onMenuKeydown}
                   ><MoreHorizontal size={16} /></button>
                   {#if menuId === comment.id}
-                    <div class="cmt__menu" role="menu" tabindex="-1" aria-label={`Comment ${comment.id} actions`} onkeydown={onMenuKeydown}>
+                    <div class="cmt__menu" role="menu" tabindex="-1" aria-label={t("comments.menu.label", { id: comment.id })} onkeydown={onMenuKeydown}>
                       {#if confirmDeleteId === comment.id}
-                        <p>Delete this comment?</p>
+                        <p>{t("comments.deleteConfirm")}</p>
                         <div class="cmt__menu-confirm">
-                          <button type="button" onclick={() => (confirmDeleteId = null)} disabled={deletingId === comment.id}>Cancel</button>
+                          <button type="button" onclick={() => (confirmDeleteId = null)} disabled={deletingId === comment.id}>{t("common.cancel")}</button>
                           <button type="button" class="cmt__delete" onclick={() => confirmDelete(comment.id)} disabled={deletingId === comment.id}>
-                            {deletingId === comment.id ? "Deleting…" : "Delete"}
+                            {deletingId === comment.id ? t("comments.deleting") : t("common.delete")}
                           </button>
                         </div>
                       {:else}
-                        <button type="button" role="menuitem" onclick={() => startEdit(comment)} disabled={updatingId !== null || deletingId !== null}>Edit</button>
-                        <button type="button" role="menuitem" onclick={() => (confirmDeleteId = comment.id)} disabled={updatingId !== null || deletingId !== null}>Delete</button>
+                        <button type="button" role="menuitem" onclick={() => startEdit(comment)} disabled={updatingId !== null || deletingId !== null}>{t("common.edit")}</button>
+                        <button type="button" role="menuitem" onclick={() => (confirmDeleteId = comment.id)} disabled={updatingId !== null || deletingId !== null}>{t("common.delete")}</button>
                       {/if}
                     </div>
                   {/if}
@@ -595,7 +614,7 @@
                   <div class="cmt__input-wrap">
                     <textarea bind:this={editTextareaEl} bind:value={editDraft} class="cmt__input" oninput={onInput} onkeydown={(e) => onKeydown(e, "edit")} onclick={updateMentionContext} onpaste={(e) => editAttach.handlePaste(e)}></textarea>
                     {#if mentionOpen && mentionMatches.length > 0}
-                      <ul class="mention-pop" role="listbox" aria-label="Mention a user">
+                      <ul class="mention-pop" role="listbox" aria-label={t("comments.mention.label")}>
                         {#each mentionMatches as cand, i (cand.user_id)}
                           <li><button type="button" role="option" aria-selected={i === mentionIndex} class="mention-pop__row" class:is-active={i === mentionIndex} onmousedown={(e) => { e.preventDefault(); selectMention(cand); }} onmouseenter={() => (mentionIndex = i)}><span class="mention-pop__avatar" aria-hidden="true">{initialsOf(cand.display_name || cand.username)}</span><span class="mention-pop__text"><span class="mention-pop__name">{cand.display_name || cand.username}</span><span class="mention-pop__user">@{cand.username}</span></span></button></li>
                         {/each}
@@ -610,6 +629,22 @@
                   <Markdown content={comment.content} mentions={candidates} class="text-sm" {mermaidBudget} />
                 {/key}
               </div>
+              {@const sent = agentInfo?.deliveries[String(comment.id)] ?? []}
+              {#if sent.length > 0}
+                <div class="cmt__agents" data-testid="comment-agents">
+                  {#each sent as d (d.agent.id)}
+                    <span
+                      class="cmt__agent"
+                      class:cmt__agent--read={d.delivered_at !== null}
+                      title={d.delivered_at ? t("agents.readAt", { time: d.delivered_at }) : t("agents.waiting")}
+                    >
+                      <Bot size={11} />
+                      {agentLabel(d.agent)}
+                      {#if d.delivered_at}<Check size={11} />{:else}<Clock size={11} />{/if}
+                    </span>
+                  {/each}
+                </div>
+              {/if}
             {/if}
           </div>
         </li>
@@ -619,9 +654,9 @@
     <div class="cmt__empty">
       <span class="cmt__empty-icon"><MessageSquare size={16} /></span>
       <div>
-        <p class="cmt__empty-title">No comments yet</p>
+        <p class="cmt__empty-title">{t("comments.empty.title")}</p>
         {#if editable}
-          <p class="cmt__empty-sub">Start the conversation below.</p>
+          <p class="cmt__empty-sub">{t("comments.empty.sub")}</p>
         {/if}
       </div>
     </div>
@@ -644,7 +679,7 @@
         ></textarea>
 
         {#if mentionOpen && mentionMatches.length > 0}
-          <ul class="mention-pop" role="listbox" aria-label="Mention a user">
+          <ul class="mention-pop" role="listbox" aria-label={t("comments.mention.label")}>
             {#each mentionMatches as cand, i (cand.user_id)}
               <li>
                 <button
@@ -671,10 +706,13 @@
             {/each}
           </ul>
         {:else if mentionOpen && candidates.length > 0}
-          <div class="mention-pop mention-pop--empty">No people match</div>
+          <div class="mention-pop mention-pop--empty">{t("comments.mention.noMatch")}</div>
         {/if}
         </div>
       </AttachComposer>
+      {#if agentInfo}
+        <AgentRecipients info={agentInfo} {draft} bind:picks={agentPicks} />
+      {/if}
     </div>
   {/if}
 </section>
@@ -688,7 +726,7 @@
         busy={attach.uploads.busy}
         onFiles={(files, source) => attach.enqueue(files, source)}
       />
-      <span class="cmt__hint">Markdown · drag, paste or attach files</span>
+      <span class="cmt__hint">{t("comments.hint")}</span>
     </div>
     <div class="cmt__actions">
       <span class="cmt__kbd" aria-hidden="true">
@@ -696,7 +734,7 @@
         <kbd><CornerDownLeft size={11} /></kbd>
       </span>
       <button class="cmt__send" disabled={!canSend} onclick={submit}>
-        {submitting ? "Posting\u2026" : "Comment"}
+        {submitting ? t("comments.posting") : t("comments.submit")}
       </button>
     </div>
   </div>
@@ -709,7 +747,7 @@
         busy={editAttach.uploads.busy}
         onFiles={(files, source) => editAttach.enqueue(files, source)}
       />
-      <span class="cmt__hint">Markdown · drag, paste or attach files</span>
+      <span class="cmt__hint">{t("comments.hint")}</span>
     </div>
     <div class="cmt__actions">
       <span class="cmt__kbd" aria-hidden="true">
@@ -722,7 +760,7 @@
         onclick={cancelEdit}
         disabled={updatingId === editingId}
       >
-        Cancel
+        {t("common.cancel")}
       </button>
       <button
         type="button"
@@ -730,7 +768,7 @@
         onclick={saveEdit}
         disabled={editDraft.trim() === "" || editAttach.uploads.pending || updatingId === editingId}
       >
-        {updatingId === editingId ? "Saving…" : "Save"}
+        {updatingId === editingId ? t("comments.saving") : t("common.save")}
       </button>
     </div>
   </div>
@@ -1004,6 +1042,28 @@
   }
   .cmt__input::placeholder {
     color: var(--text-muted);
+  }
+
+  .cmt__agents {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin-top: 0.375rem;
+  }
+  .cmt__agent {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0 0.4375rem;
+    border-radius: 999px;
+    font-size: 0.6875rem;
+    line-height: 1.25rem;
+    color: var(--text-faint);
+    background: var(--bg-subtle);
+  }
+  .cmt__agent--read {
+    color: var(--success);
+    background: color-mix(in oklab, var(--success) 10%, transparent);
   }
 
   .cmt__toolbar {

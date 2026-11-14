@@ -68,13 +68,14 @@
   import AttachComposer from "./attachments/AttachComposer.svelte";
   import AttachTrigger from "./attachments/AttachTrigger.svelte";
   import { onDestroy } from "svelte";
+  import { t } from "./i18n";
 
   let {
     value,
     editable = true,
-    placeholder = "Start writing... (markdown supported)",
-    emptyReadText = "Nothing here yet",
-    emptyEditCta = "Click to start writing...",
+    placeholder = t("docs.body.placeholder"),
+    emptyReadText = t("docs.body.emptyRead"),
+    emptyEditCta = t("docs.body.emptyEditCta"),
     proseMinHeight = "120px",
     proseClass = "",
     onSave,
@@ -260,8 +261,8 @@
       "h1,h2,h3,h4,h5,h6,p,li,blockquote,pre",
     );
     for (const el of candidates) {
-      const t = (el.textContent ?? "").toLowerCase();
-      if (t.includes(n)) return el as HTMLElement;
+      const text = (el.textContent ?? "").toLowerCase();
+      if (text.includes(n)) return el as HTMLElement;
     }
     return null;
   }
@@ -483,16 +484,16 @@
     run: () => void;
   };
   const toolbarItems: ToolbarItem[] = [
-    { icon: Bold, title: "Bold (⌘B)", run: () => fmtInline("**") },
-    { icon: Italic, title: "Italic (⌘I)", run: () => fmtInline("*") },
-    { icon: Heading, title: "Heading", run: () => fmtPrefix("heading") },
-    { icon: List, title: "Bulleted list", run: () => fmtPrefix("bullet") },
-    { icon: ListOrdered, title: "Numbered list", run: () => fmtPrefix("numbered") },
-    { icon: ListChecks, title: "Checklist", run: () => fmtPrefix("checklist") },
-    { icon: Code, title: "Inline code", run: () => fmtInline("`") },
-    { icon: Code2, title: "Code block", run: fmtCodeBlock },
-    { icon: LinkIcon, title: "Link (⌘⇧K)", run: fmtLink },
-    { icon: Quote, title: "Quote", run: () => fmtPrefix("quote") },
+    { icon: Bold, title: t("editor.toolbar.bold"), run: () => fmtInline("**") },
+    { icon: Italic, title: t("editor.toolbar.italic"), run: () => fmtInline("*") },
+    { icon: Heading, title: t("editor.toolbar.heading"), run: () => fmtPrefix("heading") },
+    { icon: List, title: t("editor.toolbar.bulleted"), run: () => fmtPrefix("bullet") },
+    { icon: ListOrdered, title: t("editor.toolbar.numbered"), run: () => fmtPrefix("numbered") },
+    { icon: ListChecks, title: t("editor.toolbar.checklist"), run: () => fmtPrefix("checklist") },
+    { icon: Code, title: t("editor.toolbar.inlineCode"), run: () => fmtInline("`") },
+    { icon: Code2, title: t("editor.toolbar.codeBlock"), run: fmtCodeBlock },
+    { icon: LinkIcon, title: t("editor.toolbar.link"), run: fmtLink },
+    { icon: Quote, title: t("editor.toolbar.quote"), run: () => fmtPrefix("quote") },
   ];
 
   // ── Reference autocomplete (LIF-239) ─────────────────
@@ -747,7 +748,7 @@
           the click. Styling mirrors the editor chrome (subtle border,
           rounded, dark-mode-aware via CSS custom props).
         -->
-        <div class="em-toolbar" role="toolbar" aria-label="Formatting">
+        <div class="em-toolbar" role="toolbar" aria-label={t("editor.toolbar.label")}>
           {#each toolbarItems as item (item.title)}
             {@const Icon = item.icon}
             <button
@@ -790,10 +791,10 @@
 {#snippet footer()}
   <div class="em-footer">
     <button class="em-save" onclick={commitEdit} disabled={saving || attach.uploads.pending}>
-      {saving ? "Saving..." : "Save"}
+      {saving ? t("docs.saving") : t("common.save")}
     </button>
     <button class="em-cancel" onclick={cancelEdit} disabled={saving}>
-      Cancel
+      {t("common.cancel")}
     </button>
     <!-- The trigger owns its own inputs: a picker on desktop with a mic beside
          it, and a Files / Camera / Voice menu on a touch device. -->
@@ -803,7 +804,7 @@
       disabled={saving}
       onFiles={(files, source) => attach.enqueue(files, source)}
     />
-    <span class="em-hint">Markdown · drag/paste to upload · ⌘S to save</span>
+    <span class="em-hint">{t("editor.hint")}</span>
   </div>
 {/snippet}
 
@@ -832,10 +833,10 @@
     {#if acHits.length === 0}
       <p class="px-3 py-3 text-center text-caption text-[var(--text-faint)]">
         {acSearching
-          ? "Searching…"
+          ? t("editor.ac.searching")
           : acTrigger?.mode === "hash" && !acTrigger.query
-            ? "Type to search issues…"
-            : `No issues match “${acTrigger?.query ?? ""}”`}
+            ? t("editor.ac.typeToSearch")
+            : t("editor.ac.noMatch", { query: acTrigger?.query ?? "" })}
       </p>
     {:else}
       {#each acHits as hit, i (hit.identifier)}

@@ -1,5 +1,6 @@
 import type { ChangesPage, IndexSnapshot } from "./sync/types";
 import { inPublicScope, publicMirror, publicSynthetic } from "./publicScope";
+import { t } from "./i18n";
 
 const BASE = "/api";
 
@@ -38,11 +39,11 @@ function resolveUrl(path: string): string {
   return "/public/api/refused";
 }
 
-const REFUSED: { ok: false; error: string; status: number } = {
-  ok: false,
-  error: "This isn't available in the public view.",
-  status: 403,
-};
+/** Built per call (not a module constant) so the message follows the
+ *  active locale. */
+function refused(): { ok: false; error: string; status: number } {
+  return { ok: false, error: t("errors.publicRefused"), status: 403 };
+}
 
 export interface AuthUser {
   id: number;
@@ -77,7 +78,7 @@ async function requestWithHeaders<T>(
   options: RequestInit = {}
 ): Promise<HeadedResult<T>> {
   const resolved = resolveRequest(path);
-  if (resolved.kind === "refused") return REFUSED;
+  if (resolved.kind === "refused") return refused();
   if (resolved.kind === "synthetic") {
     if (resolved.status >= 400) {
       const body = resolved.body as { error?: string };
@@ -115,7 +116,7 @@ async function requestWithHeaders<T>(
   } catch (e) {
     return {
       ok: false,
-      error: "Couldn't reach the server. Check your connection and try again.",
+      error: t("errors.network"),
       status: null,
     };
   }
@@ -132,7 +133,7 @@ async function request<T>(
 export async function download(path: string, filename?: string) {
   const resolved = resolveRequest(path);
   if (resolved.kind !== "private" && resolved.kind !== "public") {
-    return { ok: false as const, error: REFUSED.error };
+    return { ok: false as const, error: refused().error };
   }
   const headers: Record<string, string> = {};
   if (resolved.kind === "private") {
@@ -209,7 +210,7 @@ export async function downloadProjectArchive(identifier: string, signal: AbortSi
     }
     return { ok: true as const, blob: await response.blob(), filename: `${identifier}.lific.tar.gz` };
   } catch {
-    return { ok: false as const, error: "The archive download stopped. Check your connection and download it again." };
+    return { ok: false as const, error: t("errors.archiveDownloadStopped") };
   }
 }
 
@@ -222,7 +223,10 @@ export function saveArchiveDownload(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-export const ARCHIVE_UNKNOWN = "The import may have completed. Check the project list before uploading this archive again.";
+/** Called per use so the message follows the active locale. */
+export function archiveUnknown(): string {
+  return t("errors.archiveImportUnknown");
+}
 
 // No retry or cancellation: a disconnected request can still commit.
 export function importProjectArchive(
@@ -238,7 +242,7 @@ export function importProjectArchive(
     xhr.upload.onprogress = (event) => onProgress(event.lengthComputable
       ? Math.min(100, Math.round(event.loaded / event.total * 100)) : null);
     xhr.upload.onload = onProcessing;
-    const unknown = () => resolve({ ok: false, error: ARCHIVE_UNKNOWN, status: null });
+    const unknown = () => resolve({ ok: false, error: archiveUnknown(), status: null });
     xhr.onerror = unknown;
     xhr.ontimeout = unknown;
     xhr.onabort = unknown;
@@ -272,7 +276,13 @@ export interface InstanceInfo {
   /** LIF-215: single-user mode — the web app should auto-sign-in as the admin
    *  instead of showing the login form. */
   web_auto_login: boolean;
+  /** Fork: where the sidebar logo leads. */
+  logo_target?: LogoTarget;
 }
+
+/** Fork: the sidebar logo's destination — the project on GitHub
+ *  (upstream behavior) or an in-app page. */
+export type LogoTarget = "repo" | "home" | "feed" | "for-me";
 
 export async function getInstance() {
   return request<InstanceInfo>("/instance");
@@ -290,6 +300,8 @@ export interface InstanceSettings {
    *  LIF-194). Off by default — see src/authz.rs for the legacy vs
    *  enforced mode split. */
   authz_enforced: boolean;
+  /** Fork: see `LogoTarget`. */
+  logo_target: LogoTarget;
 }
 
 export interface InstanceSettingsPatch {
@@ -302,6 +314,36 @@ export interface InstanceSettingsPatch {
   login_message?: string;
   web_auto_login?: boolean;
   authz_enforced?: boolean;
+  logo_target?: LogoTarget;
+}
+
+// Fork: the agent manifest (src/db/queries/agent_manifest.rs).
+export interface AgentManifest {
+  /** The template as stored; `{{project}}` is filled in per project. */
+  content: string;
+  is_default: boolean;
+  updated_at: string | null;
+  version: string;
+  /** The built-in manifest, for "reset" and comparison. */
+  default: string;
+  max_chars: number;
+  /** The block an agent gets, rendered without a project. */
+  preview: string;
+}
+
+export async function getAgentManifest() {
+  return request<AgentManifest>("/instance/agent-manifest");
+}
+
+export async function saveAgentManifest(content: string) {
+  return request<AgentManifest>("/instance/agent-manifest", {
+    method: "PUT",
+    body: JSON.stringify({ content }),
+  });
+}
+
+export async function resetAgentManifest() {
+  return request<AgentManifest>("/instance/agent-manifest", { method: "DELETE" });
 }
 
 export async function getInstanceSettings() {
@@ -495,6 +537,11 @@ export interface Bot {
   created_at: string;
   connected: boolean;
   tool_id: string | null;
+  /** Fork: a workspace agent (one per place a tool runs) acts through the
+   *  credential of `parent_id`; `workspace` is that place, e.g. forge@chamber. */
+  parent_id?: number;
+  workspace?: string;
+  last_seen_at?: string;
 }
 
 export interface CreateBotResponse {
@@ -905,6 +952,39 @@ export interface Issue {
   assignees?: IssueAssignee[];
   /** LIF-436: instance-wide write sequence; send back as `expected_seq`. */
   seq?: number;
+  /** Fork: set while the issue is parked ("Отложено"). */
+  parked?: IssueParked;
+}
+
+// ── Parked issues (fork) ───────────────────────────────────
+// A parked issue is kept as is but set aside: off the board, the issue
+// list, the statistics and agents' default reads. Any status change or
+// assignment brings it back on the server.
+
+export interface IssueParked {
+  reason: string;
+  /** "YYYY-MM-DD HH:MM:SS", UTC. */
+  at: string;
+  by?: string;
+  by_name?: string;
+}
+
+export async function parkIssue(issueId: number, reason = "") {
+  return request<IssueParked>(`/issues/${issueId}/park`, {
+    method: "PUT",
+    body: JSON.stringify({ reason }),
+  });
+}
+
+export async function unparkIssue(issueId: number) {
+  return request<{ unparked: boolean }>(`/issues/${issueId}/park`, { method: "DELETE" });
+}
+
+export async function bulkParkIssues(ids: number[], parked: boolean, reason = "") {
+  return request<{ changed: number }>(`/issues/park`, {
+    method: "POST",
+    body: JSON.stringify({ ids, parked, reason }),
+  });
 }
 
 // ── Assignment (LIF-147) ───────────────────────────────────
@@ -917,6 +997,8 @@ export interface IssueAssignee {
   user_id: number;
   username: string;
   display_name?: string;
+  /** Fork: a specific agent; only it works the issue. */
+  is_bot?: boolean;
 }
 
 /** `GET /api/issues/attention` (LIF-506): open issues waiting on the caller
@@ -999,6 +1081,9 @@ export interface IssueFilters {
   /** LIF-147: `none`, `human` (any issue a person must do), `me`, or a
    *  username. */
   assignee?: string;
+  /** Fork: false leaves parked issues out, true lists only them; omitted
+   *  lists both. */
+  parked?: boolean;
   order_by?: string;
   order?: "asc" | "desc";
   limit?: number;
@@ -1337,6 +1422,152 @@ export async function listProjectActivityActors(projectId: number) {
   return request<ActorStat[]>(`/projects/${projectId}/activity/actors`);
 }
 
+// ── Feed: cross-project activity (fork) ─────────────────
+
+/** Coarse event class the server assigns to every feed row. */
+export type FeedKind =
+  | "created"
+  | "status"
+  | "comment"
+  | "edit"
+  | "assignee"
+  | "label"
+  | "link"
+  | "page"
+  | "plan"
+  | "structure";
+
+/** The verb a row shows as, colored in the Feed. */
+export type FeedVerb =
+  | "created"
+  | "commented"
+  | "moved"
+  | "completed"
+  | "cancelled"
+  | "assigned"
+  | "edited"
+  | "labeled"
+  | "deleted"
+  | "linked";
+
+export interface FeedItem extends Activity {
+  kind: FeedKind;
+  verb: FeedVerb;
+  project_identifier: string | null;
+  project_name: string | null;
+  /** Current title/status of the row's issue; null once it is deleted. */
+  issue_title: string | null;
+  issue_status: string | null;
+  page_title: string | null;
+  /** The plan a plan or plan-step row belongs to (a step row only carries
+   *  its own id), and its title. */
+  plan_id: number | null;
+  plan_title: string | null;
+}
+
+export interface FeedPage {
+  items: FeedItem[];
+  has_more: boolean;
+}
+
+export interface FeedParams {
+  projects?: number[];
+  kinds?: FeedKind[];
+  verbs?: FeedVerb[];
+  /** User ids, or "system" for unattributed rows. */
+  actors?: (number | "system")[];
+  agents?: "all" | "only" | "exclude";
+  /** Fork: only comments that mention the caller. */
+  mentioned?: boolean;
+  before?: number;
+  after?: number;
+  limit?: number;
+}
+
+export async function listFeed(params: FeedParams = {}) {
+  const q = new URLSearchParams();
+  if (params.projects) q.set("projects", params.projects.join(","));
+  if (params.kinds) q.set("kinds", params.kinds.join(","));
+  if (params.verbs) q.set("verbs", params.verbs.join(","));
+  if (params.actors) q.set("actors", params.actors.join(","));
+  if (params.agents && params.agents !== "all") q.set("agents", params.agents);
+  if (params.mentioned) q.set("mentioned", "me");
+  if (params.before !== undefined) q.set("before", String(params.before));
+  if (params.after !== undefined) q.set("after", String(params.after));
+  if (params.limit !== undefined) q.set("limit", String(params.limit));
+  const qs = q.toString();
+  return request<FeedPage>(`/feed${qs ? `?${qs}` : ""}`);
+}
+
+/** Everyone who has acted in the caller's visible projects. */
+export async function listFeedActors() {
+  return request<ActorStat[]>("/feed/actors");
+}
+
+// ── For me: open issues a person has to act on (fork) ──────
+
+export type ForMeScope = "me" | "anyone" | "others";
+export type ForMeSort = "newest" | "oldest" | "updated" | "priority";
+export type ForMeRequestedBy = "all" | "agents" | "people";
+
+export interface ForMeItem extends Issue {
+  project_identifier: string;
+  project_name: string;
+  /** When the issue was last handed to people. */
+  assigned_at: string;
+  assigned_by: {
+    user_id: number | null;
+    name: string;
+    username: string | null;
+    is_bot: boolean;
+  } | null;
+  /** Named for the caller. */
+  mine: boolean;
+  /** A user wait points at the caller. */
+  waiting_on_me: boolean;
+  comment_count: number;
+  last_comment: {
+    author: string;
+    is_bot: boolean;
+    content: string;
+    created_at: string;
+  } | null;
+}
+
+export interface ForMePage {
+  items: ForMeItem[];
+  total: number;
+  has_more: boolean;
+  counts: Record<ForMeScope, number>;
+}
+
+export interface ForMeParams {
+  projects?: number[];
+  statuses?: string[];
+  priorities?: string[];
+  scopes?: ForMeScope[];
+  requested_by?: ForMeRequestedBy;
+  sort?: ForMeSort;
+  mine_first?: boolean;
+  limit?: number;
+  offset?: number;
+}
+
+export async function listForMe(params: ForMeParams = {}) {
+  const q = new URLSearchParams();
+  if (params.projects) q.set("projects", params.projects.join(","));
+  if (params.statuses) q.set("statuses", params.statuses.join(","));
+  if (params.priorities) q.set("priorities", params.priorities.join(","));
+  if (params.scopes) q.set("scopes", params.scopes.join(","));
+  if (params.requested_by && params.requested_by !== "all") q.set("requested_by", params.requested_by);
+  if (params.sort) q.set("sort", params.sort);
+  if (params.mine_first) q.set("mine_first", "true");
+  if (params.limit !== undefined) q.set("limit", String(params.limit));
+  if (params.offset !== undefined) q.set("offset", String(params.offset));
+  const qs = q.toString();
+  return request<ForMePage>(`/for-me${qs ? `?${qs}` : ""}`);
+}
+
 /** Comments shown per request. One page of a thread, not the thread. */
 export const COMMENT_PAGE_SIZE = 50;
 
@@ -1425,11 +1656,63 @@ export async function listComments(
   return commentPage(`/issues/${issueId}/comments`, before, pageSize);
 }
 
-export async function createComment(issueId: number, content: string) {
+/** `forAgents` (fork): agents the comment is addressed to explicitly. */
+export async function createComment(issueId: number, content: string, forAgents: number[] = []) {
   return request<Comment>(`/issues/${issueId}/comments`, {
     method: "POST",
-    body: JSON.stringify({ content }),
+    body: JSON.stringify(forAgents.length ? { content, for_agents: forAgents } : { content }),
   });
+}
+
+// ── Agent inbox (fork) ───────────────────────────────────────
+
+export interface AgentRef {
+  id: number;
+  username: string;
+  display_name: string;
+  owner_id: number | null;
+  owner_name: string | null;
+}
+
+export type AgentAttachReason = "created" | "took" | "asked" | "waits" | "commented" | "routed";
+
+export interface AgentDelivery {
+  agent: AgentRef;
+  reason: string;
+  created_at: string;
+  delivered_at: string | null;
+}
+
+export interface AgentRoute {
+  id: number;
+  agent: AgentRef;
+  project_id: number;
+  issue_id: number | null;
+}
+
+export interface IssueAgents {
+  available: AgentRef[];
+  attached: { agent: AgentRef; reasons: AgentAttachReason[] }[];
+  routes: AgentRoute[];
+  deliveries: Record<string, AgentDelivery[]>;
+  /** Agents the caller may route: their own, or all for an admin. */
+  mine: number[];
+}
+
+export async function getIssueAgents(issueId: number) {
+  return request<IssueAgents>(`/issues/${issueId}/agents`);
+}
+
+export async function listProjectAgents(projectId: number) {
+  return request<AgentRef[]>(`/projects/${projectId}/agents`);
+}
+
+export async function listProjectAgentRoutes(projectId: number) {
+  return request<AgentRoute[]>(`/projects/${projectId}/agent-routes`);
+}
+
+export async function setAgentRoute(route: { agent_id: number; project_id: number; issue_id?: number | null; on: boolean }) {
+  return request<null>(`/agent/routes`, { method: "PUT", body: JSON.stringify(route) });
 }
 
 export async function listPageComments(
@@ -1502,7 +1785,7 @@ export async function uploadAttachment(
   file: File,
   link?: { entity_type: AttachmentEntity; entity_id: number },
 ): Promise<{ ok: true; data: UploadResponse } | { ok: false; error: string }> {
-  if (inPublicScope()) return { ok: false, error: REFUSED.error };
+  if (inPublicScope()) return { ok: false, error: refused().error };
   const token = localStorage.getItem("lific_token");
   const form = new FormData();
   form.append("file", file, file.name);
@@ -1526,7 +1809,7 @@ export async function uploadAttachment(
   } catch {
     return {
       ok: false,
-      error: "Couldn't reach the server. Check your connection and try again.",
+      error: t("errors.network"),
     };
   }
 }
@@ -1567,7 +1850,7 @@ export function uploadAttachmentWithProgress(
   // even the session cookie travels.
   if (inPublicScope()) {
     return {
-      result: Promise.resolve({ ok: false, error: REFUSED.error, status: 403, canceled: false }),
+      result: Promise.resolve({ ok: false, error: refused().error, status: 403, canceled: false }),
       abort: () => {},
     };
   }
@@ -1629,14 +1912,14 @@ export function uploadAttachmentWithProgress(
     xhr.onerror = () =>
       finish({
         ok: false,
-        error: "Couldn't reach the server. Check your connection and try again.",
+        error: t("errors.network"),
         status: null,
         canceled: false,
       });
     xhr.ontimeout = () =>
-      finish({ ok: false, error: "Upload timed out.", status: null, canceled: false });
+      finish({ ok: false, error: t("errors.uploadTimedOut"), status: null, canceled: false });
     xhr.onabort = () =>
-      finish({ ok: false, error: "Upload canceled.", status: null, canceled: true });
+      finish({ ok: false, error: t("errors.uploadCanceled"), status: null, canceled: true });
 
     xhr.send(form);
   });
@@ -1844,7 +2127,7 @@ export async function fetchAttachmentText(
 ): Promise<{ ok: true; text: string } | { ok: false; error: string }> {
   const resolved = resolveRequest(`/attachments/${id}`);
   if (resolved.kind !== "private" && resolved.kind !== "public") {
-    return { ok: false, error: REFUSED.error };
+    return { ok: false, error: refused().error };
   }
   const headers: Record<string, string> = {};
   if (resolved.kind === "private") {
@@ -1861,7 +2144,7 @@ export async function fetchAttachmentText(
   } catch {
     return {
       ok: false,
-      error: "Couldn't reach the server. Check your connection and try again.",
+      error: t("errors.network"),
     };
   }
 }
@@ -2503,10 +2786,121 @@ export interface HomeOverview {
   my_done: DayCount[];
 }
 
-export async function getHomeOverview(since: string | null) {
+/** `projects` narrows Home to those projects (fork); undefined = all. */
+export async function getHomeOverview(since: string | null, projects?: number[]) {
   const params = new URLSearchParams({ tz: String(-new Date().getTimezoneOffset()) });
   if (since) params.set("since", since);
+  if (projects) params.set("projects", projects.join(","));
   return request<HomeOverview>(`/home/overview?${params}`);
+}
+
+// ── Home flow report (fork) ──────────────────────────────────
+
+export interface FlowActor {
+  id: number;
+  username: string;
+  display_name: string;
+  is_bot: boolean;
+  owner_id: number | null;
+}
+
+export interface FlowDay {
+  date: string;
+  done: number;
+  cancelled: number;
+  reopened: number;
+  created_by_agents: number;
+  created_by_people: number;
+}
+
+export interface FlowActorDay {
+  date: string;
+  actor_id: number | null;
+  done: number;
+}
+
+export interface FlowActorRow {
+  actor_id: number | null;
+  done: number;
+  cancelled: number;
+  reopened: number;
+  with_evidence: number;
+  cycle_p50: number | null;
+  lead_p50: number | null;
+  active_now: number;
+  last_close: string | null;
+}
+
+export interface FlowTotals {
+  done: number;
+  cancelled: number;
+  reopened: number;
+  created: number;
+  with_evidence: number;
+  lead_p50: number | null;
+  cycle_p50: number | null;
+}
+
+export interface FlowSpread {
+  count: number;
+  p50: number | null;
+  p85: number | null;
+  mean: number | null;
+}
+
+export type FlowStage = "backlog" | "todo" | "active" | "people";
+
+export interface FlowStageStat {
+  stage: FlowStage;
+  issues: number;
+  p50: number | null;
+  p85: number | null;
+  total: number;
+}
+
+export interface FlowIssue {
+  issue_id: number;
+  project_id: number;
+  identifier: string;
+  title: string;
+  status: string;
+  /** Lead time, time in active or time with people, in seconds. */
+  seconds: number;
+  actor_id: number | null;
+  last_activity: string | null;
+}
+
+export interface FlowReport {
+  days: number;
+  from: string;
+  to: string;
+  actors: FlowActor[];
+  daily: FlowDay[];
+  closures: FlowActorDay[];
+  per_actor: FlowActorRow[];
+  current: FlowTotals;
+  previous: FlowTotals;
+  stages: FlowStageStat[];
+  lead: FlowSpread;
+  cycle: FlowSpread;
+  timed: number;
+  skipped_active: number;
+  lead_histogram: { key: string; count: number }[];
+  slowest: FlowIssue[];
+  active: FlowIssue[];
+  active_total: number;
+  waiting: FlowIssue[];
+  waiting_total: number;
+  waiting_p50: number | null;
+}
+
+export async function getHomeFlow(days: number, projects?: number[]) {
+  const params = new URLSearchParams({
+    days: String(days),
+    tz: String(-new Date().getTimezoneOffset()),
+  });
+  if (projects) params.set("projects", projects.join(","));
+  return request<FlowReport>(`/home/flow?${params}`);
 }
 
 // ── Insights (LIF-240) ───────────────────────────────────────

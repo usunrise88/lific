@@ -29,6 +29,7 @@
   import { startAutoRefresh } from "../lib/autoRefresh.svelte";
   import { projectRole, loadProjectRole, ensureMeAdmin } from "../lib/projectRole.svelte"; // LIF-234
   import { toast } from "../lib/toast/toast.svelte"; // LIF-284
+  import { t, locale } from "../lib/i18n";
   import { inPublicScope } from "../lib/publicScope"; // LIF-471
   import {
     COMMENT_WINDOW_RETRY_LIMIT,
@@ -52,10 +53,10 @@
   // LIF-112: page lifecycle statuses. Icon + label per value, used by
   // the status picker in the belowTitle strip.
   const PAGE_STATUSES = [
-    { value: "draft", label: "Draft", icon: PenLine },
-    { value: "active", label: "Active", icon: CircleDot },
-    { value: "complete", label: "Complete", icon: CheckCircle2 },
-    { value: "archived", label: "Archived", icon: Archive },
+    { value: "draft", label: t("pages.status.draft"), icon: PenLine },
+    { value: "active", label: t("pages.status.active"), icon: CircleDot },
+    { value: "complete", label: t("pages.status.complete"), icon: CheckCircle2 },
+    { value: "archived", label: t("pages.status.archived"), icon: Archive },
   ] as const;
 
   const statusOptions = PAGE_STATUSES.map((s) => ({
@@ -280,7 +281,7 @@
     if (!commentOpIsCurrent({ route: gen, op }, loadGen, commentOp)) return;
     loadingOlderComments = false;
     if (!res.ok) {
-      toast(`Couldn't load older comments: ${res.error}`, { kind: "error" });
+      toast(t("comments.toast.loadOlderFailed", { error: res.error }), { kind: "error" });
       return;
     }
     comments = prependOlderComments(comments, res.data.items);
@@ -374,7 +375,7 @@
     const res = await updatePage(page.id, { [field]: value });
     if (res.ok) {
       page = res.data;
-      lastSaved = new Date().toLocaleTimeString([], {
+      lastSaved = new Date().toLocaleTimeString(locale(), {
         hour: "2-digit",
         minute: "2-digit",
       });
@@ -385,7 +386,7 @@
     } else {
       // Error-only: title/content/status/labels are optimistic inline edits;
       // a failed save must still surface (LIF-284).
-      toast(`Couldn't save ${page.identifier}: ${res.error}`, { kind: "error" });
+      toast(t("pageDetail.toast.saveFailed", { identifier: page.identifier, error: res.error }), { kind: "error" });
     }
     saving = false;
   }
@@ -413,17 +414,17 @@
     if (page?.id !== current.id) return false;
     if (res.ok) {
       page = res.data;
-      lastSaved = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      lastSaved = new Date().toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit" });
       listPageActivity(current.id).then((r) => {
         if (r.ok && page?.id === current.id) activity = r.data.items;
       });
       return true;
     }
     if (res.status === 409) {
-      toast(`${current.identifier} changed since you opened it. Showing the latest version.`, { kind: "error" });
+      toast(t("pageDetail.toast.conflict", { identifier: current.identifier }), { kind: "error" });
       void refreshPage();
     } else {
-      toast(`Couldn't save ${current.identifier}: ${res.error}`, { kind: "error" });
+      toast(t("pageDetail.toast.saveFailed", { identifier: current.identifier, error: res.error }), { kind: "error" });
     }
     return false;
   }
@@ -508,7 +509,7 @@
     if (parentId === undefined) return null;
     const res = await createPageComment(parentId, content);
     if (!res.ok) {
-      toast(`Couldn't add comment: ${res.error}`, { kind: "error" });
+      toast(t("comments.toast.addFailed", { error: res.error }), { kind: "error" });
       return null;
     }
     if (isCurrentPage(parentId)) {
@@ -523,7 +524,7 @@
     if (parentId === undefined) return null;
     const res = await updateComment(id, content);
     if (!res.ok) {
-      toast(`Couldn't update comment: ${res.error}`, { kind: "error" });
+      toast(t("comments.toast.updateFailed", { error: res.error }), { kind: "error" });
       return null;
     }
     if (isCurrentPage(parentId)) {
@@ -538,7 +539,7 @@
     if (parentId === undefined) return false;
     const res = await deleteComment(id);
     if (!res.ok) {
-      toast(`Couldn't delete comment: ${res.error}`, { kind: "error" });
+      toast(t("comments.toast.deleteFailed", { error: res.error }), { kind: "error" });
       return false;
     }
     if (isCurrentPage(parentId)) {
@@ -564,7 +565,7 @@
       navigate(`/${projectIdentifier}/pages`);
       return true;
     }
-    toast(`Couldn't delete ${page.identifier}: ${res.error}`, { kind: "error" });
+    toast(t("pageDetail.toast.deleteFailed", { identifier: page.identifier, error: res.error }), { kind: "error" });
     return false;
   }
 
@@ -580,7 +581,7 @@
     const crumbs: import("../lib/Breadcrumbs.svelte").Crumb[] = [
       { label: projectIdentifier, href: `#/${projectIdentifier}/overview`, mono: true, hideBelowSm: true, copy: projectIdentifier },
       // Collapsed below sm — the app header already states the section.
-      { label: "Pages", href: `#/${projectIdentifier}/pages`, hideBelowSm: true },
+      { label: t("pageDetail.crumb.pages"), href: `#/${projectIdentifier}/pages`, hideBelowSm: true },
     ];
     if (page?.folder_id != null) {
       const name = folders.find((f) => f.id === page!.folder_id)?.name;
@@ -588,7 +589,7 @@
     }
     // `copy` stays unset until the page loads, so nobody can copy the
     // placeholder "Page" label.
-    crumbs.push({ label: page?.identifier || "Page", mono: true, copy: page?.identifier });
+    crumbs.push({ label: page?.identifier || t("pageDetail.crumb.page"), mono: true, copy: page?.identifier });
     return crumbs;
   });
 
@@ -599,12 +600,12 @@
     return [
       {
         id: "set-status",
-        title: "Set status…",
+        title: t("pageDetail.palette.setStatus"),
         hint: p.status,
         children: () =>
           PAGE_STATUSES.map((s) => ({
             title: s.label,
-            hint: s.value === p.status ? "current" : undefined,
+            hint: s.value === p.status ? t("pageDetail.palette.current") : undefined,
             // Setting the local mirror persists via the LIF-112 effect.
             run: () => { statusValue = s.value; },
           })),
@@ -613,13 +614,13 @@
         ? [
             {
               id: "toggle-label",
-              title: "Add or remove label…",
+              title: t("pageDetail.palette.toggleLabel"),
               hint: p.labels.length > 0 ? p.labels.join(", ") : undefined,
               children: () =>
                 labels.map((l) => ({
                   title: l.name,
                   color: l.color,
-                  hint: p.labels.includes(l.name) ? "remove" : "add",
+                  hint: p.labels.includes(l.name) ? t("pageDetail.palette.remove") : t("pageDetail.palette.add"),
                   run: () => void toggleLabel(l.name),
                 })),
             },
@@ -638,7 +639,8 @@
   identifier={page?.identifier ?? ""}
   attachEntity={page ? { entity_type: "page", entity_id: page.id } : null}
   backRoute={`/${projectIdentifier}/pages`}
-  backLabel="Pages"
+  backLabel={t("pageDetail.crumb.pages")}
+  backPhrase={t("pageDetail.backToPages")}
   {breadcrumbSegments}
   {editable}
   {canComment}
@@ -646,9 +648,9 @@
   titleSize="lg"
   onSaveTitle={saveTitle}
   body={page?.content ?? ""}
-  bodyPlaceholder="Start writing... (markdown supported)"
-  bodyEmptyEditCta="Click to start writing..."
-  bodyEmptyReadText="Empty page"
+  bodyPlaceholder={t("docs.body.placeholder")}
+  bodyEmptyEditCta={t("docs.body.emptyEditCta")}
+  bodyEmptyReadText={t("pageDetail.emptyBody")}
   bodyProseMinHeight="120px"
   onSaveBody={saveBody}
   onToggleBodyTask={editable ? saveBodyTask : undefined}
@@ -681,11 +683,11 @@
            (workspace page). Commenting stays available on project pages. -->
       <span class="text-micro font-medium px-1.5 py-0.5 rounded-full text-[var(--text-muted)] bg-[var(--bg-subtle)]"
             title={inPublicScope()
-              ? "Read-only. This is the public view of the project; sign in to edit or comment."
+              ? t("pageDetail.readOnly.public")
               : isWorkspacePage
-                ? "Read-only — workspace pages can only be edited by an admin."
-                : "Read-only — you're a viewer on this project. You can still comment."}>
-        Read-only
+                ? t("pageDetail.readOnly.workspace")
+                : t("pageDetail.readOnly.viewer")}>
+        {t("pageDetail.readOnly.badge")}
       </span>
     {/if}
   {/snippet}
@@ -705,12 +707,12 @@
                    {page.pinned
               ? 'text-[var(--accent)] border-[var(--accent)] bg-[var(--accent-subtle)]'
               : 'text-[var(--text-muted)] border-[var(--border)] hover:bg-[var(--bg-subtle)] hover:text-[var(--text)]'}"
-            title={page.pinned ? "Unpin this page" : "Pin to top of the page list"}
+            title={page.pinned ? t("pageDetail.pin.unpinTitle") : t("pageDetail.pin.pinTitle")}
             onclick={() => { if (page) saveField("pinned", !page.pinned); }}
             disabled={saving}
           >
             <Pin size={13} class={page.pinned ? "fill-current" : ""} />
-            {page.pinned ? "Pinned" : "Pin"}
+            {page.pinned ? t("pageDetail.pin.pinned") : t("pageDetail.pin.pin")}
           </button>
         {/if}
 
@@ -754,11 +756,11 @@
             all={labels}
             {editable}
             onToggle={toggleLabel}
-            emptyText="No labels"
+            emptyText={t("pageDetail.labels.empty")}
             emptyItalic
             hideEmptyWhenEditable
             popoverWidth="w-[200px]"
-            emptyPickerText="No labels defined in this project."
+            emptyPickerText={t("pageDetail.labels.emptyPicker")}
           />
         {/if}
       </div>
@@ -770,7 +772,7 @@
       <div class="mt-10 pt-6 border-t border-[var(--border)] flex gap-8">
         <div>
           <span class="block text-micro font-semibold uppercase tracking-widest text-[var(--text-faint)] mb-0.5">
-            Created
+            {t("pageDetail.meta.created")}
           </span>
           <span class="text-body-sm text-[var(--text-muted)]">
             {formatDate(page.created_at)}
@@ -778,7 +780,7 @@
         </div>
         <div>
           <span class="block text-micro font-semibold uppercase tracking-widest text-[var(--text-faint)] mb-0.5">
-            Updated
+            {t("pageDetail.meta.updated")}
           </span>
           <span class="text-body-sm text-[var(--text-muted)]">
             {formatDate(page.updated_at)}

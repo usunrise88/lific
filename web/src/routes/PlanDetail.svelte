@@ -19,6 +19,7 @@
   } from "../lib/api";
   import { getContext } from "svelte";
   import { pageTitle, PAGE_TITLE_CONTEXT } from "../lib/pageTitle";
+  import { t, locale } from "../lib/i18n";
   import DocumentDetail from "../lib/DocumentDetail.svelte";
   import IssuePickerModal from "../lib/IssuePickerModal.svelte";
   import Markdown from "../lib/Markdown.svelte";
@@ -84,11 +85,13 @@
   // What the next selection should do — "anchor" mutates the plan, while a
   // step id links that step.
   let pickerTarget = $state<{ kind: "anchor" } | { kind: "step"; stepId: number } | null>(null);
-  let pickerTitle = $state("Link an issue");
+  let pickerTitle = $state(t("plans.picker.link"));
   let pickerCurrent = $state<string | null>(null);
   let pickerAllowClear = $state(false);
 
   const STATUSES = ["active", "done", "archived"];
+  const ISSUE_STATUSES = ["backlog", "todo", "active", "done", "cancelled"];
+  const statusLabel = (s: string) => (STATUSES.includes(s) ? t(`plans.status.${s}`) : s);
 
   $effect(() => {
     const id = planId;
@@ -145,7 +148,7 @@
   }
 
   function markSaved() {
-    lastSaved = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    lastSaved = new Date().toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit" });
   }
 
   // ── Plan-level ──
@@ -170,7 +173,7 @@
   function setAnchor() {
     if (!plan) return;
     pickerTarget = { kind: "anchor" };
-    pickerTitle = "Set anchor issue";
+    pickerTitle = t("plans.picker.anchor");
     pickerCurrent = plan.anchor_identifier ?? null;
     pickerAllowClear = true;
     pickerOpen = true;
@@ -205,7 +208,7 @@
       plan = res.data.plan;
       const eff = res.data.effect;
       if (eff?.issue_status_changed && eff.issue_identifier) {
-        flash(`${eff.issue_identifier} marked done`);
+        flash(t("plans.flash.markedDone", { identifier: eff.issue_identifier }));
       }
       refreshActivity();
     } else error = res.error;
@@ -278,7 +281,7 @@
   function attachIssue(step: PlanStep) {
     if (!plan) return;
     pickerTarget = { kind: "step", stepId: step.id };
-    pickerTitle = "Link an issue to this step";
+    pickerTitle = t("plans.picker.step");
     pickerCurrent = step.issue_identifier ?? null;
     pickerAllowClear = false;
     pickerOpen = true;
@@ -295,17 +298,17 @@
 
   // Dispatch a picker selection to whichever target opened it.
   function onPickerSelect(issue: Issue) {
-    const t = pickerTarget;
+    const target = pickerTarget;
     pickerTarget = null;
-    if (!t) return;
-    if (t.kind === "anchor") void applyAnchor(issue.id);
-    else void linkStepIssue(t.stepId, issue.id);
+    if (!target) return;
+    if (target.kind === "anchor") void applyAnchor(issue.id);
+    else void linkStepIssue(target.stepId, issue.id);
   }
 
   function onPickerClear() {
-    const t = pickerTarget;
+    const target = pickerTarget;
     pickerTarget = null;
-    if (t?.kind === "anchor") void applyAnchor(null);
+    if (target?.kind === "anchor") void applyAnchor(null);
   }
 
   // ── Expand/collapse ──
@@ -331,9 +334,12 @@
 
   function provenance(step: PlanStep): { text: string; tone: string } | null {
     if (!step.issue_identifier) return null;
-    if (step.done && step.issue_status === "done") return { text: `via ${step.issue_identifier}`, tone: "muted" };
-    if (!step.done && step.reopened_via_issue_at) return { text: `reopened — ${step.issue_identifier} reopened`, tone: "warn" };
-    return { text: `${step.issue_identifier}: ${step.issue_status ?? "?"}`, tone: "link" };
+    const identifier = step.issue_identifier;
+    if (step.done && step.issue_status === "done") return { text: t("plans.prov.via", { identifier }), tone: "muted" };
+    if (!step.done && step.reopened_via_issue_at) return { text: t("plans.prov.reopened", { identifier }), tone: "warn" };
+    const s = step.issue_status;
+    const status = !s ? "?" : ISSUE_STATUSES.includes(s) ? t(`plans.issueStatus.${s}`) : s;
+    return { text: t("plans.prov.status", { identifier, status }), tone: "link" };
   }
 
   // LIF-248: shared by the provenance chip and the anchor-issue chip below —
@@ -359,10 +365,11 @@
   onRetry={() => load(planId)}
   identifier={plan?.identifier ?? `PLAN-${planId}`}
   backRoute={`/${projectIdentifier}/plans`}
-  backLabel="Plans"
+  backLabel={t("plans.title")}
+  backPhrase={t("plans.backToPlans")}
   breadcrumbSegments={[
     { label: projectIdentifier, href: `#/${projectIdentifier}/overview`, mono: true, hideBelowSm: true, copy: projectIdentifier },
-    { label: "Plans", href: `#/${projectIdentifier}/plans` },
+    { label: t("plans.title"), href: `#/${projectIdentifier}/plans` },
     // The trail ends in the identifier, not the title, matching issues and
     // pages: the title already reads as the heading directly below, while the
     // identifier had nowhere else to surface. `copy` stays unset until the
@@ -418,7 +425,7 @@
         <div class="flex items-center gap-2 py-1 mt-2 pl-1">
           <input
             class="flex-1 bg-transparent outline-none text-body text-[var(--text)] border-b border-[var(--accent)]"
-            placeholder="Step title…"
+            placeholder={t("plans.step.titlePlaceholder")}
             bind:value={childTitle}
             autofocus
             onkeydown={(e) => { if (e.key === "Enter") commitAddChild(); if (e.key === "Escape") addingChildOf = null; }}
@@ -430,7 +437,7 @@
           class="mt-3 flex items-center gap-1.5 text-body-sm text-[var(--text-muted)] hover:text-[var(--text)]"
           onclick={() => startAddChild(-1)}
         >
-          <Plus size={14} /> Add step
+          <Plus size={14} /> {t("plans.step.add")}
         </button>
       {/if}
     {/if}
@@ -447,7 +454,7 @@
       <button
         class="mt-0.5 size-4 shrink-0 flex items-center justify-center text-[var(--text-faint)] hover:text-[var(--text)]"
         onclick={() => toggleExpand(step.id)}
-        title={expanded ? "Collapse" : "Expand"}
+        title={expanded ? t("plans.step.collapse") : t("plans.step.expand")}
       >
         {#if expanded}<ChevronDown size={13} />{:else}<ChevronRight size={13} />{/if}
       </button>
@@ -461,7 +468,7 @@
                {canEdit && !step.done ? 'hover:border-[var(--accent)]' : ''}
                {canEdit ? '' : 'cursor-default'}"
         onclick={() => { if (canEdit) toggleDone(step); }}
-        title={canEdit ? (step.done ? "Mark not done" : "Mark done") : (step.done ? "Done" : "Not done")}
+        title={canEdit ? (step.done ? t("plans.step.markNotDone") : t("plans.step.markDone")) : (step.done ? t("plans.step.done") : t("plans.step.notDone"))}
       >
         {#if step.done}<Check size={11} />{/if}
       </button>
@@ -481,7 +488,7 @@
             <button
               class="text-left text-body truncate {step.done ? 'text-[var(--text-faint)] line-through' : 'text-[var(--text)]'} {canEdit ? '' : 'cursor-default'}"
               ondblclick={() => { if (canEdit) startEditTitle(step); }}
-              title={canEdit ? "Double-click to rename" : undefined}
+              title={canEdit ? t("plans.step.renameHint") : undefined}
             >
               {step.title}
             </button>
@@ -495,7 +502,7 @@
                        : prov.tone === 'muted'
                          ? 'text-[var(--text-faint)] bg-[var(--bg-subtle)]'
                          : 'text-[var(--accent)] bg-[var(--accent-subtle)]'}"
-              title="Shift-click to preview"
+              title={t("plans.shiftPreview")}
               onclick={(e) => step.issue_identifier && openIssueChip(e, step.issue_identifier)}
             >
               {prov.text}<ArrowUpRight size={10} />
@@ -507,12 +514,12 @@
           <!-- LIF-275: pointer-coarse keeps step actions reachable on touch. -->
           <div class="ml-auto flex items-center gap-0.5 opacity-0 group-hover:opacity-100 pointer-coarse:opacity-100 transition-opacity shrink-0">
             {#if step.issue_identifier}
-              <button class="p-1 rounded text-[var(--text-faint)] hover:text-[var(--text)] text-micro" title="Detach issue" onclick={() => detachIssue(step)}>unlink</button>
+              <button class="p-1 rounded text-[var(--text-faint)] hover:text-[var(--text)] text-micro" title={t("plans.step.detach")} onclick={() => detachIssue(step)}>{t("plans.step.unlink")}</button>
             {:else}
-              <button class="p-1 rounded text-[var(--text-faint)] hover:text-[var(--text)] text-micro" title="Link an issue" onclick={() => attachIssue(step)}>link</button>
+              <button class="p-1 rounded text-[var(--text-faint)] hover:text-[var(--text)] text-micro" title={t("plans.picker.link")} onclick={() => attachIssue(step)}>{t("plans.step.linkShort")}</button>
             {/if}
-            <button class="p-1 rounded text-[var(--text-faint)] hover:text-[var(--text)]" title="Add sub-step" onclick={() => startAddChild(step.id)}><Plus size={13} /></button>
-            <button class="p-1 rounded text-[var(--text-faint)] hover:text-[var(--error)]" title="Delete step" onclick={() => removeStep(step)}><X size={13} /></button>
+            <button class="p-1 rounded text-[var(--text-faint)] hover:text-[var(--text)]" title={t("plans.step.addSub")} onclick={() => startAddChild(step.id)}><Plus size={13} /></button>
+            <button class="p-1 rounded text-[var(--text-faint)] hover:text-[var(--error)]" title={t("plans.step.delete")} onclick={() => removeStep(step)}><X size={13} /></button>
           </div>
           {/if}
         </div>
@@ -531,21 +538,21 @@
                        border border-[var(--border)] rounded-md p-2 resize-y min-h-[80px]"
                 bind:value={descDraft}
                 autofocus
-                placeholder="Describe this step… (markdown supported)"
+                placeholder={t("plans.step.descPlaceholder")}
                 onkeydown={(e) => { if (e.key === 'Escape') cancelEditDesc(); if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); commitEditDesc(); } }}
               ></textarea>
               <div class="flex items-center gap-2 mt-1">
-                <button class="text-caption font-medium text-[var(--accent-text)] bg-[var(--accent)] px-2 py-1 rounded-md hover:bg-[var(--accent-hover)]" onclick={commitEditDesc}>Save</button>
-                <button class="text-caption text-[var(--text-muted)] px-2 py-1 rounded-md hover:bg-[var(--bg-subtle)]" onclick={cancelEditDesc}>Cancel</button>
-                <span class="text-micro text-[var(--text-faint)] ml-auto">Markdown · Esc to cancel · ⌘S to save</span>
+                <button class="text-caption font-medium text-[var(--accent-text)] bg-[var(--accent)] px-2 py-1 rounded-md hover:bg-[var(--accent-hover)]" onclick={commitEditDesc}>{t("common.save")}</button>
+                <button class="text-caption text-[var(--text-muted)] px-2 py-1 rounded-md hover:bg-[var(--bg-subtle)]" onclick={cancelEditDesc}>{t("common.cancel")}</button>
+                <span class="text-micro text-[var(--text-faint)] ml-auto">{t("plans.step.editHint")}</span>
               </div>
             {:else if hasBody}
-              <button class="block w-full text-left prose-step" onclick={() => startEditDesc(step)} title="Click to edit">
+              <button class="block w-full text-left prose-step" onclick={() => startEditDesc(step)} title={t("plans.step.clickToEdit")}>
                 <Markdown content={step.description} />
               </button>
             {:else}
               <button class="text-body-sm italic text-[var(--text-faint)] hover:text-[var(--text-muted)]" onclick={() => startEditDesc(step)}>
-                Add details…
+                {t("plans.step.addDetails")}
               </button>
             {/if}
           </div>
@@ -555,7 +562,7 @@
           <div class="flex items-center gap-2 py-1">
             <input
               class="flex-1 bg-transparent outline-none text-body text-[var(--text)] border-b border-[var(--accent)]"
-              placeholder="Sub-step title…"
+              placeholder={t("plans.step.subTitlePlaceholder")}
               bind:value={childTitle}
               autofocus
               onkeydown={(e) => { if (e.key === "Enter") commitAddChild(); if (e.key === "Escape") addingChildOf = null; }}
@@ -579,25 +586,25 @@
     <div class="issue-meta-aside">
       <!-- Status (LIF-234: read-only for viewers) -->
       <div class="issue-meta-field">
-        <p class="issue-meta-field-label">Status</p>
+        <p class="issue-meta-field-label">{t("plans.meta.status")}</p>
         <div class="relative">
           <button
             class="flex items-center gap-2 text-body-sm rounded-md px-2 py-1 -mx-2 w-full text-left {canEdit ? 'hover:bg-[var(--bg-subtle)]' : 'cursor-default'}"
             onclick={(e) => { if (!canEdit) return; e.stopPropagation(); statusOpen = !statusOpen; }}
           >
             <span class="size-2 rounded-full {plan.status === 'active' ? 'bg-[var(--accent)]' : plan.status === 'done' ? 'bg-[var(--success)]' : 'bg-[var(--text-faint)]'}"></span>
-            <span class="capitalize text-[var(--text)]">{plan.status}</span>
+            <span class="text-[var(--text)]">{statusLabel(plan.status)}</span>
           </button>
           {#if statusOpen && canEdit}
             <div class="absolute left-0 top-full mt-1 z-20 w-[160px] bg-[var(--surface)] border border-[var(--border)] rounded-md shadow-lg py-1"
                  role="presentation" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
               {#each STATUSES as s}
                 <button
-                  class="w-full flex items-center gap-2 px-3 py-1.5 text-left text-body-sm capitalize
+                  class="w-full flex items-center gap-2 px-3 py-1.5 text-left text-body-sm
                          {s === plan.status ? 'text-[var(--accent)] bg-[var(--accent-subtle)]' : 'text-[var(--text)] hover:bg-[var(--bg-subtle)]'}"
                   onclick={() => setStatus(s)}
                 >
-                  {s}
+                  {statusLabel(s)}
                 </button>
               {/each}
             </div>
@@ -607,7 +614,7 @@
 
       <!-- Progress -->
       <div class="issue-meta-field">
-        <p class="issue-meta-field-label">Progress</p>
+        <p class="issue-meta-field-label">{t("plans.meta.progress")}</p>
         <div class="flex items-center gap-2">
           <div class="flex-1 h-1.5 rounded-full bg-[var(--bg-subtle)] overflow-hidden">
             <div class="h-full bg-[var(--accent)] rounded-full transition-all" style="width: {progress * 100}%"></div>
@@ -618,21 +625,21 @@
 
       <!-- Anchor issue -->
       <div class="issue-meta-field">
-        <p class="issue-meta-field-label">Anchor issue</p>
+        <p class="issue-meta-field-label">{t("plans.meta.anchor")}</p>
         <div class="flex items-center gap-1.5 -mx-2 px-2">
           {#if plan.anchor_identifier}
             <button class="text-body-sm font-mono text-[var(--accent)] hover:underline flex items-center gap-1"
-                    title="Shift-click to preview"
+                    title={t("plans.shiftPreview")}
                     onclick={(e) => plan?.anchor_identifier && openIssueChip(e, plan.anchor_identifier)}>
               {plan.anchor_identifier}<ArrowUpRight size={12} />
             </button>
             {#if canEdit}
-              <button class="ml-auto text-[var(--text-faint)] hover:text-[var(--text)] text-caption" onclick={setAnchor}>change</button>
+              <button class="ml-auto text-[var(--text-faint)] hover:text-[var(--text)] text-caption" onclick={setAnchor}>{t("plans.meta.change")}</button>
             {/if}
           {:else if canEdit}
-            <button class="text-body-sm text-[var(--text-faint)] hover:text-[var(--text)]" onclick={setAnchor}>Set anchor…</button>
+            <button class="text-body-sm text-[var(--text-faint)] hover:text-[var(--text)]" onclick={setAnchor}>{t("plans.meta.setAnchor")}</button>
           {:else}
-            <span class="text-body-sm text-[var(--text-faint)]">None</span>
+            <span class="text-body-sm text-[var(--text-faint)]">{t("common.none")}</span>
           {/if}
         </div>
       </div>
@@ -641,11 +648,11 @@
 
       <div class="issue-meta-dates">
         <div class="issue-meta-field">
-          <p class="issue-meta-field-label">Created</p>
+          <p class="issue-meta-field-label">{t("plans.meta.created")}</p>
           <p class="text-body-sm text-[var(--text-muted)] leading-snug m-0">{formatDate(plan.created_at)}</p>
         </div>
         <div class="issue-meta-field">
-          <p class="issue-meta-field-label">Updated</p>
+          <p class="issue-meta-field-label">{t("plans.meta.updated")}</p>
           <p class="text-body-sm text-[var(--text-muted)] leading-snug m-0">{formatDate(plan.updated_at)}</p>
         </div>
       </div>

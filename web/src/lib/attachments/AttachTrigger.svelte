@@ -21,6 +21,7 @@
   import { Paperclip, FileUp, Camera, Mic } from "lucide-svelte";
   import VoiceNote from "./VoiceNote.svelte";
   import type { UploadSource } from "./annotateFlow";
+  import { t } from "../i18n";
 
   let {
     onFiles,
@@ -103,28 +104,28 @@
     type="button"
     class="at__button"
     class:at__button--plain={variant === "plain"}
-    title="Attach files"
-    aria-label="Attach files"
+    title={t("attachments.trigger.title")}
+    aria-label={t("attachments.trigger.title")}
     aria-haspopup={coarse ? "menu" : undefined}
     aria-expanded={coarse ? menuOpen : undefined}
     {disabled}
     onclick={onTrigger}
   >
     <Paperclip size={13} />
-    <span>{busy ? "Uploading\u2026" : "Attach"}</span>
+    <span>{busy ? t("attachments.trigger.uploading") : t("attachments.trigger.attach")}</span>
   </button>
 
   {#if coarse && menuOpen}
-    <div class="at__menu" role="menu" aria-label="Attach">
+    <div class="at__menu" role="menu" aria-label={t("attachments.trigger.attach")}>
       <button type="button" role="menuitem" class="at__item" onclick={chooseFiles}>
-        <FileUp size={14} /> Files
+        <FileUp size={14} /> {t("attachments.trigger.files")}
       </button>
       <button type="button" role="menuitem" class="at__item" onclick={chooseCamera}>
-        <Camera size={14} /> Camera
+        <Camera size={14} /> {t("attachments.trigger.camera")}
       </button>
       {#if voice?.isSupported()}
         <button type="button" role="menuitem" class="at__item" onclick={chooseVoice}>
-          <Mic size={14} /> Record voice
+          <Mic size={14} /> {t("attachments.trigger.voice")}
         </button>
       {/if}
     </div>

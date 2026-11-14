@@ -229,6 +229,8 @@ pub fn open_memory() -> Result<DbPool, LificError> {
     )?;
     writer.execute_batch("PRAGMA foreign_keys = ON;")?;
     migrate::run(&writer)?;
+    // Fork: tables that are not numbered migrations (see agent_inbox::ensure_schema).
+    queries::agent_inbox::ensure_schema(&writer)?;
 
     let readers = ArrayQueue::new(READ_POOL_SIZE);
     for _ in 0..READ_POOL_SIZE {
@@ -260,6 +262,8 @@ pub fn open(path: &Path) -> Result<DbPool, LificError> {
     apply_pragmas(&writer)?;
     secure_sidecars(path)?;
     migrate::run(&writer)?;
+    // Fork: tables that are not numbered migrations (see agent_inbox::ensure_schema).
+    queries::agent_inbox::ensure_schema(&writer)?;
     secure_sidecars(path)?;
 
     // LIF-155: clear any actor left over from a previous process (the

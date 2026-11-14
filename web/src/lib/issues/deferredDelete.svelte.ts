@@ -24,6 +24,7 @@
 
 import { deleteIssue, type Issue } from "../api";
 import { toast } from "../toast/toast.svelte";
+import { t } from "../i18n";
 
 interface PendingBatch {
   /** The issues being deleted (captured objects — used for the count label
@@ -81,8 +82,10 @@ async function commitViaApi(batch: PendingBatch): Promise<void> {
     // leaving the UI claiming they're gone when the server still has them.
     toast(
       failed === batch.issues.length
-        ? `Couldn't delete ${label(batch.issues)} — restored`
-        : `Couldn't delete ${failed} of ${batch.issues.length} issues — restored`,
+        ? batch.issues.length === 1
+          ? t("issues.delete.failedOne", { identifier: batch.issues[0].identifier })
+          : t("issues.delete.failedAll", { count: batch.issues.length })
+        : t("issues.delete.failedSome", { failed, count: batch.issues.length }),
       { kind: "error" },
     );
     batch.onRestore();
@@ -119,11 +122,6 @@ function commitViaKeepalive(batch: PendingBatch): void {
   }
 }
 
-function label(issues: Issue[]): string {
-  return issues.length === 1
-    ? issues[0].identifier
-    : `${issues.length} issues`;
-}
 
 export interface ScheduleOptions {
   /** Reinsert the optimistically-removed rows (Undo, or commit failure). */
@@ -157,10 +155,14 @@ export function scheduleDelete(issues: Issue[], opts: ScheduleOptions): void {
   };
   setPending(batch);
 
-  toast(`Deleted ${label(issues)}`, {
+  toast(
+    issues.length === 1
+      ? t("issues.delete.deletedOne", { identifier: issues[0].identifier })
+      : t("issues.delete.deleted", { count: issues.length }),
+    {
     kind: "info",
     action: {
-      label: "Undo",
+      label: t("common.undo"),
       fn: () => {
         // Undo: cancel the commit entirely and put the rows back. The toast's
         // onClose still fires (with didAction=true) but the guard below makes
@@ -169,7 +171,12 @@ export function scheduleDelete(issues: Issue[], opts: ScheduleOptions): void {
         batch.committed = true;
         if (pending === batch) setPending(null);
         batch.onRestore();
-        toast(`Restored ${label(issues)}`, { kind: "info", duration: 3000 });
+        toast(
+          issues.length === 1
+            ? t("issues.delete.restoredOne", { identifier: issues[0].identifier })
+            : t("issues.delete.restored", { count: issues.length }),
+          { kind: "info", duration: 3000 },
+        );
       },
     },
     onClose: (didAction) => {

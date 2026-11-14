@@ -40,6 +40,12 @@
             : "indigo",
         );
 
+        // Fork: Radix Colors theme (keep in sync with lib/appearance/themes.ts).
+        var preset = localStorage.getItem("lific_theme_preset");
+        if (["indigo", "ocean", "lagoon", "iris", "berry", "plum", "jade", "teal", "meadow", "desert", "ember", "graphite"].indexOf(preset) !== -1) {
+          html.setAttribute("data-theme-preset", preset);
+        }
+
         if (localStorage.getItem("lific_density") === "compact") {
           html.classList.add("density-compact");
         }

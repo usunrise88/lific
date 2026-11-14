@@ -11,6 +11,7 @@
   // "apply to all". One image, one description.
 
   import { Check, X } from "lucide-svelte";
+  import { t } from "../i18n";
 
   let {
     onApply,
@@ -46,20 +47,20 @@
     class="alt__input"
     type="text"
     bind:value
-    placeholder="Describe this image, Enter to apply, Esc to skip"
-    aria-label="Alt text for the image you just uploaded"
+    placeholder={t("attachments.alt.placeholder")}
+    aria-label={t("attachments.alt.label")}
     onkeydown={onKeydown}
   />
   <button
     type="button"
     class="alt__act"
-    title="Apply description"
-    aria-label="Apply description"
+    title={t("attachments.alt.apply")}
+    aria-label={t("attachments.alt.apply")}
     onclick={commit}
   >
     <Check size={13} />
   </button>
-  <button type="button" class="alt__act" title="Skip" aria-label="Skip description" onclick={onSkip}>
+  <button type="button" class="alt__act" title={t("attachments.alt.skip")} aria-label={t("attachments.alt.skipLabel")} onclick={onSkip}>
     <X size={13} />
   </button>
 </span>

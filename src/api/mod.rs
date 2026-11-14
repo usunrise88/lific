@@ -9,7 +9,12 @@ mod auth;
 // layer in `server` has to expose by the same names this module sets them by.
 pub mod comments;
 mod export;
+mod feed;
+mod for_me;
 mod git_hook;
+mod agent_inbox;
+mod agent_manifest;
+pub(crate) use agent_inbox::render_for_agent as render_inbox_for_agent;
 mod home;
 mod insights;
 mod issues;
@@ -26,6 +31,7 @@ mod resources;
 mod sync;
 mod views;
 mod waits;
+mod parked;
 
 use axum::{
     Router,
@@ -165,6 +171,28 @@ fn router_impl(
         )
         .route("/api/issues/attention", get(issues::my_attention))
         .route("/api/home/overview", get(home::home_overview))
+        .route("/api/home/flow", get(home::home_flow))
+        // Fork: agent inbox (queries::agent_inbox).
+        .route("/api/agent/inbox", get(agent_inbox::get_inbox))
+        .route("/api/agent/inbox/hook", get(agent_inbox::hook))
+        .route("/api/agent/routes", axum::routing::put(agent_inbox::set_route))
+        .route("/api/projects/{id}/agents", get(agent_inbox::project_agents))
+        .route("/api/projects/{id}/agent-routes", get(agent_inbox::project_routes))
+        .route("/api/issues/{id}/agents", get(agent_inbox::issue_agents))
+        // Fork: agent manifest (queries::agent_manifest).
+        .route("/api/agent/manifest", get(agent_manifest::get_rendered))
+        .route(
+            "/api/instance/agent-manifest",
+            get(agent_manifest::admin_get)
+                .put(agent_manifest::admin_put)
+                .delete(agent_manifest::admin_reset),
+        )
+        // Fork: cross-project activity feed (the Feed page), filtered to
+        // visible projects like the home overview.
+        .route("/api/feed", get(feed::feed))
+        .route("/api/feed/actors", get(feed::actors))
+        // Fork: open issues a person has to act on (the For me page).
+        .route("/api/for-me", get(for_me::for_me))
         .route(
             "/api/issues/{id}",
             get(issues::get_issue)
@@ -223,6 +251,12 @@ fn router_impl(
         .route(
             "/api/issues/{id}/waits/{wait_id}",
             delete(waits::clear_wait),
+        )
+        // Fork: parked issues
+        .route("/api/issues/park", post(parked::bulk_park))
+        .route(
+            "/api/issues/{id}/park",
+            put(parked::park_issue).delete(parked::unpark_issue),
         )
         // Project-wide relation edges (dependency graph — LIF-363)
         .route(

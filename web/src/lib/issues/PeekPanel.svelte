@@ -24,6 +24,7 @@
   // open/close and is removed once it settles, so at rest (the only time
   // a dropdown can be open) there's no transform in the ancestor chain and
   // Select behaves exactly as it does everywhere else in the app.
+  import { t } from "../i18n";
   import {
     resolveIssue,
     updateIssue,
@@ -58,9 +59,17 @@
 
   let {
     navigate,
+    embedded = false,
   }: {
     navigate: (path: string) => void;
+    /** Fork: render in the host route's layout instead of as an overlay.
+     *  Exactly one instance is live at a time: the embedded one while a
+     *  route has docked the preview, the global overlay otherwise. */
+    embedded?: boolean;
   } = $props();
+
+  let live = $derived(embedded === peekState.docked);
+  let shown = $derived(live && peekState.open);
 
   let issue = $state<Issue | null>(null);
   let modules = $state<Module[]>([]);
@@ -85,6 +94,7 @@
 
   $effect(() => {
     const ident = peekState.identifier;
+    if (!live) return;
     if (!ident) {
       issue = null;
       return;
@@ -196,7 +206,7 @@
       if (issue && issue.id === id) issue = res.data;
       notifyPeekSync(id, { title: next });
     } else {
-      toast(`Couldn't save ${issue.identifier}: ${res.error}`, { kind: "error" });
+      toast(t("issues.toast.saveFailed", { identifier: issue.identifier, error: res.error }), { kind: "error" });
     }
   }
 
@@ -214,14 +224,14 @@
 
   const statusOptions = STATUSES.map((s) => ({
     value: s,
-    label: s[0].toUpperCase() + s.slice(1),
+    label: t(`common.status.${s}`),
   }));
   const priorityOptions = PRIORITIES.map((p) => ({
     value: p,
-    label: p === "none" ? "No priority" : p[0].toUpperCase() + p.slice(1),
+    label: p === "none" ? t("issues.peek.noPriority") : t(`common.priority.${p}`),
   }));
   let moduleOptions = $derived([
-    { value: null as number | null, label: "No module" },
+    { value: null as number | null, label: t("issues.group.noModule") },
     ...modules.map((m) => ({ value: m.id as number | null, label: m.name })),
   ]);
 
@@ -251,7 +261,7 @@
   }
 
   function handleKeydown(e: KeyboardEvent) {
-    if (!peekState.open) return;
+    if (!shown) return;
     if (e.key === "Escape") {
       e.preventDefault();
       closePeek();
@@ -265,7 +275,8 @@
      the panel is closed. -->
 <svelte:window onkeydown={handleKeydown} />
 
-{#if peekState.open}
+{#if shown}
+  {#if !embedded}
   <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
   <!-- Deliberately doesn't touch body/html overflow — the list/board
        behind the scrim stays exactly as scrollable as it was; peek is a
@@ -275,20 +286,23 @@
     onclick={closePeek}
     transition:fade={scrimParams()}
   ></div>
+  {/if}
 
   <div
-    class="fixed z-[95] flex flex-col bg-[var(--surface)] shadow-2xl
-           inset-x-0 bottom-0 h-[85dvh] rounded-t-xl border-t border-[var(--border)]
-           pb-[env(safe-area-inset-bottom)]
-           md:inset-y-0 md:right-0 md:left-auto md:bottom-auto
-           md:h-full md:w-[480px] md:max-w-[92vw]
-           md:rounded-none md:border-t-0 md:border-l"
+    class={embedded
+      ? "flex flex-col h-full bg-[var(--surface)] rounded-xl border border-[var(--border)] overflow-hidden"
+      : `fixed z-[95] flex flex-col bg-[var(--surface)] shadow-2xl
+         inset-x-0 bottom-0 h-[85dvh] rounded-t-xl border-t border-[var(--border)]
+         pb-[env(safe-area-inset-bottom)]
+         md:inset-y-0 md:right-0 md:left-auto md:bottom-auto
+         md:h-full md:w-[480px] md:max-w-[92vw]
+         md:rounded-none md:border-t-0 md:border-l`}
     bind:this={sheetEl}
-    in:fly={panelInParams()}
-    out:fly={panelOutParams()}
-    role="dialog"
-    aria-modal="true"
-    aria-label={issue ? `${issue.identifier} preview` : "Issue preview"}
+    in:fly={embedded ? { x: 16, duration: motionReduced() ? 0 : 160 } : panelInParams()}
+    out:fly={embedded ? { duration: 0 } : panelOutParams()}
+    role={embedded ? "region" : "dialog"}
+    aria-modal={embedded ? undefined : "true"}
+    aria-label={issue ? t("issues.peek.labelFor", { identifier: issue.identifier }) : t("issues.peek.label")}
   >
     <!-- Grab zone: pill + header. On mobile, dragging anywhere here slides
          the sheet down to dismiss (sheetdrag.ts); the pill is the visual
@@ -324,8 +338,8 @@
           <span
             class="inline-flex items-center gap-1 text-caption text-[var(--text-faint)]"
             title={commentCountIsPartial
-              ? `${commentCount} or more comments`
-              : `${commentCount} comment${commentCount === 1 ? "" : "s"}`}
+              ? t("issues.peek.commentsPartial", { count: commentCount })
+              : t("issues.peek.comments", { count: commentCount })}
           >
             <MessageSquare size={12} />
             {commentCount}{commentCountIsPartial ? "+" : ""}
@@ -337,7 +351,7 @@
         class="size-7 flex items-center justify-center rounded-md
                text-[var(--text-faint)] hover:text-[var(--text)]
                hover:bg-[var(--bg-subtle)] transition-colors"
-        aria-label="Close preview"
+        aria-label={t("issues.peek.close")}
         onclick={closePeek}
       >
         <X size={16} />
@@ -375,14 +389,14 @@
         </div>
       {:else if error}
         <div class="flex flex-col items-center gap-2 py-16 text-center">
-          <p class="text-body-sm text-[var(--text-muted)]">Couldn't load this issue.</p>
+          <p class="text-body-sm text-[var(--text-muted)]">{t("issues.peek.loadFailed")}</p>
           <p class="text-caption text-[var(--text-faint)]">{error}</p>
         </div>
       {:else if issue}
         <InlineTitle value={issue.title} {editable} size="md" onSave={saveTitle} />
         {#if !editable}
           <p class="text-caption text-[var(--text-faint)] mb-3">
-            {permissionsFailed ? "Editing permissions could not be checked." : permissionsChecked ? "Read-only access" : "Checking editing permissions..."}
+            {permissionsFailed ? t("issues.permissions.failed") : permissionsChecked ? t("issues.permissions.readOnly") : t("issues.permissions.checking")}
           </p>
         {/if}
 
@@ -487,7 +501,7 @@
               {:else}
                 <Layers size={13} class="text-[var(--text-faint)]" />
               {/if}
-              {issue.module_id == null ? "No module" : modules.find((module) => module.id === issue?.module_id)?.name ?? `Module #${issue.module_id}`}
+              {issue.module_id == null ? t("issues.group.noModule") : modules.find((module) => module.id === issue?.module_id)?.name ?? t("issues.peek.moduleId", { id: issue.module_id })}
             </span>
           {/if}
         </div>
@@ -516,17 +530,17 @@
         {#if (issue.blocked_by && issue.blocked_by.length > 0) || (issue.blocks && issue.blocks.length > 0) || (issue.relates_to && issue.relates_to.length > 0)}
           <div class="flex flex-wrap items-center gap-1.5 mb-4 text-caption">
             {#each issue.blocked_by ?? [] as rel}
-              <span class="font-mono text-[var(--error)] bg-[var(--error-bg)] px-1.5 py-0.5 rounded" title="Blocked by {rel}">
+              <span class="font-mono text-[var(--error)] bg-[var(--error-bg)] px-1.5 py-0.5 rounded" title={t("issues.peek.blockedBy", { identifier: rel })}>
                 ⛔ {rel}
               </span>
             {/each}
             {#each issue.blocks ?? [] as rel}
-              <span class="font-mono text-[var(--accent)] bg-[var(--accent-subtle)] px-1.5 py-0.5 rounded" title="Blocks {rel}">
+              <span class="font-mono text-[var(--accent)] bg-[var(--accent-subtle)] px-1.5 py-0.5 rounded" title={t("issues.peek.blocks", { identifier: rel })}>
                 → {rel}
               </span>
             {/each}
             {#each issue.relates_to ?? [] as rel}
-              <span class="font-mono text-[var(--text-muted)] bg-[var(--bg-subtle)] px-1.5 py-0.5 rounded" title="Related to {rel}">
+              <span class="font-mono text-[var(--text-muted)] bg-[var(--bg-subtle)] px-1.5 py-0.5 rounded" title={t("issues.peek.relatedTo", { identifier: rel })}>
                 {rel}
               </span>
             {/each}
@@ -540,11 +554,11 @@
         {#if issue.description}
           <Markdown content={issue.description} />
         {:else}
-          <p class="text-body-sm text-[var(--text-faint)] italic">No description</p>
+          <p class="text-body-sm text-[var(--text-faint)] italic">{t("issues.noDescription")}</p>
         {/if}
 
         <p class="text-caption text-[var(--text-faint)] mt-4">
-          Updated {formatDate(issue.updated_at)}
+          {t("issues.peek.updated", { date: formatDate(issue.updated_at) })}
         </p>
       {/if}
     </div>
@@ -561,14 +575,14 @@
           class="inline-flex flex-row-reverse items-center gap-1 text-body-sm
                  text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
         >
-          Copy identifier
+          {t("issues.menu.copyIdentifier")}
         </CopyIdButton>
         <button
           class="inline-flex items-center gap-1.5 text-body-sm font-medium
                  text-[var(--accent)] hover:underline transition-colors"
           onclick={openFullView}
         >
-          Open full view
+          {t("issues.peek.openFull")}
           <ArrowUpRight size={14} />
         </button>
       </div>

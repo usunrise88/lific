@@ -17,11 +17,12 @@
   import PendingUploads from "./PendingUploads.svelte";
   import type { ComposerAttachments } from "./composer.svelte";
   import { CornerDownLeft } from "lucide-svelte";
+  import { t } from "../i18n";
 
   let {
     composer,
     radius = "0.75rem",
-    dropLabel = "Drop files to attach",
+    dropLabel = t("attachments.drop.label"),
     accept = "image/*,application/pdf,text/plain,text/csv,.csv,.log,application/zip,.docx,.xlsx,.hwp,.hwpx",
     children,
     footer,
@@ -55,14 +56,14 @@
          buttons do the same for anyone reaching for the mouse. -->
     <div class="bp" role="status">
       <span class="bp__text">
-        That is {composer.pendingPaste.summary}. Attach it as a file?
+        {t("attachments.bigPaste.prompt", { summary: composer.pendingPaste.summary })}
       </span>
       <button type="button" class="bp__btn bp__btn--primary" onclick={() => composer.attachPaste()}>
-        Attach as file
+        {t("attachments.bigPaste.attach")}
         <kbd class="bp__kbd"><CornerDownLeft size={10} /></kbd>
       </button>
       <button type="button" class="bp__btn" onclick={() => composer.pasteInline()}>
-        Paste inline
+        {t("attachments.bigPaste.inline")}
         <kbd class="bp__kbd">Esc</kbd>
       </button>
     </div>

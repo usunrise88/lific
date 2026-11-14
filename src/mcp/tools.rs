@@ -258,6 +258,44 @@ impl Display for IssueRelations<'_> {
     }
 }
 
+/// Fork: apply `parked` from update_issue / bulk_update. `true` when it
+/// changed anything.
+fn set_parked(
+    conn: &rusqlite::Connection,
+    issue_id: i64,
+    parked: Option<bool>,
+    reason: Option<&str>,
+) -> Result<bool, crate::error::LificError> {
+    match parked {
+        Some(true) => {
+            queries::parked::park(conn, issue_id, reason.unwrap_or(""), None)?;
+            Ok(true)
+        }
+        Some(false) => queries::parked::unpark(conn, issue_id),
+        None if reason.is_some() => Err(crate::error::LificError::BadRequest(
+            "park_reason needs parked=true".into(),
+        )),
+        None => Ok(false),
+    }
+}
+
+/// Fork: who an issue is for, as an agent reads it: `you` when the issue
+/// names the calling agent, else the usual `human` / `@name` list.
+fn assignment_marker(issue: &models::Issue) -> Option<String> {
+    let me = crate::mcp::current_auth_user().map(|u| u.id);
+    // A workspace agent also owns what is assigned to its tool as a whole.
+    let parent = me.and_then(queries::agent_workspaces::cached_parent);
+    if me.is_some_and(|me| {
+        issue
+            .assignees
+            .iter()
+            .any(|a| a.is_bot && (a.user_id == me || Some(a.user_id) == parent))
+    }) {
+        return Some("you".into());
+    }
+    queries::assignees::describe(issue.needs_human, &issue.assignees)
+}
+
 struct IssueLine<'a> {
     issue: &'a models::Issue,
     /// Resolved module name, rendered as `(module: …)` after the labels.
@@ -311,7 +349,10 @@ impl Display for IssueLine<'_> {
             )
         })?;
         Display::fmt(&super::waits::WaitTokens(&issue.waits), formatter)?;
-        queries::assignees::describe(issue.needs_human, &issue.assignees).map_or(Ok(()), |who| {
+        if issue.parked.is_some() {
+            formatter.write_str(" parked")?;
+        }
+        assignment_marker(issue).map_or(Ok(()), |who| {
             write!(formatter, " for:{}", who.replace(", ", ","))
         })
     }
@@ -1133,6 +1174,7 @@ impl LificMcp {
     /// | `get_board` | resolvable | omission is an error today |
     /// | `create_plan` | resolvable | omission is an error today |
     /// | `get_briefing` | resolvable | omission is an error without a binding |
+    /// | `get_manifest` (fork) | resolvable | omission renders a placeholder identifier |
     /// | `list_resources` (issue, plan, module, label, folder) | resolvable | omission is an error today |
     /// | `list_resources` (page) | meaning-preserved | omission lists pages across every project |
     /// | `list_resources` (project) | meaning-preserved | `project` is ignored for this type |
@@ -1167,7 +1209,8 @@ const FALLBACK_RESOURCE_TYPES: [&str; 5] = ["issue", "plan", "module", "label", 
 /// machine, and has nothing but the tool name and arguments to go on.
 pub(crate) fn project_fallback_applies(tool: &str, resource_type: Option<&str>) -> bool {
     match tool {
-        "list_issues" | "create_issue" | "get_board" | "create_plan" | "get_briefing" => true,
+        "list_issues" | "create_issue" | "get_board" | "create_plan" | "get_briefing"
+        | "get_manifest" => true,
         "list_resources" => {
             resource_type.is_some_and(|kind| FALLBACK_RESOURCE_TYPES.contains(&kind))
         }
@@ -1942,6 +1985,75 @@ impl LificMcp {
         }))
     }
 
+    /// Fork: the calling agent's inbox (`queries::agent_inbox`).
+    #[tool(
+        description = "Comments people addressed to you (picked you, @mentioned you, or replied on an issue you work on). Returns only new ones; call between steps and when idle."
+    )]
+    fn check_inbox(&self, Parameters(input): Parameters<CheckInboxInput>) -> String {
+        self.check_inbox_inner(input).unwrap_or_else(error_response)
+    }
+
+    fn check_inbox_inner(&self, input: CheckInboxInput) -> Result<String, String> {
+        let identity = super::current_identity(&self.db).map(|identity| identity.user);
+        let Some(user) = identity else {
+            return Err("authentication required".into());
+        };
+        let (items, pending, is_bot) = self.write(|conn| {
+            let is_bot: bool = conn
+                .query_row("SELECT is_bot FROM users WHERE id = ?1", [user.id], |r| r.get(0))
+                .unwrap_or(false);
+            if !is_bot {
+                return Ok((Vec::new(), 0, false));
+            }
+            let items = queries::agent_inbox::take(
+                conn,
+                user.id,
+                input.limit.unwrap_or(10),
+                input.peek.unwrap_or(false),
+            )?;
+            Ok((items, queries::agent_inbox::pending_count(conn, user.id)?, true))
+        })?;
+        if !is_bot {
+            return Ok("This connection is a person's, not an agent's, so it has no inbox.".into());
+        }
+        if items.is_empty() {
+            return Ok("Inbox empty: nothing new addressed to you.".into());
+        }
+        Ok(crate::api::render_inbox_for_agent(&items, pending, 40_000))
+    }
+
+    #[tool(
+        description = "This instance's working rules for agents, as a block for AGENTS.md or CLAUDE.md. Put it between the lific:begin and lific:end markers there, replacing the old block."
+    )]
+    fn get_manifest(&self, Parameters(input): Parameters<GetManifestInput>) -> String {
+        self.get_manifest_inner(input).unwrap_or_else(error_response)
+    }
+
+    pub(crate) fn get_manifest_inner(&self, input: GetManifestInput) -> Result<String, String> {
+        let (block, version) = self.manifest_block(input.project.as_deref())?;
+        Ok(format!(
+            "Agent manifest v={version}. Write the block below into the instructions file \
+             agents read in this repository (AGENTS.md, CLAUDE.md or your harness's own). \
+             If the file already has a lific:begin ... lific:end block, replace exactly that \
+             block; otherwise append it. Leave the rest of the file as it is.\n\n{block}"
+        ))
+    }
+
+    /// The rendered manifest for `project` (or the bound project), and its
+    /// version. The identifier is only filled into the text, never looked
+    /// up, so this says nothing about which projects exist.
+    pub(crate) fn manifest_block(&self, project: Option<&str>) -> Result<(String, String), String> {
+        let ident = project
+            .map(str::trim)
+            .filter(|p| !p.is_empty())
+            .or(self.bound_project.as_deref())
+            .map(str::to_uppercase);
+        self.read(|conn| {
+            let m = queries::agent_manifest::get(conn)?;
+            Ok((queries::agent_manifest::render(&m, ident.as_deref()), m.version))
+        })
+    }
+
     #[tool(
         description = "Read who changed what and when, and through which interface, for an issue, page, or project. Newest first; since reads forward."
     )]
@@ -2108,7 +2220,7 @@ impl LificMcp {
     }
 
     #[tool(
-        description = "List a project's issues, or with members, issues across projects. A row with for: needs a person; agents take rows without it."
+        description = "List a project's issues, or with members, issues across projects. A row with for: is someone else's (a person or a named agent); agents take rows without it, and for:you is yours."
     )]
     fn list_issues(&self, Parameters(input): Parameters<ListIssuesInput>) -> String {
         self.list_issues_inner(input).unwrap_or_else(error_response)
@@ -2218,6 +2330,7 @@ impl LificMcp {
                     offset: Some(offset),
                     assignee: input.assignee.clone(),
                     caller_user_id: crate::authz::effective_user(conn, &identity).map(|u| u.id),
+                    parked: Some(input.parked == Some(true)),
                 },
             )
         })?;
@@ -2450,10 +2563,29 @@ No issues found."
             crate::checklist::checklist(&issue.description).map_or(Ok(()), |list| {
                 writeln!(output, "Checklist: {}/{} done", list.done, list.total)
             })?;
-            match queries::assignees::describe(issue.needs_human, &issue.assignees) {
-                Some(who) => writeln!(output, "Assigned: {who} (a person must do this)"),
+            match assignment_marker(&issue) {
+                Some(who) if who == "you" => writeln!(output, "Assigned: you (this issue is yours)"),
+                Some(who) if issue.needs_human => {
+                    writeln!(output, "Assigned: {who} (a person must do this)")
+                }
+                Some(who) => writeln!(output, "Assigned: {who} (only that agent works on it)"),
                 None => Ok(()),
             }?;
+            issue.parked.as_ref().map_or(Ok(()), |p| {
+                write!(
+                    output,
+                    "Parked {} by {}",
+                    p.at.get(..10).unwrap_or(&p.at),
+                    p.by.as_deref().map_or("someone".into(), |u| format!("@{u}"))
+                )?;
+                if !p.reason.is_empty() {
+                    write!(output, ": {}", p.reason)?;
+                }
+                writeln!(
+                    output,
+                    " (set aside: don't start it unless asked; update_issue(parked=false) brings it back)"
+                )
+            })?;
             [
                 ("Blocks: ", rels.blocks.as_slice()),
                 ("Blocked by: ", rels.blocked_by.as_slice()),
@@ -3016,6 +3148,13 @@ No issues found."
                 }
                 None => (issue, None),
             };
+            // Fork: parked after the other fields, so a status change in the
+            // same call (which unparks) does not undo it.
+            let issue = if set_parked(conn, id, input.parked, input.park_reason.as_deref())? {
+                queries::get_issue(conn, id)?
+            } else {
+                issue
+            };
             Ok((issue, cascade_action, cascaded_steps, verification))
         })?;
         self.emit_with_seq(
@@ -3125,13 +3264,14 @@ No issues found."
                             .map(|name| names::stored_label_name(conn, pid, name))
                             .transpose()?,
                         limit: Some(BULK_CAP),
+                        parked: Some(input.filter_parked == Some(true)),
                         ..Default::default()
                     },
                 )?;
                 issues
                     .iter()
                     .map(|issue| {
-                        queries::update_issue(
+                        let updated = queries::update_issue(
                             conn,
                             issue.id,
                             &models::UpdateIssue {
@@ -3145,8 +3285,9 @@ No issues found."
                                 assignees: set_assignees.clone(),
                                 ..Default::default()
                             },
-                        )
-                        .map(|issue| (issue.project_id, issue.id))
+                        )?;
+                        set_parked(conn, updated.id, input.set_parked, input.park_reason.as_deref())?;
+                        Ok((updated.project_id, updated.id))
                     })
                     .collect::<Result<Vec<_>, _>>()
             })
@@ -3272,6 +3413,7 @@ No issues found."
                 &models::ListIssuesQuery {
                     project_id: Some(pid),
                     limit: Some(BOARD_CAP),
+                    parked: Some(false),
                     ..Default::default()
                 },
             )
@@ -4074,6 +4216,7 @@ No issues found."
                             project_id: Some(pid),
                             limit: Some(limit),
                             offset: Some(offset),
+                            parked: Some(false),
                             ..Default::default()
                         },
                     )
@@ -5913,8 +6056,15 @@ mod tests_page_reads;
 mod tests_waits;
 
 #[cfg(test)]
+#[path = "tests_manifest.rs"]
+mod tests_manifest;
+
+#[cfg(test)]
 #[path = "tests_assignees.rs"]
 mod tests_assignees;
+#[cfg(test)]
+#[path = "tests_parked.rs"]
+mod tests_parked;
 
 #[cfg(test)]
 mod tests {
@@ -8536,6 +8686,7 @@ mod tests {
             waits: vec![],
             needs_human: false,
             assignees: vec![],
+            parked: None,
         };
         crate::mcp::reset_issue_link_context_reads();
         let context = current_issue_link_context();

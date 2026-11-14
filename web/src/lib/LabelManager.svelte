@@ -25,6 +25,7 @@
   import ColorPicker from "./ColorPicker.svelte";
   import Skeleton from "./Skeleton.svelte";
   import { colorForName, DEFAULT_LABEL_COLOR, safeLabelColor } from "./labelColors";
+  import { t } from "./i18n";
 
   let {
     projectId,
@@ -124,8 +125,8 @@
     const e = usage.get(name);
     if (!e) return "";
     const parts: string[] = [];
-    if (e.issues) parts.push(`${e.issues} issue${e.issues === 1 ? "" : "s"}`);
-    if (e.pages) parts.push(`${e.pages} page${e.pages === 1 ? "" : "s"}`);
+    if (e.issues) parts.push(t("labels.usage.issues", { count: e.issues }));
+    if (e.pages) parts.push(t("labels.usage.pages", { count: e.pages }));
     return parts.join(" · ");
   }
 
@@ -199,7 +200,7 @@
     editingId = null;
     if (!name || name === l.name) return;
     if (nameTaken(name, l.id)) {
-      err = `A label named "${name}" already exists.`;
+      err = t("labels.error.exists", { name });
       return;
     }
     err = "";
@@ -253,7 +254,7 @@
   <div class="flex items-center justify-between gap-3 mb-3 flex-wrap">
     <h2 class="text-body-sm font-semibold text-[var(--text)] flex items-center gap-1.5">
       <Tag size={14} class="text-[var(--text-muted)]" />
-      Labels
+      {t("labels.title")}
       {#if labels.length > 0}
         <span class="text-caption font-normal text-[var(--text-faint)] tabular-nums">{labels.length}</span>
       {/if}
@@ -266,7 +267,7 @@
             <Search size={12} class="absolute left-2 top-1/2 -translate-y-1/2 text-[var(--text-faint)]" />
             <input
               bind:value={filter}
-              placeholder="Filter…"
+              placeholder={t("labels.filter")}
               class="w-[130px] pr-2 py-1 text-caption rounded-md border border-[var(--border)]
                      bg-[var(--surface)] text-[var(--text)] placeholder:text-[var(--text-faint)]
                      outline-none focus:border-[var(--accent)]"
@@ -275,8 +276,8 @@
           </div>
         {/if}
         <div class="flex items-center gap-0.5 text-caption">
-          <span class="text-[var(--text-faint)]">Sort</span>
-          {#each [["name", "A–Z"], ["usage", "Most used"], ["newest", "Newest"]] as [val, label] (val)}
+          <span class="text-[var(--text-faint)]">{t("labels.sort.label")}</span>
+          {#each [["name", t("labels.sort.name")], ["usage", t("labels.sort.usage")], ["newest", t("labels.sort.newest")]] as [val, label] (val)}
             <button
               class="px-1.5 py-0.5 rounded transition-colors
                      {sortBy === val
@@ -299,7 +300,7 @@
       <ColorPicker value={createColor} onChange={(c) => { newColor = c; colorTouched = true; }} />
       <input
         bind:value={newName}
-        placeholder="New label name…"
+        placeholder={t("labels.create.placeholder")}
         maxlength="40"
         class="flex-1 min-w-[120px] text-body-sm bg-transparent text-[var(--text)]
                placeholder:text-[var(--text-faint)] outline-none"
@@ -323,13 +324,13 @@
         onclick={() => create()}
       >
         <Plus size={14} />
-        {creating ? "Adding…" : "Add"}
+        {creating ? t("labels.create.adding") : t("common.add")}
       </button>
     </div>
 
     {#if createDup}
       <div class="px-4 py-1.5 text-caption text-[var(--warn)] bg-[color-mix(in_oklab,var(--warn)_10%,transparent)]">
-        “{newName.trim()}” already exists.
+        {t("labels.create.duplicate", { name: newName.trim() })}
       </div>
     {/if}
     {/if}
@@ -352,12 +353,12 @@
         </div>
       {/each}
     {:else if labels.length === 0 && !canEdit}
-      <div class="px-4 py-6 text-center text-body-sm text-[var(--text-faint)]">No labels yet.</div>
+      <div class="px-4 py-6 text-center text-body-sm text-[var(--text-faint)]">{t("labels.empty.readonly")}</div>
     {:else if labels.length === 0}
       <!-- Empty-state starter presets (#5) -->
       <div class="px-4 py-5 flex flex-col gap-3">
         <p class="text-body-sm text-[var(--text-muted)]">
-          No labels yet. Start from a common set, or create your own above.
+          {t("labels.empty.body")}
         </p>
         <div class="flex items-center gap-2 flex-wrap">
           {#each remainingPresets as p (p.name)}
@@ -375,13 +376,13 @@
             class="text-caption font-medium text-[var(--accent)] hover:underline px-1"
             onclick={addAllPresets}
           >
-            Add all
+            {t("labels.presets.addAll")}
           </button>
         </div>
       </div>
     {:else if visible.length === 0}
       <div class="px-4 py-6 text-center text-body-sm text-[var(--text-faint)]">
-        No labels match “{filter.trim()}”.
+        {t("labels.noMatch", { query: filter.trim() })}
       </div>
     {:else}
       {#each visible as l, idx (l.id)}
@@ -393,23 +394,23 @@
             <span class="size-3 rounded-full shrink-0" style="background: {safeLabelColor(l.color)}"></span>
             <div class="flex-1 min-w-0">
               <p class="text-body-sm text-[var(--text)]">
-                Delete <strong>{l.name}</strong>?
+                {t("labels.delete.confirm.before")} <strong>{l.name}</strong>{t("labels.delete.confirm.after")}
                 {#if usageTotal(l.name) > 0}
-                  <span class="text-[var(--text-muted)]">Detaches from {usageText(l.name)}.</span>
+                  <span class="text-[var(--text-muted)]">{t("labels.delete.detaches", { usage: usageText(l.name) })}</span>
                 {/if}
               </p>
               {#if labels.length > 1}
                 <div class="flex flex-wrap items-center gap-1.5 mt-1.5">
-                  <span class="text-caption text-[var(--text-muted)] shrink-0">or merge into</span>
+                  <span class="text-caption text-[var(--text-muted)] shrink-0">{t("labels.merge.into")}</span>
                   <select
                     bind:value={mergeInto}
                     class="text-caption rounded border border-[var(--border)] bg-[var(--surface)]
                            text-[var(--text)] px-1.5 py-0.5 outline-none focus:border-[var(--accent)]
                            min-w-0 max-w-full"
                   >
-                    <option value={null}>Choose label…</option>
-                    {#each labels.filter((x) => x.id !== l.id) as t (t.id)}
-                      <option value={t.id}>{t.name}</option>
+                    <option value={null}>{t("labels.merge.choose")}</option>
+                    {#each labels.filter((x) => x.id !== l.id) as other (other.id)}
+                      <option value={other.id}>{other.name}</option>
                     {/each}
                   </select>
                   <button
@@ -418,7 +419,7 @@
                     disabled={mergeInto == null || busyId === l.id}
                     onclick={() => doMerge(l.id)}
                   >
-                    Merge
+                    {t("labels.merge.action")}
                   </button>
                 </div>
               {/if}
@@ -429,13 +430,13 @@
               disabled={busyId === l.id}
               onclick={() => del(l.id)}
             >
-              {busyId === l.id ? "…" : "Delete"}
+              {busyId === l.id ? "…" : t("common.delete")}
             </button>
             <button
               class="text-body-sm text-[var(--text-muted)] px-2 py-1 rounded-md hover:bg-[var(--bg-subtle)] transition-colors shrink-0"
               onclick={() => { confirmingId = null; mergeInto = null; }}
             >
-              Cancel
+              {t("common.cancel")}
             </button>
           {:else if !canEdit}
             <!-- Read-only display row (viewer): static dot + name, usage
@@ -446,14 +447,14 @@
               <button
                 class="shrink-0 inline-flex items-center gap-1 text-caption text-[var(--text-faint)]
                        hover:text-[var(--accent)] transition-colors tabular-nums"
-                title="View {l.name} issues"
+                title={t("labels.viewIssues", { name: l.name })}
                 onclick={() => onOpenLabel?.(l.name)}
               >
                 {usageText(l.name)}
                 <ArrowRight size={11} />
               </button>
             {:else}
-              <span class="shrink-0 text-caption text-[var(--text-faint)]">unused</span>
+              <span class="shrink-0 text-caption text-[var(--text-faint)]">{t("labels.unused")}</span>
             {/if}
           {:else}
             <!-- Display row: dot recolors, name renames, count links out -->
@@ -477,7 +478,7 @@
               <button
                 class="group flex-1 min-w-0 flex items-center text-left rounded px-1 -mx-1 py-0.5
                        cursor-text hover:bg-[var(--bg-subtle)] transition-colors"
-                title="Rename"
+                title={t("labels.rename")}
                 onclick={() => startRename(l)}
               >
                 <span class="text-body-sm font-medium text-[var(--text)] truncate">{l.name}</span>
@@ -488,21 +489,21 @@
               <button
                 class="shrink-0 inline-flex items-center gap-1 text-caption text-[var(--text-faint)]
                        hover:text-[var(--accent)] transition-colors tabular-nums"
-                title="View {l.name} issues"
+                title={t("labels.viewIssues", { name: l.name })}
                 onclick={() => onOpenLabel?.(l.name)}
               >
                 {usageText(l.name)}
                 <ArrowRight size={11} />
               </button>
             {:else}
-              <span class="shrink-0 text-caption text-[var(--text-faint)]">unused</span>
+              <span class="shrink-0 text-caption text-[var(--text-faint)]">{t("labels.unused")}</span>
             {/if}
 
             <button
               class="touch-target size-7 grid place-items-center rounded-md text-[var(--text-muted)] shrink-0
                      hover:text-[var(--error)] hover:bg-[var(--error-bg)] transition-colors"
               onclick={() => startConfirm(l)}
-              aria-label="Delete {l.name}"
+              aria-label={t("labels.delete.aria", { name: l.name })}
             >
               <Trash2 size={14} />
             </button>
@@ -514,7 +515,7 @@
            get added and disappears once all six exist. -->
       {#if canEdit && remainingPresets.length > 0}
         <div class="px-4 py-3 border-t border-[var(--border)] flex items-center gap-2 flex-wrap">
-          <span class="text-caption text-[var(--text-muted)]">Common:</span>
+          <span class="text-caption text-[var(--text-muted)]">{t("labels.presets.common")}</span>
           {#each remainingPresets as p (p.name)}
             <button
               class="inline-flex items-center gap-1.5 text-caption font-medium px-2 py-1 rounded-full border
@@ -530,7 +531,7 @@
             class="text-caption font-medium text-[var(--accent)] hover:underline px-1"
             onclick={addAllPresets}
           >
-            Add all
+            {t("labels.presets.addAll")}
           </button>
         </div>
       {/if}

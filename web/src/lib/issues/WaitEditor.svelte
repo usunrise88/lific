@@ -2,6 +2,7 @@
   // LIF-485: the issue sidebar's "Waiting on" field. Lists every user and
   // date blocker with its current state, and (for editors) adds and clears
   // them. Issue-to-issue blockers stay in the "Blocked by" field below.
+  import { t } from "../i18n";
   import {
     addIssueWait,
     clearIssueWait,
@@ -71,7 +72,7 @@
     if (candidates === null) {
       const res = await listMentionCandidates(projectId);
       candidates = res.ok ? res.data : [];
-      if (!res.ok) toast(`Couldn't load members: ${res.error}`, { kind: "error" });
+      if (!res.ok) toast(t("issues.wait.loadMembersFailed", { error: res.error }), { kind: "error" });
     }
   }
 
@@ -87,7 +88,7 @@
     const res = await addIssueWait(issueId, input);
     busy = false;
     if (!res.ok) {
-      toast(`Couldn't add blocker: ${res.error}`, { kind: "error" });
+      toast(t("issues.wait.addFailed", { error: res.error }), { kind: "error" });
       return;
     }
     adding = false;
@@ -100,7 +101,7 @@
     const res = await clearIssueWait(issueId, wait.id);
     busy = false;
     if (!res.ok) {
-      toast(`Couldn't clear blocker: ${res.error}`, { kind: "error" });
+      toast(t("issues.wait.clearFailed", { error: res.error }), { kind: "error" });
       return;
     }
     onChange(waits.filter((w) => w.id !== wait.id));
@@ -108,7 +109,7 @@
 </script>
 
 <div class="issue-meta-field" data-testid="issue-waits">
-  <p class="issue-meta-field-label">Waiting on</p>
+  <p class="issue-meta-field-label">{t("issues.wait.label")}</p>
   {#if waits.length > 0}
     <ul class="flex flex-col gap-1.5 m-0 p-0 list-none">
       {#each waits as wait (wait.id)}
@@ -145,8 +146,8 @@
               class="size-6 -my-0.5 shrink-0 grid place-items-center rounded
                      text-[var(--text-faint)] hover:text-[var(--error)]
                      hover:bg-[var(--bg-subtle)] transition-colors disabled:opacity-40"
-              title="Clear this blocker"
-              aria-label="Clear blocker: {described.headline}"
+              title={t("issues.wait.clearTitle")}
+              aria-label={t("issues.wait.clearAria", { headline: described.headline })}
               disabled={busy}
               onclick={() => clear(wait)}
             >
@@ -163,10 +164,10 @@
       <form
         class="flex flex-col gap-2 rounded-md border border-[var(--border)] p-2.5 -mx-1"
         onsubmit={submit}
-        aria-label="Add blocker"
+        aria-label={t("issues.wait.add")}
       >
-        <div class="flex gap-1 p-0.5 rounded-md bg-[var(--bg-subtle)]" role="group" aria-label="Blocker kind">
-          {#each [{ value: "user", label: "Person" }, { value: "date", label: "Dates" }] as option (option.value)}
+        <div class="flex gap-1 p-0.5 rounded-md bg-[var(--bg-subtle)]" role="group" aria-label={t("issues.wait.kind")}>
+          {#each [{ value: "user", label: t("issues.wait.person") }, { value: "date", label: t("issues.wait.dates") }] as option (option.value)}
             <button
               type="button"
               class="flex-1 text-caption font-medium px-2 py-1 rounded transition-colors
@@ -183,14 +184,14 @@
 
         {#if kind === "user"}
           <label class="flex flex-col gap-1 text-caption text-[var(--text-muted)]">
-            Person
+            {t("issues.wait.person")}
             <select
               class="text-body-sm rounded-md border border-[var(--border)] bg-[var(--bg-subtle)]
                      text-[var(--text)] px-2 py-1.5 outline-none focus:border-[var(--accent)]"
               bind:value={user}
               disabled={candidates === null}
             >
-              <option value="">{candidates === null ? "Loading members..." : "Choose a member"}</option>
+              <option value="">{candidates === null ? t("issues.wait.loadingMembers") : t("issues.wait.chooseMember")}</option>
               {#each candidates ?? [] as c (c.user_id)}
                 <option value={c.username}>
                   {c.display_name && c.display_name !== c.username ? `${c.display_name} (@${c.username})` : `@${c.username}`}
@@ -201,7 +202,7 @@
         {:else}
           <div class="flex gap-2">
             <label class="flex-1 min-w-0 flex flex-col gap-1 text-caption text-[var(--text-muted)]">
-              From
+              {t("issues.wait.from")}
               <input
                 type="date"
                 class="text-body-sm rounded-md border border-[var(--border)] bg-[var(--bg-subtle)]
@@ -211,7 +212,7 @@
               />
             </label>
             <label class="flex-1 min-w-0 flex flex-col gap-1 text-caption text-[var(--text-muted)]">
-              Until (optional)
+              {t("issues.wait.untilOptional")}
               <input
                 type="date"
                 class="text-body-sm rounded-md border border-[var(--border)] bg-[var(--bg-subtle)]
@@ -222,18 +223,18 @@
             </label>
           </div>
           <p class="m-0 text-caption text-[var(--text-faint)] leading-snug">
-            Blocks until From. After Until it shows as overdue.
+            {t("issues.wait.dateHint")}
           </p>
         {/if}
 
         <label class="flex flex-col gap-1 text-caption text-[var(--text-muted)]">
-          Note
+          {t("issues.wait.note")}
           <input
             type="text"
             maxlength="500"
             class="text-body-sm rounded-md border border-[var(--border)] bg-[var(--bg-subtle)]
                    text-[var(--text)] px-2 py-1.5 outline-none focus:border-[var(--accent)]"
-            placeholder={kind === "user" ? "What you need from them" : "Who said so, e.g. filing office"}
+            placeholder={kind === "user" ? t("issues.wait.notePlaceholderUser") : t("issues.wait.notePlaceholderDate")}
             bind:value={note}
           />
         </label>
@@ -244,7 +245,7 @@
             class="text-body-sm text-[var(--text-muted)] px-3 py-1.5 rounded-md hover:bg-[var(--bg-subtle)] transition-colors"
             onclick={() => (adding = false)}
           >
-            Cancel
+            {t("common.cancel")}
           </button>
           <button
             type="submit"
@@ -253,7 +254,7 @@
                    disabled:opacity-40 disabled:cursor-not-allowed"
             disabled={!valid || busy}
           >
-            Add
+            {t("common.add")}
           </button>
         </div>
       </form>
@@ -265,7 +266,7 @@
         onclick={openForm}
       >
         <Plus size={13} />
-        Add blocker
+        {t("issues.wait.add")}
       </button>
     {/if}
   {/if}

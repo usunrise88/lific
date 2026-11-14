@@ -381,6 +381,20 @@ fn rest_manifest() -> HashMap<(&'static str, &'static str), Classification> {
         // LIF-506: issues waiting on the caller, filtered to visible projects.
         (("GET", "/api/issues/attention"), Filtered),
         (("GET", "/api/home/overview"), Filtered),
+        (("GET", "/api/home/flow"), Filtered),
+        (("GET", "/api/agent/inbox"), Exempt("the calling agent's own inbox; routing already checked visibility")),
+        (("GET", "/api/agent/manifest"), Exempt(NOT_PROJECT_SCOPED)),
+        (("GET", "/api/instance/agent-manifest"), Exempt(NOT_PROJECT_SCOPED)),
+        (("PUT", "/api/instance/agent-manifest"), Exempt(NOT_PROJECT_SCOPED)),
+        (("DELETE", "/api/instance/agent-manifest"), Exempt(NOT_PROJECT_SCOPED)),
+        (("GET", "/api/agent/inbox/hook"), Exempt("the calling agent's own inbox; routing already checked visibility")),
+        (("PUT", "/api/agent/routes"), Gated(Viewer)),
+        (("GET", "/api/projects/{id}/agents"), Gated(Viewer)),
+        (("GET", "/api/projects/{id}/agent-routes"), Gated(Viewer)),
+        (("GET", "/api/issues/{id}/agents"), Gated(Viewer)),
+        (("GET", "/api/feed"), Filtered),
+        (("GET", "/api/feed/actors"), Filtered),
+        (("GET", "/api/for-me"), Filtered),
         (("POST", "/api/issues"), Gated(Maintainer)),
         (("GET", "/api/issues/{id}"), Gated(Viewer)),
         (("PUT", "/api/issues/{id}"), Gated(Maintainer)),
@@ -402,6 +416,10 @@ fn rest_manifest() -> HashMap<(&'static str, &'static str), Classification> {
             Gated(Maintainer),
         ),
         (("POST", "/api/issues/reverse"), Gated(Maintainer)),
+        // Fork: parked issues. Bulk checks Maintainer per issue's project.
+        (("PUT", "/api/issues/{id}/park"), Gated(Maintainer)),
+        (("DELETE", "/api/issues/{id}/park"), Gated(Maintainer)),
+        (("POST", "/api/issues/park"), Gated(Maintainer)),
         // ── Activity / export (all read-side, Viewer) ──
         (("GET", "/api/issues/{id}/activity"), Gated(Viewer)),
         (("GET", "/api/pages/{id}/activity"), Gated(Viewer)),
@@ -606,6 +624,10 @@ fn mcp_manifest() -> HashMap<&'static str, Classification> {
     HashMap::from([
         ("search", Filtered),
         ("get_activity", Gated(Viewer)),
+        // Fork: only the calling agent's own messages, routed by visibility.
+        ("check_inbox", Filtered),
+        // Fork: the instance's agent manifest, the same text for every caller.
+        ("get_manifest", Exempt("instance-wide text, no project data")),
         ("get_briefing", Gated(Viewer)),
         ("list_issues", Gated(Viewer)),
         ("get_issue", Gated(Viewer)),

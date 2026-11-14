@@ -3,6 +3,7 @@
   // is days since the project's last recorded change, in four bands.
   import type { Project, ProjectPulse } from "../api";
   import ProjectIcon from "../ProjectIcon.svelte";
+  import { t } from "../i18n";
   import { daysSince, ageLabel } from "../issues/importance";
 
   let {
@@ -19,10 +20,10 @@
   let expanded = $state(false);
 
   function band(days: number | null): { label: string; color: string } {
-    if (days === null || days >= 45) return { label: "neglected", color: "var(--heat-6)" };
-    if (days >= 21) return { label: "stale", color: "var(--heat-5)" };
-    if (days >= 7) return { label: "aging", color: "var(--heat-3)" };
-    return { label: "fresh", color: "var(--heat-2)" };
+    if (days === null || days >= 45) return { label: t("home.freshness.neglected"), color: "var(--heat-6)" };
+    if (days >= 21) return { label: t("home.freshness.stale"), color: "var(--heat-5)" };
+    if (days >= 7) return { label: t("home.freshness.aging"), color: "var(--heat-3)" };
+    return { label: t("home.freshness.fresh"), color: "var(--heat-2)" };
   }
 
   let rows = $derived.by(() => {
@@ -58,7 +59,7 @@
           </span>
         {/if}
         <span class="flex-1 min-w-0 truncate text-body-sm text-[var(--text)]">{row.project.name}</span>
-        <span class="shrink-0 text-micro tabular-nums text-[var(--text-faint)]" title="Open issues">{row.open} open</span>
+        <span class="shrink-0 text-micro tabular-nums text-[var(--text-faint)]" title={t("home.freshness.openTitle")}>{t("home.openCount", { count: row.open })}</span>
         <span class="shrink-0 w-[92px] flex items-center gap-1.5 text-micro text-[var(--text-muted)]">
           <span class="size-1.5 rounded-full shrink-0" style="background: {b.color}"></span>
           {b.label}
@@ -71,10 +72,10 @@
         class="self-start mt-1 text-caption text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
         onclick={() => (expanded = !expanded)}
       >
-        {expanded ? "Show fewer" : `Show all ${rows.length}`}
+        {expanded ? t("home.showFewer") : t("home.showAll", { count: rows.length })}
       </button>
     {/if}
   </div>
 {:else}
-  <p class="text-body-sm text-[var(--text-muted)]">No project has open work.</p>
+  <p class="text-body-sm text-[var(--text-muted)]">{t("home.freshness.empty")}</p>
 {/if}

@@ -9,21 +9,34 @@
 // (#EAB308 / #F59E0B) that washed out on light backgrounds — replaced with
 // darker amber. Each color carries a human name for tooltips + aria-labels.
 
-export type LabelColor = { name: string; value: string };
+import { t } from "./i18n";
+
+export type LabelColor = { readonly name: string; value: string };
+
+/** A palette entry whose `name` is looked up on each read, so the active
+ *  locale applies (the palette itself is a module-level constant). */
+function swatch(key: string, value: string): LabelColor {
+  return {
+    get name() {
+      return t(`pickers.color.${key}`);
+    },
+    value,
+  };
+}
 
 export const LABEL_PALETTE: LabelColor[] = [
-  { name: "Red", value: "#EF4444" },
-  { name: "Orange", value: "#F97316" },
-  { name: "Amber", value: "#D97706" },
-  { name: "Green", value: "#16A34A" },
-  { name: "Emerald", value: "#059669" },
-  { name: "Teal", value: "#0D9488" },
-  { name: "Cyan", value: "#0891B2" },
-  { name: "Blue", value: "#2563EB" },
-  { name: "Indigo", value: "#4F46E5" },
-  { name: "Violet", value: "#7C3AED" },
-  { name: "Pink", value: "#DB2777" },
-  { name: "Gray", value: "#6B7280" },
+  swatch("red", "#EF4444"),
+  swatch("orange", "#F97316"),
+  swatch("amber", "#D97706"),
+  swatch("green", "#16A34A"),
+  swatch("emerald", "#059669"),
+  swatch("teal", "#0D9488"),
+  swatch("cyan", "#0891B2"),
+  swatch("blue", "#2563EB"),
+  swatch("indigo", "#4F46E5"),
+  swatch("violet", "#7C3AED"),
+  swatch("pink", "#DB2777"),
+  swatch("gray", "#6B7280"),
 ];
 
 /** Just the hex values, in palette order. */
@@ -42,7 +55,7 @@ export function colorName(hex: string): string {
   const found = LABEL_PALETTE.find(
     (c) => c.value.toLowerCase() === hex.toLowerCase(),
   );
-  return found ? found.name : "Custom";
+  return found ? found.name : t("pickers.color.custom");
 }
 
 /** Deterministically pick a palette color from a string (so a freshly typed

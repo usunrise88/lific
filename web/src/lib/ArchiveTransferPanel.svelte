@@ -1,6 +1,7 @@
 <script lang="ts">
   import { downloadProjectArchive, getArchiveCapabilities, me, onSessionChange, saveArchiveDownload } from "./api";
   import { Download } from "lucide-svelte";
+  import { t } from "./i18n";
 
   let { projectId, identifier }: { projectId: number; identifier: string } = $props();
   let eligible = $state(false);
@@ -46,7 +47,7 @@
       const user = await me();
       if (!live()) return;
       if (user.ok && user.data.id === owner) saveArchiveDownload(result.blob, result.filename);
-      else error = "Your account changed. Download the archive again after signing in.";
+      else error = t("archive.export.accountChanged");
     }
     if (!result.ok) error = result.error;
     busy = false;
@@ -55,20 +56,18 @@
 
 {#if eligible}
   <section aria-labelledby="archive-transfer-heading" class="border-t border-[var(--border)] pt-6 space-y-3">
-    <h2 id="archive-transfer-heading" class="text-body-sm font-semibold text-[var(--text)]">Project archive</h2>
+    <h2 id="archive-transfer-heading" class="text-body-sm font-semibold text-[var(--text)]">{t("archive.export.title")}</h2>
     <p class="text-body-sm text-[var(--text-muted)]">
-      Copy this whole project to another Lific instance. The archive includes linked files,
-      history, deleted content and author names. It can contain sensitive text no longer visible
-      in the project. Accounts and permissions are not included; author names transfer as text only.
+      {t("archive.export.intro")}
     </p>
-    <p class="text-body-sm text-[var(--text-muted)]">Downloading leaves this project untouched. Importing creates a private project, never a merge.</p>
+    <p class="text-body-sm text-[var(--text-muted)]">{t("archive.export.untouched")}</p>
     <label class="flex items-start gap-2 text-body-sm text-[var(--text)]">
       <input type="checkbox" bind:checked={confirmed} disabled={busy} class="mt-1 accent-[var(--accent)]" />
-      I understand this archive includes history and deleted content.
+      {t("archive.export.confirm")}
     </label>
     {#if error}<p role="alert" class="text-body-sm text-[var(--error)] break-words">{error}</p>{/if}
     <button class="toolbar-pill disabled:opacity-40" disabled={!confirmed || busy} onclick={download}>
-      <Download size={14} /> {busy ? "Preparing archive..." : "Download project archive"}
+      <Download size={14} /> {busy ? t("archive.export.preparing") : t("archive.export.download")}
     </button>
   </section>
 {/if}

@@ -315,15 +315,35 @@ pub struct Issue {
     /// and for issues marked for any human.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub assignees: Vec<IssueAssignee>,
+    /// Fork: set while the issue is parked ("Отложено"): kept, but out of
+    /// the board, the statistics and what agents read by default.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parked: Option<IssueParked>,
 }
 
-/// LIF-147: one named assignee. Always a human account.
+/// Fork: why and since when an issue is parked, and who parked it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct IssueParked {
+    #[serde(default)]
+    pub reason: String,
+    pub at: String,
+    /// Username of who parked it; `None` once that account is gone.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub by: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub by_name: Option<String>,
+}
+
+/// LIF-147: one named assignee. A person, or (fork) one specific agent.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct IssueAssignee {
     pub user_id: i64,
     pub username: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub display_name: Option<String>,
+    /// Fork: the assignee is an agent; only that agent works the issue.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub is_bot: bool,
 }
 
 /// LIF-484: what a wait is waiting on.
@@ -528,6 +548,9 @@ pub struct ListIssuesQuery {
     /// Who `assignee=me` means. Internal: set by the transport.
     #[serde(skip)]
     pub caller_user_id: Option<i64>,
+    /// Fork: `false` leaves parked issues out, `true` lists only them,
+    /// unset lists both (exports and other internal readers).
+    pub parked: Option<bool>,
 }
 
 /// Per-status issue counts for a project (LIF-161). `total` is the sum of
@@ -1004,6 +1027,15 @@ pub struct Bot {
     pub connected: bool,
     #[serde(default)]
     pub tool_id: Option<String>,
+    /// Fork: for a workspace agent, the bot whose credential it acts
+    /// through, the place it runs (`forge@chamber`) and when it was last
+    /// seen. `connected` is then its parent's.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parent_id: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub workspace: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_seen_at: Option<String>,
 }
 
 // ── API Key (user-facing) ────────────────────────────────────
@@ -1082,6 +1114,10 @@ impl rusqlite::types::ToSql for CommentKind {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateComment {
     pub content: String,
+    /// Fork: agents (bot user ids) the comment is addressed to; see
+    /// `queries::agent_inbox`. Issue comments only.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub for_agents: Vec<i64>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -1310,6 +1346,9 @@ pub struct IssueChange {
     pub needs_human: bool,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub assignees: Vec<IssueAssignee>,
+    /// Fork: see [`Issue::parked`].
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub parked: Option<IssueParked>,
 }
 
 /// A live page in the sync stream. `identifier` is the `PRO-DOC-7` form

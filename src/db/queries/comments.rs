@@ -1201,6 +1201,33 @@ pub fn create_comment_with_mentions(
         content,
         member_scoped,
         CommentKind::Comment,
+        &[],
+    )
+}
+
+/// Fork: [`create_comment_with_mentions`] with agents picked in the
+/// composer as the comment's explicit addressees.
+#[allow(clippy::too_many_arguments)]
+pub fn create_comment_for_agents(
+    conn: &Connection,
+    parent: CommentParent,
+    project_id: Option<i64>,
+    author: CommentActor,
+    attachments: AttachmentActor,
+    content: &str,
+    member_scoped: bool,
+    agent_picks: &[i64],
+) -> Result<Comment, LificError> {
+    create_reconciled_comment(
+        conn,
+        parent,
+        project_id,
+        author,
+        attachments,
+        content,
+        member_scoped,
+        CommentKind::Comment,
+        agent_picks,
     )
 }
 
@@ -1225,6 +1252,7 @@ pub fn create_verification_comment(
         content,
         member_scoped,
         CommentKind::Verification,
+        &[],
     )
 }
 
@@ -1238,6 +1266,7 @@ fn create_reconciled_comment(
     content: &str,
     member_scoped: bool,
     kind: CommentKind,
+    agent_picks: &[i64],
 ) -> Result<Comment, LificError> {
     super::savepoint(conn, "create_comment_with_mentions", || {
         let candidates = mention_candidates(conn, project_id, member_scoped)?;
@@ -1250,6 +1279,15 @@ fn create_reconciled_comment(
             &comment.content,
             attachments,
             project_id,
+        )?;
+        // Fork: fill the addressed agents' inboxes.
+        super::agent_inbox::route_comment(
+            conn,
+            comment.id,
+            comment.issue_id,
+            comment.user_id,
+            &comment.content,
+            agent_picks,
         )?;
         Ok(comment)
     })
@@ -1278,6 +1316,14 @@ pub fn update_comment_with_mentions(
             &comment.content,
             attachments,
             project_id,
+        )?;
+        // Fork: agents @mentioned by the edit get the comment too.
+        super::agent_inbox::route_edit(
+            conn,
+            comment.id,
+            comment.issue_id,
+            comment.user_id,
+            &comment.content,
         )?;
         Ok(comment)
     })

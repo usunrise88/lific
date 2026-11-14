@@ -6,6 +6,7 @@
 // silently fails (the old behavior at several call sites) can't happen anymore.
 
 import { toast } from "./toast/toast.svelte";
+import { t } from "./i18n";
 
 export interface CopyOptions {
   /** Success-toast label: "Copied issue id" reads better than echoing a long
@@ -30,9 +31,9 @@ export async function copyToClipboard(
     typeof opts === "string" ? { label: opts } : (opts ?? {});
   const ok = await write(text);
   if (ok) {
-    if (!silentSuccess) toast(`Copied ${label ?? text}`, { kind: "info", duration: 2500 });
+    if (!silentSuccess) toast(t("toast.copied", { what: label ?? text }), { kind: "info", duration: 2500 });
   } else {
-    toast("Couldn't copy to clipboard", { kind: "error" });
+    toast(t("toast.copyFailed"), { kind: "error" });
   }
   return ok;
 }

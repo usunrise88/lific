@@ -2,6 +2,7 @@
   // Board (kanban) card. Extracted from IssueList.svelte (LIF-99).
   // A pure leaf: it renders one issue and emits a click; all drag behavior
   // is owned by the dndzone in the parent, which wraps this component.
+  import { t } from "../i18n";
   import type { Issue, Label } from "../api";
   import { safeLabelColor } from "../labelColors";
   import PriorityIcon from "../PriorityIcon.svelte";
@@ -15,6 +16,7 @@
   import CopyIdButton from "../CopyIdButton.svelte";
   import WaitChip from "./WaitChip.svelte"; // LIF-485
   import AssigneeMarker from "./AssigneeMarker.svelte"; // LIF-147
+  import { priorityLabel } from "./grouping";
 
   let {
     issue,
@@ -43,9 +45,9 @@
     e.preventDefault();
     e.stopPropagation();
     openContextMenu(e.clientX, e.clientY, [
-      { label: "Open preview", icon: PanelRight, action: () => onPeek(issue) },
+      { label: t("issues.menu.openPreview"), icon: PanelRight, action: () => onPeek(issue) },
       {
-        label: "Open in new tab",
+        label: t("issues.menu.openNewTab"),
         icon: ExternalLink,
         action: () =>
           window.open(
@@ -57,7 +59,7 @@
       {
         // Toasts rather than flipping a checkmark: the menu closes on
         // action, so there is nothing left on screen to confirm on.
-        label: "Copy identifier",
+        label: t("issues.menu.copyIdentifier"),
         icon: Copy,
         action: () => copyToClipboard(issue.identifier),
       },
@@ -117,7 +119,7 @@
          it's always visible (LIF-275) — with drag being the only other
          board interaction, this is the touch path to change status/
          priority/module via the peek bottom sheet. -->
-    <Tooltip content="Peek">
+    <Tooltip content={t("issues.peekTooltip")}>
       <button
         class="hidden shrink-0 size-5 items-center justify-center rounded
                text-[var(--text-faint)] hover:text-[var(--accent)]
@@ -135,7 +137,7 @@
       </button>
     </Tooltip>
     {#if issue.priority !== "none"}
-      <Tooltip content={issue.priority[0].toUpperCase() + issue.priority.slice(1)}>
+      <Tooltip content={priorityLabel(issue.priority)}>
         <PriorityIcon priority={issue.priority} size={14} />
       </Tooltip>
     {/if}

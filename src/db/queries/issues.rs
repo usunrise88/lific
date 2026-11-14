@@ -45,6 +45,7 @@ pub fn get_issue(conn: &Connection, id: i64) -> Result<Issue, LificError> {
                 waits: Vec::new(),
                 needs_human: false,
                 assignees: Vec::new(),
+                parked: None,
             })
         })
         .map_err(|e| match e {
@@ -143,6 +144,7 @@ pub fn get_issue(conn: &Connection, id: i64) -> Result<Issue, LificError> {
         .collect::<Result<Vec<String>, _>>()?;
 
     issue.waits = super::waits::list_waits(conn, id)?;
+    issue.parked = super::parked::get(conn, id)?;
     let assignment = super::assignees::assignment(conn, id)?;
     issue.needs_human = assignment.needs_human;
     issue.assignees = assignment.assignees;
@@ -366,6 +368,12 @@ pub fn list_issues_page(
             param_values.push(Box::new(v.replace('T', " ")));
         }
     }
+    // Fork: parked issues.
+    match q.parked {
+        Some(true) => conditions.push(super::parked::is_parked("i")),
+        Some(false) => conditions.push(super::parked::not_parked("i")),
+        None => {}
+    }
     // LIF-147: assignment filter.
     if let Some(ref value) = q.assignee {
         let (condition, user) = super::assignees::filter_condition(
@@ -502,6 +510,7 @@ pub fn list_issues_page(
             waits: Vec::new(),
             needs_human: false,
             assignees: Vec::new(),
+            parked: None,
         })
     })?;
 
@@ -581,8 +590,10 @@ pub fn list_issues_page(
         // them, in one grouped query.
         let mut waits = super::waits::waits_by_issue(conn, &ids)?;
         let mut assignments = super::assignees::assignments_by_issue(conn, &ids)?;
+        let mut parked = super::parked::by_issue(conn, &ids)?;
         for issue in &mut issues {
             issue.waits = waits.remove(&issue.id).unwrap_or_default();
+            issue.parked = parked.remove(&issue.id);
             if let Some(assignment) = assignments.remove(&issue.id) {
                 issue.needs_human = assignment.needs_human;
                 issue.assignees = assignment.assignees;
@@ -605,7 +616,7 @@ pub fn count_issues_by_status_all(
         std::collections::HashMap::new();
     let mut stmt = conn.prepare_cached(
         "SELECT project_id, status, COUNT(*) FROM issues
-         WHERE deleted_at IS NULL GROUP BY project_id, status",
+         WHERE deleted_at IS NULL AND NOT EXISTS (SELECT 1 FROM fork_issue_parked fp WHERE fp.issue_id = issues.id) GROUP BY project_id, status",
     )?;
     let rows = stmt.query_map([], |row| {
         Ok((
@@ -631,7 +642,7 @@ pub fn count_issues_by_status(
     let mut counts = IssueStatusCounts::default();
     let mut stmt = conn.prepare_cached(
         "SELECT status, COUNT(*) FROM issues
-         WHERE project_id = ?1 AND deleted_at IS NULL GROUP BY status",
+         WHERE project_id = ?1 AND deleted_at IS NULL AND NOT EXISTS (SELECT 1 FROM fork_issue_parked fp WHERE fp.issue_id = issues.id) GROUP BY status",
     )?;
     let rows = stmt.query_map(params![project_id], |row| {
         Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))

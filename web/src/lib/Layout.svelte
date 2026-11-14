@@ -32,10 +32,11 @@
   import { currentUser, getUserRevision, publishUser } from "./userState";
   import { mobileNavState } from "./mobileNavState.svelte";
   import { navLink } from "./navLink";
-  import { Settings, List, LayoutGrid, FileText, Plus, Layers, History, ListChecks, LayoutDashboard, Search, ChevronRight, Sun, Moon, Monitor, Menu, Home, TrendingUp, HelpCircle, Folder, FolderPlus, FolderMinus, Pencil, Trash2, PanelLeftClose, PanelLeftOpen, Waypoints, Paperclip } from "lucide-svelte";
+  import { Settings, List, LayoutGrid, FileText, Plus, Layers, History, ListChecks, LayoutDashboard, Search, ChevronRight, Sun, Moon, Monitor, Menu, Home, TrendingUp, HelpCircle, Folder, FolderPlus, FolderMinus, Pencil, Trash2, PanelLeftClose, PanelLeftOpen, Waypoints, Paperclip, Activity, Inbox, Hourglass } from "lucide-svelte";
   import { onDestroy, setContext, untrack, tick } from "svelte";
   import { Ellipsis, ArrowUp, ArrowDown } from "lucide-svelte";
   import { peekState } from "./issues/peek.svelte";
+  import { logoTarget, loadLogoTarget, logoRoute, REPO_URL } from "./logoTarget.svelte";
   import PeekPanel from "./issues/PeekPanel.svelte"; // LIF-248: hoisted here so it's available on every route
   import PagePeekPanel from "./pages/PagePeekPanel.svelte"; // pages sibling of PeekPanel, same reasoning
   import { contextMenuState, openContextMenu } from "./contextMenuState.svelte";
@@ -46,6 +47,7 @@
   import { isTypingContext } from "./shortcuts";
   import { loadProjectRole } from "./projectRole.svelte"; // LIF-234
   import { startAutoRefresh } from "./autoRefresh.svelte";
+  import { t } from "./i18n";
   import {
     clampSidebarWidth,
     loadSidebarWidthPreference,
@@ -225,9 +227,9 @@
     const trigger = (e?.currentTarget ?? document.activeElement) as HTMLElement;
     const rect = trigger.getBoundingClientRect();
     openContextMenu(rect.left, rect.top, [
-      { label: "Light", icon: Sun, action: () => setPreference("light") },
-      { label: "Dark", icon: Moon, action: () => setPreference("dark") },
-      { label: "System", icon: Monitor, action: () => setPreference("system") },
+      { label: t("layout.theme.light"), icon: Sun, action: () => setPreference("light") },
+      { label: t("layout.theme.dark"), icon: Moon, action: () => setPreference("dark") },
+      { label: t("layout.theme.system"), icon: Monitor, action: () => setPreference("system") },
     ], trigger);
   }
 
@@ -339,7 +341,7 @@
     projects = next;
     const res = await reorderProjects(next.map((p) => p.id));
     projects = res.ok ? res.data : previous;
-    if (!res.ok) orderError = `Project order wasn't saved: ${res.error}`;
+    if (!res.ok) orderError = t("layout.error.projectOrder", { error: res.error });
     orderSaving = false;
   }
 
@@ -357,7 +359,7 @@
     orderError = "";
     const res = await reorderProjectGroups(next.map((g) => g.id));
     groups = res.ok ? res.data : previous;
-    if (!res.ok) orderError = `Group order wasn't saved: ${res.error}`;
+    if (!res.ok) orderError = t("layout.error.groupOrder", { error: res.error });
     orderSaving = false;
   }
   // Set when "New group…" came from a project's menu: the project to file
@@ -372,26 +374,26 @@
     const index = siblings.findIndex((p) => p.id === project.id);
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     openContextMenu(e.type === "contextmenu" ? e.clientX : rect.right, e.type === "contextmenu" ? e.clientY : rect.bottom, [
-      { label: "Move up", icon: ArrowUp, disabled: orderSaving || index === 0, action: () => void moveProject(project, "up") },
-      { label: "Move down", icon: ArrowDown, disabled: orderSaving || index === siblings.length - 1, action: () => void moveProject(project, "down") },
+      { label: t("layout.menu.moveUp"), icon: ArrowUp, disabled: orderSaving || index === 0, action: () => void moveProject(project, "up") },
+      { label: t("layout.menu.moveDown"), icon: ArrowDown, disabled: orderSaving || index === siblings.length - 1, action: () => void moveProject(project, "down") },
       ...groups
         .filter((g) => g.id !== current?.id)
         .map((g) => ({
-          label: `Move to ${g.name}`,
+          label: t("layout.menu.moveTo", { group: g.name }),
           icon: Folder,
           action: () => void assignProject(project.id, g.id),
         })),
       ...(current
         ? [
             {
-              label: "Remove from group",
+              label: t("layout.menu.removeFromGroup"),
               icon: FolderMinus,
               action: () => void assignProject(project.id, null),
             },
           ]
         : []),
       {
-        label: "New group…",
+        label: t("layout.menu.newGroupEllipsis"),
         icon: FolderPlus,
         action: () => startCreatingGroup(project.id),
       },
@@ -404,10 +406,10 @@
     const index = groups.findIndex((g) => g.id === group.id);
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     openContextMenu(e.type === "contextmenu" ? e.clientX : rect.right, e.type === "contextmenu" ? e.clientY : rect.bottom, [
-      { label: "Move up", icon: ArrowUp, disabled: orderSaving || index === 0, action: () => void moveGroup(group, "up") },
-      { label: "Move down", icon: ArrowDown, disabled: orderSaving || index === groups.length - 1, action: () => void moveGroup(group, "down") },
-      { label: "Rename", icon: Pencil, action: () => startRenamingGroup(group) },
-      { label: "Delete group", icon: Trash2, action: () => void removeGroup(group) },
+      { label: t("layout.menu.moveUp"), icon: ArrowUp, disabled: orderSaving || index === 0, action: () => void moveGroup(group, "up") },
+      { label: t("layout.menu.moveDown"), icon: ArrowDown, disabled: orderSaving || index === groups.length - 1, action: () => void moveGroup(group, "down") },
+      { label: t("layout.menu.rename"), icon: Pencil, action: () => startRenamingGroup(group) },
+      { label: t("layout.menu.deleteGroup"), icon: Trash2, action: () => void removeGroup(group) },
     ], e.currentTarget as HTMLElement);
   }
 
@@ -419,8 +421,8 @@
     // under the + rather than wherever the pointer happened to be.
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     openContextMenu(rect.left, rect.bottom, [
-      { label: "New project", icon: Plus, href: "#/projects/new", action: () => menuNavigate("/projects/new") },
-      { label: "New group", icon: FolderPlus, action: () => startCreatingGroup() },
+      { label: t("layout.menu.newProject"), icon: Plus, href: "#/projects/new", action: () => menuNavigate("/projects/new") },
+      { label: t("layout.menu.newGroup"), icon: FolderPlus, action: () => startCreatingGroup() },
     ], e.currentTarget as HTMLElement);
   }
 
@@ -467,7 +469,7 @@
     const editing = editingGroupId;
     const pending = pendingGroupProjectId;
     if (!name || editing === null) {
-      groupEditError = "Enter a group name.";
+      groupEditError = t("layout.group.nameRequired");
       return false;
     }
     groupSaving = true;
@@ -492,7 +494,7 @@
     if (editing === NEW_GROUP && pending !== null) {
       const assigned = await assignProjectGroup(pending, res.data.id);
       if (!assigned.ok) {
-        toast(`Group created, but the project wasn't moved into it: ${assigned.error}`, {
+        toast(t("layout.group.assignFailed", { error: assigned.error }), {
           kind: "error",
         });
       }
@@ -657,6 +659,12 @@
 
   let activeProject = $derived(projectFromRoute());
 
+  // Fork: where the brand logo leads (instance setting).
+  $effect(() => {
+    void loadLogoTarget();
+  });
+  let brandRoute = $derived(logoRoute(logoTarget.value));
+
   type RecentSection = "issues" | "modules" | "pages" | "plans";
   let recentIssues = $state<Issue[]>([]);
   let recentModules = $state<Module[]>([]);
@@ -812,24 +820,26 @@
     ) ?? null,
   );
   let mobileSection = $derived.by(() => {
-    if (route === "/") return "Home";
-    if (isActive("/settings")) return "Settings";
-    if (route === "/projects/new") return "New project";
-    if (route === "/projects/import") return "Import archive";
+    if (route === "/") return t("nav.home");
+    if (route === "/feed") return t("nav.feed");
+    if (route === "/for-me") return t("nav.forMe");
+    if (isActive("/settings")) return t("nav.settings");
+    if (route === "/projects/new") return t("nav.newProject");
+    if (route === "/projects/import") return t("nav.importArchive");
     if (!activeProject) return null;
     const rest = route.slice(activeProject.length + 1);
     const slug = rest.split("/")[1] ?? "";
     const labels: Record<string, string> = {
-      overview: "Overview",
-      settings: "Overview",
-      issues: "Issues",
-      board: "Board",
-      modules: "Modules",
-      pages: "Pages",
-      files: "Files",
-      plans: "Plans",
-      activity: "Activity",
-      insights: "Insights",
+      overview: t("nav.overview"),
+      settings: t("nav.overview"),
+      issues: t("nav.issues"),
+      board: t("nav.board"),
+      modules: t("nav.modules"),
+      pages: t("nav.pages"),
+      files: t("nav.files"),
+      plans: t("nav.plans"),
+      activity: t("nav.activity"),
+      insights: t("nav.insights"),
     };
     return labels[slug] ?? null;
   });
@@ -862,11 +872,21 @@
         use:observeSidebarFontSize={(size) => sidebarFontSize = size}></span>
       <!-- Brand header -->
       <div class="px-3 pt-3 pb-2 flex items-center gap-1.5">
+        <!-- Fork: the instance setting `logo_target` decides whether the logo
+             opens the project on GitHub (upstream) or an in-app page. -->
         <a
-          href="https://github.com/VoidNullable/lific"
-          target="_blank"
-          rel="noopener noreferrer"
-          title="View Lific on GitHub"
+          href={brandRoute ? `#${brandRoute}` : REPO_URL}
+          target={brandRoute ? undefined : "_blank"}
+          rel={brandRoute ? undefined : "noopener noreferrer"}
+          title={brandRoute
+            ? t("layout.brand.goTo", { page: brandRoute === "/" ? t("nav.home") : brandRoute === "/feed" ? t("nav.feed") : t("nav.forMe") })
+            : t("layout.brand.github")}
+          onclick={(e) => {
+            if (brandRoute && !e.metaKey && !e.ctrlKey && !e.shiftKey && e.button === 0) {
+              e.preventDefault();
+              navigate(brandRoute);
+            }
+          }}
           class="sidebar-brand flex flex-1 min-w-0 items-center gap-2.5 px-1 py-1 transition-colors"
         >
           <img src="/logo.webp" alt="" width="26" height="26" class="rounded-md shrink-0" />
@@ -887,8 +907,8 @@
                  text-[var(--text-faint)] hover:text-[var(--text)]
                  hover:bg-[var(--sidebar-hover)] transition-colors"
           onclick={toggleSidebar}
-          title="Collapse sidebar  ·  ⌘\\"
-          aria-label="Collapse sidebar"
+          title={t("layout.sidebar.collapseTitle")}
+          aria-label={t("layout.sidebar.collapse")}
         >
           <PanelLeftClose size={15} />
         </button>
@@ -901,7 +921,7 @@
           onclick={() => palette?.openPalette()}
         >
           <Search size={14} class="shrink-0" />
-          <span class="flex-1 text-left text-body-sm">Jump to…</span>
+          <span class="flex-1 text-left text-body-sm">{t("layout.jumpTo")}</span>
           <kbd class="font-mono text-micro leading-none text-[var(--text-faint)]
                       bg-[var(--sidebar-hover)] rounded px-1 py-0.5">⌘K</kbd>
         </button>
@@ -914,11 +934,28 @@
              pill's shape (icon + label) but unindented and un-chevroned
              since it isn't a disclosure. -->
         <a href="#/" use:navLink={navigate} aria-current={route === "/" ? "page" : undefined}
-          class="sidebar-destination sidebar-home w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md
+          class="sidebar-destination w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md
                  text-left text-body-sm transition-colors"
         >
           <Home size={14} class="shrink-0" />
-          Home
+          {t("nav.home")}
+        </a>
+        <!-- Fork: live cross-project activity, and the issues waiting on a
+             person. For me is the last top-level entry, so it carries the
+             section gap Home used to. -->
+        <a href="#/feed" use:navLink={navigate} aria-current={route === "/feed" ? "page" : undefined}
+          class="sidebar-destination w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md
+                 text-left text-body-sm transition-colors"
+        >
+          <Activity size={14} class="shrink-0" />
+          {t("nav.feed")}
+        </a>
+        <a href="#/for-me" use:navLink={navigate} aria-current={route === "/for-me" ? "page" : undefined}
+          class="sidebar-destination sidebar-home w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md
+                 text-left text-body-sm transition-colors"
+        >
+          <Inbox size={14} class="shrink-0" />
+          {t("nav.forMe")}
         </a>
 
         <!-- One project entry: the pill plus its sub-nav. Shared verbatim by
@@ -961,7 +998,7 @@
               <span class="truncate flex-1">{project.name}</span>
               </a>
               <button class="sidebar-overflow size-7 shrink-0 grid place-items-center rounded-md text-[var(--text-faint)] hover:bg-[var(--sidebar-hover)]"
-                aria-label={`Actions for ${project.name}`} aria-haspopup="menu"
+                aria-label={t("layout.project.actions", { name: project.name })} aria-haspopup="menu"
                 onclick={(e) => openProjectMenu(e, project)}><Ellipsis size={15} /></button>
             </div>
 
@@ -1010,20 +1047,21 @@
                       {/each}
                     {/if}
                 {/snippet}
-                {@render subItem(`/${project.identifier}/overview`, "Overview", LayoutDashboard)}
-                {@render subItem(`/${project.identifier}/issues`, "Issues", List)}
-                {@render subItem(`/${project.identifier}/board`, "Board", LayoutGrid)}
-                {@render subItem(`/${project.identifier}/graph`, "Graph", Waypoints)}
-                {@render subItem(`/${project.identifier}/modules`, "Modules", Layers)}
-                {@render subItem(`/${project.identifier}/pages`, "Pages", FileText)}
-                {@render subItem(`/${project.identifier}/files`, "Files", Paperclip)}
-                {@render subItem(`/${project.identifier}/plans`, "Plans", ListChecks)}
-                {@render subItem(`/${project.identifier}/activity`, "Activity", History)}
-                {@render subItem(`/${project.identifier}/insights`, "Insights", TrendingUp)}
+                {@render subItem(`/${project.identifier}/overview`, t("nav.overview"), LayoutDashboard)}
+                {@render subItem(`/${project.identifier}/issues`, t("nav.issues"), List)}
+                {@render subItem(`/${project.identifier}/board`, t("nav.board"), LayoutGrid)}
+                {@render subItem(`/${project.identifier}/parked`, t("nav.parked"), Hourglass)}
+                {@render subItem(`/${project.identifier}/graph`, t("nav.graph"), Waypoints)}
+                {@render subItem(`/${project.identifier}/modules`, t("nav.modules"), Layers)}
+                {@render subItem(`/${project.identifier}/pages`, t("nav.pages"), FileText)}
+                {@render subItem(`/${project.identifier}/files`, t("nav.files"), Paperclip)}
+                {@render subItem(`/${project.identifier}/plans`, t("nav.plans"), ListChecks)}
+                {@render subItem(`/${project.identifier}/activity`, t("nav.activity"), History)}
+                {@render subItem(`/${project.identifier}/insights`, t("nav.insights"), TrendingUp)}
                 {#if isProjectActive && activeRecentSection}
                   <button class="sidebar-recents-heading flex items-center gap-1 px-2 py-1 text-caption text-[var(--text-faint)] rounded-md hover:bg-[var(--sidebar-hover)]"
                     aria-expanded={recentOpen} aria-controls={`recent-${project.id}`} onclick={() => recentOpen = !recentOpen}>
-                    <ChevronRight size={12} class={recentOpen ? "rotate-90" : ""} /> Recent {activeRecentSection}
+                    <ChevronRight size={12} class={recentOpen ? "rotate-90" : ""} /> {t(`nav.recent.${activeRecentSection}`)}
                   </button>
                   <div id={`recent-${project.id}`} hidden={!recentOpen} aria-busy={recentLoading !== null}>
                     {@render recentItems(activeRecentSection, project)}
@@ -1037,14 +1075,14 @@
              the first group unreachable on a brand-new instance. -->
         <div class="sidebar-projects-heading flex items-center justify-between px-2 pb-1">
           <span class="sidebar-section-label text-micro font-semibold uppercase text-[var(--text-faint)]">
-            Projects
+            {t("layout.projects")}
           </span>
           <button
             class="size-8 flex items-center justify-center rounded
                    text-[var(--text-faint)] hover:text-[var(--accent)]
                    hover:bg-[var(--sidebar-hover)] transition-colors"
-            title="New project or group"
-            aria-label="New project or group" aria-haspopup="menu"
+            title={t("layout.newProjectOrGroup")}
+            aria-label={t("layout.newProjectOrGroup")} aria-haspopup="menu"
             onclick={openCreateMenu}
           >
             <Plus size={13} />
@@ -1061,8 +1099,8 @@
           <input
             class="w-full h-7 px-2 mb-0.5 rounded-md text-body-sm bg-[var(--bg)]
                    border border-[var(--border)] text-[var(--text)]"
-            placeholder="Group name"
-            aria-label="Group name" aria-invalid={!!groupEditError} aria-describedby={groupEditError ? "group-edit-error" : undefined}
+            placeholder={t("layout.group.name")}
+            aria-label={t("layout.group.name")} aria-invalid={!!groupEditError} aria-describedby={groupEditError ? "group-edit-error" : undefined}
             bind:this={groupInput}
             bind:value={draftGroupName}
             disabled={groupSaving}
@@ -1070,8 +1108,8 @@
           />
           {#if groupEditError}<p id="group-edit-error" role="alert" class="text-caption text-[var(--error)] break-words">{groupEditError}</p>{/if}
           <div class="flex gap-2 text-caption">
-            <button type="submit" disabled={groupSaving} class="px-2 py-1 rounded hover:bg-[var(--bg-subtle)]">{groupSaving ? "Saving…" : "Save"}</button>
-            <button type="button" disabled={groupSaving} class="px-2 py-1 rounded hover:bg-[var(--bg-subtle)]" onclick={cancelGroupEdit}>Cancel</button>
+            <button type="submit" disabled={groupSaving} class="px-2 py-1 rounded hover:bg-[var(--bg-subtle)]">{groupSaving ? t("common.saving") : t("common.save")}</button>
+            <button type="button" disabled={groupSaving} class="px-2 py-1 rounded hover:bg-[var(--bg-subtle)]" onclick={cancelGroupEdit}>{t("common.cancel")}</button>
           </div>
           </form>
         {/snippet}
@@ -1109,12 +1147,12 @@
             </button>
             <button class="sidebar-overflow size-7 shrink-0 grid place-items-center rounded-md text-[var(--text-faint)] hover:bg-[var(--sidebar-hover)]"
               data-sidebar-group-actions={group.id}
-              aria-label={`Actions for group ${group.name}`} aria-haspopup="menu" onclick={(e) => openGroupMenu(e, group)}><Ellipsis size={15} /></button>
+              aria-label={t("layout.group.actions", { name: group.name })} aria-haspopup="menu" onclick={(e) => openGroupMenu(e, group)}><Ellipsis size={15} /></button>
             </div>
             {/if}
             {#if collapsed && projectsIn(group).some((p) => p.identifier === activeProject)}
               <button class="ml-3 max-w-[calc(100%-0.75rem)] truncate text-caption text-[var(--accent)] px-2 py-1"
-                title={`Show ${activeProjectRecord?.name}`} onclick={() => toggleGroup(group.id)}>Current: {activeProjectRecord?.name}</button>
+                title={t("layout.group.showCurrent", { name: activeProjectRecord?.name ?? "" })} onclick={() => toggleGroup(group.id)}>{t("layout.group.current", { name: activeProjectRecord?.name ?? "" })}</button>
             {/if}
               <!-- Groups use spacing; only project destinations have a spine. -->
               <div id={`group-${group.id}`} hidden={collapsed} class="sidebar-group-projects">
@@ -1137,6 +1175,9 @@
               type: "lific-projects",
               dropTargetStyle: {},
               dragDisabled: orderSaving || ungroupedItems.length < 2,
+              // Fork: let a finger scroll the project list on tablets; a
+              // still press still reorders (see IssueList's board).
+              delayTouchStart: 350,
             }}
             onconsider={handleProjectConsider}
             onfinalize={handleProjectFinalize}
@@ -1152,18 +1193,18 @@
           </div>
         {:else if editingGroupId !== NEW_GROUP}
           <div class="px-3 py-6">
-            <p class="text-body-sm text-[var(--text-faint)] mb-2">No projects yet.</p>
+            <p class="text-body-sm text-[var(--text-faint)] mb-2">{t("layout.empty.noProjects")}</p>
             <div class="flex flex-col items-start gap-1">
               <a href="#/projects/new" use:navLink={navigate}
                 class="text-body-sm text-[var(--accent)] hover:underline"
               >
-                Create a project
+                {t("layout.empty.createProject")}
               </a>
               <button
                 class="text-body-sm text-[var(--accent)] hover:underline"
                 onclick={() => startCreatingGroup()}
               >
-                Create a group
+                {t("layout.empty.createGroup")}
               </button>
             </div>
           </div>
@@ -1175,7 +1216,7 @@
       <div class="sidebar-footer p-2 flex items-center gap-1">
         <a href="#/settings" use:navLink={navigate} aria-current={isActive('/settings') ? 'page' : undefined}
           class="sidebar-destination sidebar-account flex-1 min-w-0 flex items-center gap-2 px-2 py-1.5 rounded-md text-left transition-colors"
-          title="Account settings"
+          title={t("layout.accountSettings")}
         >
           <div
             class="sidebar-avatar size-7 rounded-full
@@ -1189,7 +1230,7 @@
               {user.display_name || user.username}
             </div>
             <div class="text-micro text-[var(--text-faint)] flex items-center gap-1 leading-tight mt-0.5">
-              <Settings size={9} /> Settings
+              <Settings size={9} /> {t("nav.settings")}
             </div>
           </div>
         </a>
@@ -1197,8 +1238,8 @@
           class="size-7 shrink-0 grid place-items-center rounded-md
                  text-[var(--text-faint)] hover:text-[var(--text)] hover:bg-[var(--sidebar-hover)] transition-colors"
           onclick={themeMenu}
-          title="Theme: {themePref}"
-          aria-label="Choose theme, current: {themePref}" aria-haspopup="menu"
+          title={t("layout.theme.title", { theme: t(`layout.theme.current.${themePref}`) })}
+          aria-label={t("layout.theme.choose", { theme: t(`layout.theme.current.${themePref}`) })} aria-haspopup="menu"
         >
           {#if themePref === "system"}
             <Monitor size={15} />
@@ -1216,8 +1257,8 @@
           class="size-7 shrink-0 grid place-items-center rounded-md
                  text-[var(--text-faint)] hover:text-[var(--text)] hover:bg-[var(--sidebar-hover)] transition-colors"
           onclick={() => toggleShortcutHelp()}
-          title="Keyboard shortcuts  ·  ?"
-          aria-label="Keyboard shortcuts"
+          title={t("layout.shortcutsTitle")}
+          aria-label={t("shortcuts.title")}
         >
           <HelpCircle size={15} />
         </button>
@@ -1228,7 +1269,7 @@
         class="group absolute inset-y-0 -right-1 z-20 hidden w-2 cursor-col-resize touch-none md:block focus:outline-none"
         role="separator"
         aria-orientation="vertical"
-        aria-label="Resize sidebar"
+        aria-label={t("layout.sidebar.resize")}
         aria-valuemin={sidebarMetrics.min}
         aria-valuemax={sidebarMetrics.max}
         aria-valuenow={sidebarWidth}
@@ -1259,7 +1300,8 @@
         <button
           class="size-11 shrink-0 grid place-items-center rounded-lg
                  text-[var(--text-muted)] active:bg-[var(--bg-subtle)] transition-colors"
-          aria-label="Open navigation"
+          aria-label={t("layout.openNavigation")}
+          data-mobile-nav-trigger
           aria-expanded={navOpen}
           onclick={() => mobileNav?.openAt(null)}
         >
@@ -1329,8 +1371,8 @@
                        text-[var(--text-faint)] hover:text-[var(--text)]
                        hover:bg-[var(--bg-subtle)] transition-colors"
                 onclick={toggleSidebar}
-                title="Expand sidebar  ·  ⌘\\"
-                aria-label="Expand sidebar"
+                title={t("layout.sidebar.expandTitle")}
+                aria-label={t("layout.sidebar.expand")}
               >
                 <PanelLeftOpen size={15} />
               </button>

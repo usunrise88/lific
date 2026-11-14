@@ -727,6 +727,23 @@ fn insert_identity_extensions(
     request.extensions_mut().insert(kind);
 }
 
+/// Fork: a tool credential (API key or OAuth token) that names its workspace
+/// with `X-Lific-Workspace` acts as that workspace's agent; see
+/// `queries::agent_workspaces`. Browser sessions never do.
+fn with_workspace(
+    db: &DbPool,
+    user: Option<crate::db::models::AuthUser>,
+    headers: &HeaderMap,
+) -> Option<crate::db::models::AuthUser> {
+    let raw = headers
+        .get(crate::db::queries::agent_workspaces::HEADER)
+        .and_then(|v| v.to_str().ok());
+    match (user, raw) {
+        (Some(user), Some(raw)) => Some(crate::db::queries::agent_workspaces::apply(db, user, Some(raw))),
+        (user, _) => user,
+    }
+}
+
 /// Axum middleware that validates Bearer tokens and resolves user identity.
 ///
 /// After successful auth, inserts `Extension<Option<AuthUser>>` into the request:
@@ -949,6 +966,7 @@ pub async fn require_api_key(
                     crate::oauth::OAuthCredential::Bound(user) => Some(user),
                     crate::oauth::OAuthCredential::LegacyUnbound => None,
                 };
+                let auth_user = with_workspace(&auth.db, auth_user, request.headers());
                 // LIF-403: the credential authenticates, but it may not be
                 // pointed at credential management or account administration.
                 // Enforced here, in the middleware, rather than in the handlers:
@@ -1070,6 +1088,8 @@ pub async fn require_api_key(
                 .into_response();
         }
     };
+
+    let auth_user = with_workspace(&auth.db, auth_user, request.headers());
 
     // LIF-155: API keys are programmatic — 'mcp' on the /mcp path, 'api' for
     // direct REST usage. The LIF-261 operator bypass for an unbound key
@@ -3799,6 +3819,59 @@ mod tests {
             format!("id:{user_id}:sessuser:false:web"),
             "session token must resolve to its user on the web transport"
         );
+    }
+
+    /// Fork: a bot's key that names a workspace acts as that workspace's
+    /// agent; a person's key, or a session, ignores the header.
+    #[tokio::test]
+    async fn a_workspace_header_turns_a_bot_key_into_its_workspace_agent() {
+        let pool = test_db();
+        let (bot_key, person_key, bot_id) = {
+            let conn = pool.write().unwrap();
+            let owner = crate::db::queries::users::create_user(
+                &conn,
+                &crate::db::models::CreateUser {
+                    username: "anton".into(),
+                    email: "anton@test.com".into(),
+                    password: "testpassword1".into(),
+                    display_name: None,
+                    is_admin: false,
+                    is_bot: false,
+                },
+            )
+            .unwrap();
+            let bot = crate::db::queries::users::ensure_bot(&conn, owner.id, "claude-code", "Claude Code")
+                .unwrap();
+            drop(conn);
+            (
+                create_api_key(&pool, "bot", Some(bot.id)).unwrap(),
+                create_api_key(&pool, "person", Some(owner.id)).unwrap(),
+                bot.id,
+            )
+        };
+        let call = |token: String, workspace: Option<&'static str>| {
+            let app = identity_echo_app(test_auth_state(&pool));
+            async move {
+                let mut req = Request::builder()
+                    .uri("/echo")
+                    .header("authorization", format!("Bearer {token}"));
+                if let Some(w) = workspace {
+                    req = req.header("x-lific-workspace", w);
+                }
+                let resp = app.oneshot(req.body(Body::empty()).unwrap()).await.unwrap();
+                let bytes = resp.into_body().collect().await.unwrap().to_bytes();
+                String::from_utf8(bytes.as_ref().to_vec()).unwrap()
+            }
+        };
+        let plain = call(bot_key.clone(), None).await;
+        assert!(plain.starts_with(&format!("id:{bot_id}:claude-code-anton:")), "{plain}");
+        let forge = call(bot_key.clone(), Some("Forge@Chamber")).await;
+        assert!(forge.contains(":claude-code-anton-forge-chamber:"), "{forge}");
+        assert_eq!(call(bot_key.clone(), Some("forge@chamber")).await, forge);
+        let prism = call(bot_key, Some("prism@chamber")).await;
+        assert!(prism.contains(":claude-code-anton-prism-chamber:"), "{prism}");
+        let person = call(person_key, Some("forge@chamber")).await;
+        assert!(person.contains(":anton:"), "{person}");
     }
 
     #[tokio::test]

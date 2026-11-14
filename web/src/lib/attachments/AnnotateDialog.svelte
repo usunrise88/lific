@@ -36,6 +36,7 @@
     type Rect,
   } from "./annotateMath";
   import { Crop, ArrowUpRight, Square, Pen, EyeOff, Undo2, X } from "lucide-svelte";
+  import { t } from "../i18n";
 
   let {
     file,
@@ -66,11 +67,11 @@
   const PROMPT_MS = 4000;
 
   const TOOLS: { id: Tool; label: string; icon: typeof Crop }[] = [
-    { id: "arrow", label: "Arrow", icon: ArrowUpRight },
-    { id: "rect", label: "Rectangle", icon: Square },
-    { id: "pen", label: "Pen", icon: Pen },
-    { id: "redact", label: "Redact", icon: EyeOff },
-    { id: "crop", label: "Crop", icon: Crop },
+    { id: "arrow", label: t("attachments.annotate.tool.arrow"), icon: ArrowUpRight },
+    { id: "rect", label: t("attachments.annotate.tool.rect"), icon: Square },
+    { id: "pen", label: t("attachments.annotate.tool.pen"), icon: Pen },
+    { id: "redact", label: t("attachments.annotate.tool.redact"), icon: EyeOff },
+    { id: "crop", label: t("attachments.annotate.tool.crop"), icon: Crop },
   ];
 
   let phase = $state<"prompt" | "editing">("prompt");
@@ -525,14 +526,14 @@
   <!-- Deliberately a chip, not a modal: it appears next to nothing, blocks
        nothing, and expires on its own. -->
   <div class="ann-prompt" role="status">
-    <span class="ann-prompt__text">Annotate before upload?</span>
+    <span class="ann-prompt__text">{t("attachments.annotate.prompt")}</span>
     <button type="button" class="ann-prompt__go" onclick={openEditor}>
-      Annotate <kbd>Enter</kbd>
+      {t("attachments.annotate.go")} <kbd>Enter</kbd>
     </button>
     <button
       type="button"
       class="ann-prompt__skip"
-      aria-label="Skip annotation and upload"
+      aria-label={t("attachments.annotate.skip")}
       onclick={() => finish(file)}
     >
       <X size={13} />
@@ -545,11 +546,11 @@
     class="ann"
     role="dialog"
     aria-modal="true"
-    aria-label="Annotate image"
+    aria-label={t("attachments.annotate.title")}
     tabindex="-1"
   >
     <div class="ann__bar">
-      <div class="ann__group" role="group" aria-label="Tools">
+      <div class="ann__group" role="group" aria-label={t("attachments.annotate.tools")}>
         {#each TOOLS as item (item.id)}
           {@const Icon = item.icon}
           <button
@@ -566,15 +567,15 @@
         {/each}
       </div>
 
-      <div class="ann__group" role="group" aria-label="Colour">
+      <div class="ann__group" role="group" aria-label={t("attachments.annotate.colour")}>
         {#each COLORS as swatch (swatch)}
           <button
             type="button"
             class="ann__swatch"
             class:is-active={color === swatch}
             style:background={swatch}
-            title={`Use ${swatch}`}
-            aria-label={`Use colour ${swatch}`}
+            title={t("attachments.annotate.useColour", { colour: swatch })}
+            aria-label={t("attachments.annotate.useColourLabel", { colour: swatch })}
             aria-pressed={color === swatch}
             onclick={() => (color = swatch)}
           ></button>
@@ -585,8 +586,8 @@
         <button
           type="button"
           class="ann__tool"
-          title="Undo (Ctrl+Z)"
-          aria-label="Undo"
+          title={t("attachments.annotate.undoHint")}
+          aria-label={t("common.undo")}
           disabled={undoDepth === 0}
           onclick={undo}
         >
@@ -598,16 +599,16 @@
           disabled={shapes.length === 0 && !crop}
           onclick={reset}
         >
-          Clear
+          {t("attachments.annotate.clear")}
         </button>
       </div>
 
       <span class="ann__hint">
         {tool === "crop"
-          ? "Drag to set the crop, or drag a handle to adjust"
+          ? t("attachments.annotate.hint.crop")
           : tool === "redact"
-            ? "Drag over anything that should not leave this machine"
-            : "Drag on the image to draw"}
+            ? t("attachments.annotate.hint.redact")
+            : t("attachments.annotate.hint.draw")}
       </span>
     </div>
 
@@ -624,7 +625,7 @@
           onpointercancel={onPointerUp}
         ></canvas>
       {:else}
-        <p class="ann__loading">Loading image…</p>
+        <p class="ann__loading">{t("attachments.annotate.loading")}</p>
       {/if}
     </div>
 
@@ -633,10 +634,10 @@
         {file.name} · {imageSize.w}×{imageSize.h}
       </span>
       <button type="button" class="ann__cancel" onclick={() => finish(file)}>
-        Cancel <kbd>Esc</kbd>
+        {t("common.cancel")} <kbd>Esc</kbd>
       </button>
       <button type="button" class="ann__accept" disabled={flattening} onclick={accept}>
-        {flattening ? "Preparing…" : "Upload"} <kbd>Enter</kbd>
+        {flattening ? t("attachments.annotate.preparing") : t("attachments.annotate.upload")} <kbd>Enter</kbd>
       </button>
     </div>
   </div>

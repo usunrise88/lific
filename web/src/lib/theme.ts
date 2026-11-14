@@ -1,4 +1,5 @@
 import { get, writable } from "svelte/store";
+import { RADIX_THEMES } from "./appearance/themes";
 
 export type ThemePreference = "light" | "dark" | "system";
 export type AccentPreset = "indigo" | "teal" | "rose" | "amber" | "green" | "violet";
@@ -11,6 +12,14 @@ const ACCENT_KEY = "lific_accent";
 const DENSITY_KEY = "lific_density";
 const FONT_SCALE_KEY = "lific_font_scale";
 const MOTION_KEY = "lific_motion";
+const PRESET_KEY = "lific_theme_preset";
+
+/** Fork: a whole palette. "classic" is the original Lific palette, where the
+ *  accent picker applies; the others are Radix Colors themes
+ *  (src/radixThemes.css) and bring their own accent. */
+export type ThemePreset = string;
+export const CLASSIC_THEME = "classic";
+const PRESETS = new Set<string>([CLASSIC_THEME, ...RADIX_THEMES.map((t) => t.id)]);
 
 const ACCENTS: readonly AccentPreset[] = ["indigo", "teal", "rose", "amber", "green", "violet"];
 
@@ -85,6 +94,29 @@ export function setAccent(preset: AccentPreset) {
 /** Apply the accent preset via `data-accent` on <html>. */
 export function applyAccent(preset: AccentPreset) {
   document.documentElement.setAttribute("data-accent", preset);
+}
+
+/** Read the stored theme preset, default to classic. */
+export function getThemePreset(): ThemePreset {
+  const stored = localStorage.getItem(PRESET_KEY);
+  return stored && PRESETS.has(stored) ? stored : CLASSIC_THEME;
+}
+
+/** Persist + apply a theme preset. */
+export function setThemePreset(preset: ThemePreset) {
+  const valid = PRESETS.has(preset) ? preset : CLASSIC_THEME;
+  if (valid === CLASSIC_THEME) {
+    localStorage.removeItem(PRESET_KEY);
+  } else {
+    localStorage.setItem(PRESET_KEY, valid);
+  }
+  applyThemePreset(valid);
+}
+
+/** Apply via `data-theme-preset` on <html>; classic removes it. */
+export function applyThemePreset(preset: ThemePreset) {
+  if (preset === CLASSIC_THEME) document.documentElement.removeAttribute("data-theme-preset");
+  else document.documentElement.setAttribute("data-theme-preset", preset);
 }
 
 /** Read stored density, default to comfortable. */
@@ -173,6 +205,7 @@ export function init() {
   preference.set(readPreference());
   apply(getPreference());
   applyAccent(getAccent());
+  applyThemePreset(getThemePreset());
   applyDensity(getDensity());
   applyFontScale(getFontScale());
   applyMotion(getMotionPreference());
